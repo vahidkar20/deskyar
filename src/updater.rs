@@ -182,7 +182,10 @@ fn check_update(manually: bool) -> ResultType<()> {
     }
     #[cfg(target_os = "windows")]
     let update_msi = crate::platform::is_msi_installed()? && !crate::is_custom_client();
-    if !(manually || config::Config::get_bool_option(keys::OPTION_ALLOW_AUTO_UPDATE)) {
+    if !(manually
+        || config::Config::get_bool_option(keys::OPTION_ALLOW_AUTO_UPDATE)
+        || crate::deskyar::auto_update_default())
+    {
         return Ok(());
     }
     if do_check_software_update().is_err() {
@@ -194,8 +197,24 @@ fn check_update(manually: bool) -> ResultType<()> {
     if update_url.is_empty() {
         log::debug!("No update available.");
     } else {
+        // A portable run lives in %LOCALAPPDATA% and has no installed copy for
+        // `update_me` to replace - it would fail only after pulling ~25 MB.
+        // The home page offers the release page for those users instead.
+        #[cfg(target_os = "windows")]
+        if !crate::platform::is_installed() {
+            log::debug!("Portable run: skipping download, UI offers the release page");
+            return Ok(());
+        }
         let download_url = update_url.replace("tag", "download");
-        let version = download_url.split('/').last().unwrap_or_default();
+        // Tags may carry a `v` prefix ("v1.5.1"). The path needs it verbatim,
+        // but the asset name and the version comparison do not - and
+        // `get_version_number` would parse "v1.5.1" as 0.0.0.
+        let version = download_url
+            .split('/')
+            .last()
+            .unwrap_or_default()
+            .trim_start_matches('v')
+            .trim_start_matches('V');
         #[cfg(target_os = "windows")]
         let download_url = if cfg!(feature = "flutter") {
             let Some(arch) = crate::platform::windows::release_arch_suffix() else {
@@ -204,15 +223,23 @@ fn check_update(manually: bool) -> ResultType<()> {
                     std::env::consts::ARCH
                 );
             };
+            // Asset name follows the product name, so a rebranded build looks
+            // for its own files instead of `rustdesk-<version>-<arch>.exe`.
             format!(
-                "{}/rustdesk-{}-{}.{}",
+                "{}/{}-{}-{}.{}",
                 download_url,
+                crate::get_app_name(),
                 version,
                 arch,
                 if update_msi { "msi" } else { "exe" }
             )
         } else {
-            format!("{}/rustdesk-{}-x86-sciter.exe", download_url, version)
+            format!(
+                "{}/{}-{}-x86-sciter.exe",
+                download_url,
+                crate::get_app_name(),
+                version
+            )
         };
         log::debug!("New version available: {}", &version);
         let client = create_http_client_with_url_strict(&download_url)?;

@@ -1018,7 +1018,11 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 }
 
 pub fn check_software_update() {
-    if is_custom_client() {
+    // Upstream refuses to look for updates in any rebranded build, which is why
+    // a custom client normally stays on the version it shipped with forever.
+    // DeskYar publishes its own releases, so only bail out when no feed is
+    // configured at all.
+    if is_custom_client() && crate::deskyar::update_repo().is_empty() {
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);
@@ -1031,6 +1035,11 @@ pub fn check_software_update() {
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
+    // Rebranded builds track their own release repository instead of the
+    // upstream version endpoint.
+    if is_custom_client() {
+        return do_check_deskyar_update().await;
+    }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
     let proxy_conf = Config::get_socks();
@@ -1062,6 +1071,104 @@ pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
     let latest_release_version = response_url.rsplit('/').next().unwrap_or_default();
 
     if get_version_number(&latest_release_version) > get_version_number(crate::VERSION) {
+        #[cfg(feature = "flutter")]
+        {
+            let mut m = HashMap::new();
+            m.insert("name", "check_software_update_finish");
+            m.insert("url", &response_url);
+            if let Ok(data) = serde_json::to_string(&m) {
+                let _ = crate::flutter::push_global_event(crate::flutter::APP_TYPE_MAIN, data);
+            }
+        }
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = response_url;
+    } else {
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = "".to_string();
+    }
+    Ok(())
+}
+
+/// Resolve the newest DeskYar release from GitHub.
+///
+/// Publishes the result through the same `SOFTWARE_UPDATE_URL` channel upstream
+/// uses, so `updater.rs` keeps ownership of downloading and installing. The URL
+/// is left in `releases/tag/<tag>` form because the updater rewrites `tag` to
+/// `download` and appends the asset name itself.
+async fn do_check_deskyar_update() -> hbb_common::ResultType<()> {
+    let repo = crate::deskyar::update_repo();
+    if repo.is_empty() {
+        return Ok(());
+    }
+    let url = crate::deskyar::api_url(&repo);
+
+    let proxy_conf = Config::get_socks();
+    let tls_url = get_url_for_tls(&url, &proxy_conf);
+    let cached_tls_type = get_cached_tls_type(tls_url);
+
+    // GitHub answers over TLS 1.2+ only. Try the cached transport first and
+    // fall back to the native stack, mirroring what upstream does for its own
+    // version endpoint.
+    let primary = cached_tls_type.unwrap_or(TlsType::Rustls);
+    let candidates: Vec<TlsType> = match primary {
+        TlsType::NativeTls => vec![TlsType::NativeTls],
+        _ => vec![primary, TlsType::NativeTls],
+    };
+
+    let mut body: Option<String> = None;
+    let mut last_error: Option<String> = None;
+    for tls_type in candidates {
+        let client = create_http_client_async(tls_type, false);
+        match client
+            .get(&url)
+            .header("User-Agent", crate::deskyar::USER_AGENT)
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => match resp.text().await {
+                Ok(text) => {
+                    upsert_tls_cache(tls_url, tls_type, false);
+                    body = Some(text);
+                    break;
+                }
+                Err(err) => last_error = Some(format!("reading response failed: {err}")),
+            },
+            Ok(resp) => {
+                last_error = Some(format!("GitHub API returned HTTP {}", resp.status()));
+            }
+            Err(err) => last_error = Some(format!("request failed: {err}")),
+        }
+    }
+
+    let Some(body) = body else {
+        return Err(anyhow!(
+            "update check against {repo} failed: {}",
+            last_error.unwrap_or_else(|| "no response".to_string())
+        ));
+    };
+
+    let Some(release) = crate::deskyar::parse_latest_release(&body) else {
+        return Err(anyhow!("malformed release payload from {repo}"));
+    };
+
+    if !release.has_installable_asset() {
+        // The release exists but carries nothing we can install - advertising it
+        // would make the updater download a 404 and leave a corrupt file behind.
+        log::warn!(
+            "DeskYar release {} has no {} asset, skipping update",
+            release.tag,
+            crate::deskyar::asset_name(&release.version)
+        );
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = "".to_string();
+        return Ok(());
+    }
+
+    if get_version_number(&release.version) > get_version_number(crate::VERSION) {
+        let response_url = crate::deskyar::release_page(&repo, &release.tag);
+        log::info!(
+            "DeskYar update available: {} -> {}",
+            crate::VERSION,
+            release.version
+        );
         #[cfg(feature = "flutter")]
         {
             let mut m = HashMap::new();

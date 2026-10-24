@@ -58,3 +58,14 @@ libsciter.dylib
 flutter/web/
 # libdrmtap is cloned at build time by build.py (not a submodule)
 /third_party/libdrmtap/
+
+# --- DeskYar: brand artwork ships with the source -------------------------
+# Upstream tracks these despite the *png / *svg rules above (they were added
+# before the ignores existed). A fresh `git init` needs them re-included or
+# the build produces an iconless binary.
+!res/*.png
+!res/*.svg
+!res/*.ico
+!flutter/assets/*.svg
+!flutter/assets/*.png
+!flutter/windows/runner/resources/*.ico

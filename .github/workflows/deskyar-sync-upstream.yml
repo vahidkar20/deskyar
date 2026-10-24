@@ -1,0 +1,237 @@
+name: Sync upstream RustDesk
+
+# Keeps DeskYar current with upstream RustDesk without a human doing the rebase.
+#
+# Daily (or on demand) this:
+#   1. asks GitHub for the newest rustdesk/rustdesk release,
+#   2. compares it with the version in Cargo.toml,
+#   3. rebuilds the tree from the new upstream tarball + its hbb_common
+#      submodule revision,
+#   4. re-applies `scripts/deskyar.patch` (our entire delta from upstream),
+#   5. re-runs the branding pass so the vendored hbb_common keeps APP_NAME,
+#   6. bumps the version and pushes a `v<version>` tag.
+#
+# The tag push starts "Build DeskYar (Windows x64)", which is the only job that
+# publishes a release - so a rebase that compiles is what reaches users. If the
+# patch no longer applies cleanly (upstream touched the same lines), the job
+# stops and opens an issue instead of shipping something half-merged.
+
+on:
+  schedule:
+    # 03:17 UTC daily. Upstream usually publishes mid-week, so a day of lag is
+    # the worst case before a rebuild starts.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: "Upstream tag to sync (blank = newest release)"
+        required: false
+        default: ""
+      auto_publish:
+        description: "Commit to main and tag without review"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: deskyar-upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve upstream release
+        id: upstream
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.upstream_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(curl -sSL -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/rustdesk/rustdesk/releases/latest | jq -r '.tag_name // empty')
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::error::could not resolve the upstream release tag"
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "upstream release: $TAG (version $VERSION)"
+
+      - name: Compare with current version
+        id: compare
+        run: |
+          set -euo pipefail
+          CURRENT=$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          NEWEST=$(printf '%s\n%s\n' "$CURRENT" "${{ steps.upstream.outputs.version }}" | sort -V | tail -1)
+          if [ "$NEWEST" = "$CURRENT" ]; then
+            echo "needs_sync=false" >> "$GITHUB_OUTPUT"
+            echo "already on $CURRENT, nothing to do"
+          else
+            echo "needs_sync=true" >> "$GITHUB_OUTPUT"
+            echo "will upgrade $CURRENT -> ${{ steps.upstream.outputs.version }}"
+          fi
+
+      - name: Rebuild tree on new upstream
+        id: rebase
+        if: steps.compare.outputs.needs_sync == 'true'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.upstream.outputs.tag }}"
+
+          # Our delta and the tooling that re-applies it must survive the wipe.
+          cp scripts/deskyar.patch /tmp/deskyar.patch
+          cp scripts/apply-branding.py /tmp/apply-branding.py
+          cp scripts/bump-version.py /tmp/bump-version.py
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+
+          echo "::group::fetch upstream source"
+          curl -sSL "https://github.com/rustdesk/rustdesk/archive/refs/tags/${TAG}.tar.gz" -o /tmp/upstream.tgz
+          tar -xzf /tmp/upstream.tgz -C . --strip-components=1
+          echo "::endgroup::"
+
+          echo "::group::fetch hbb_common at the pinned revision"
+          # The source tarball does not contain submodule content, and our patch
+          # deliberately excludes it, so it is fetched separately.
+          HBB_SHA=$(curl -sSL -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/rustdesk/rustdesk/contents/libs/hbb_common?ref=${TAG}" | jq -r '.sha')
+          if [ -z "$HBB_SHA" ] || [ "$HBB_SHA" = "null" ]; then
+            echo "::error::could not resolve the hbb_common revision for $TAG"
+            exit 1
+          fi
+          git clone --quiet https://github.com/rustdesk/hbb_common /tmp/hbb
+          git -C /tmp/hbb checkout --quiet "$HBB_SHA"
+          rm -rf /tmp/hbb/.git
+          rm -rf libs/hbb_common
+          cp -r /tmp/hbb libs/hbb_common
+          echo "hbb_common @ $HBB_SHA"
+          echo "::endgroup::"
+
+          echo "::group::re-apply DeskYar delta"
+          if ! git apply --check /tmp/deskyar.patch; then
+            echo "::error::scripts/deskyar.patch no longer applies to $TAG"
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          git apply /tmp/deskyar.patch
+          echo "::endgroup::"
+
+          # The patch carries our branded files, but hbb_common is excluded from
+          # it, so APP_NAME is (re)applied here. Idempotent: reports
+          # "already branded" when the patch already did it.
+          python3 /tmp/apply-branding.py --root .
+          python3 /tmp/bump-version.py "${{ steps.upstream.outputs.version }}" --root .
+
+          # Prove the result is still a coherent tree before committing.
+          test -f src/deskyar.rs
+          test -f flutter/lib/desktop/widgets/install_banner.dart
+          grep -q 'mod deskyar;' src/lib.rs
+          grep -q 'DeskYar' libs/hbb_common/src/config.rs
+          echo "rebased onto $TAG"
+
+      - name: Commit and tag
+        if: |
+          steps.compare.outputs.needs_sync == 'true' &&
+          steps.rebase.outcome == 'success' &&
+          (inputs.auto_publish || github.event_name == 'schedule')
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.upstream.outputs.version }}"
+          git config user.name "DeskYar Sync"
+          git config user.email "sync@deskyar.local"
+          git add -A
+          git commit -m "chore: sync upstream RustDesk ${{ steps.upstream.outputs.tag }}"
+          git tag "v${VERSION}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "v${VERSION}"
+          echo "pushed v${VERSION}"
+
+      # A tag pushed with GITHUB_TOKEN does not raise a `push` event (GitHub
+      # suppresses self-triggering runs), so the build is dispatched explicitly.
+      # Swap GITHUB_TOKEN for a PAT secret if you would rather rely on the tag.
+      - name: Trigger the build
+        if: |
+          steps.compare.outputs.needs_sync == 'true' &&
+          steps.rebase.outcome == 'success' &&
+          (inputs.auto_publish || github.event_name == 'schedule')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh workflow run deskyar-windows.yml \
+            --ref "v${{ steps.upstream.outputs.version }}" \
+            -f make_release=true
+          echo "dispatched the Windows build for v${{ steps.upstream.outputs.version }}"
+
+      - name: Open a pull request instead
+        if: |
+          steps.compare.outputs.needs_sync == 'true' &&
+          steps.rebase.outcome == 'success' &&
+          inputs.auto_publish == false &&
+          github.event_name != 'schedule'
+        run: |
+          set -euo pipefail
+          BRANCH="deskyar-sync/upstream-${{ steps.upstream.outputs.version }}"
+          git config user.name "DeskYar Sync"
+          git config user.email "sync@deskyar.local"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore: sync upstream RustDesk ${{ steps.upstream.outputs.tag }}"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "Sync upstream RustDesk ${{ steps.upstream.outputs.tag }}" \
+            --body "Automated rebase onto \`${{ steps.upstream.outputs.tag }}\`.
+
+          \`scripts/deskyar.patch\` applied cleanly and the branding pass succeeded.
+          Merge, then push the tag \`v${{ steps.upstream.outputs.version }}\` to build and publish." \
+            --base "${GITHUB_REF_NAME}" --head "$BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report a rebase conflict
+        if: |
+          steps.compare.outputs.needs_sync == 'true' &&
+          steps.rebase.outcome != 'success'
+        run: |
+          set -euo pipefail
+          gh issue create \
+            --title "Upstream ${{ steps.upstream.outputs.tag }} needs a manual rebase" \
+            --body "The automated rebase onto \`${{ steps.upstream.outputs.tag }}\` failed.
+
+          \`scripts/deskyar.patch\` is generated from the delta between stock RustDesk
+          and this tree. Upstream changed lines we also touch, so the patch no longer
+          applies cleanly.
+
+          **To fix locally**
+
+          \`\`\`bash
+          # rebase onto the new upstream, resolve the conflicts git reports
+          git remote add upstream https://github.com/rustdesk/rustdesk.git
+          git fetch upstream --tags
+          git merge ${{ steps.upstream.outputs.tag }}
+
+          # once the tree builds, regenerate the patch so future syncs work
+          python3 scripts/apply-branding.py --root .
+          python3 scripts/bump-version.py ${{ steps.upstream.outputs.version }} --root .
+          \`\`\`
+
+          Then push a \`v${{ steps.upstream.outputs.version }}\` tag.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --label upstream-sync
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

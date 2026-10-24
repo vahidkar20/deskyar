@@ -428,17 +428,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildHelpCards(String updateUrl) {
-    if (!bind.isCustomClient() &&
-        updateUrl.isNotEmpty &&
-        !isCardClosed &&
-        bind.mainUriPrefixSync().contains('rustdesk')) {
-      final isToUpdate = (isWindows || isMacOS) && bind.mainIsInstalled();
-      String btnText = isToUpdate ? 'Update' : 'Download';
+    // DeskYar publishes its own releases, so the upstream guards
+    // (`!isCustomClient()` and "only on the official server") would suppress
+    // this card permanently. `updateUrl` already points at our release page.
+    if (updateUrl.isNotEmpty && !isCardClosed) {
+      // A portable run cannot replace itself - it lives in %LOCALAPPDATA% and
+      // the installed copy is what actually gets updated. Offer the download
+      // page in that case and the silent updater everywhere else.
+      final canSelfUpdate = (isWindows || isMacOS) && bind.mainIsInstalled();
+      String btnText = canSelfUpdate ? 'Update' : 'Download';
       GestureTapCallback onPressed = () async {
-        final Uri url = Uri.parse('https://rustdesk.com/download');
+        final Uri url = Uri.parse(updateUrl);
         await launchUrl(url);
       };
-      if (isToUpdate) {
+      if (canSelfUpdate) {
         onPressed = () {
           handleUpdate(updateUrl);
         };
@@ -449,10 +452,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           btnText,
           onPressed,
           closeButton: true,
-          help: isToUpdate ? 'Changelog' : null,
-          link: isToUpdate
-              ? 'https://github.com/rustdesk/rustdesk/releases/tag/${bind.mainGetNewVersion()}'
-              : null);
+          help: canSelfUpdate ? 'Changelog' : null,
+          link: canSelfUpdate ? updateUrl : null);
     }
     if (systemError.isNotEmpty) {
       return buildInstallCard("", systemError, "", () {});
