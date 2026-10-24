@@ -1,25 +1,26 @@
 name: Sync upstream RustDesk
 
-# Keeps DeskYar current with upstream RustDesk without a human doing the rebase.
+# Pulls new RustDesk releases in without losing the DeskYar customisations.
 #
-# Daily (or on demand) this:
-#   1. asks GitHub for the newest rustdesk/rustdesk release,
-#   2. compares it with the version in Cargo.toml,
-#   3. rebuilds the tree from the new upstream tarball + its hbb_common
-#      submodule revision,
-#   4. re-applies `scripts/deskyar.patch` (our entire delta from upstream),
-#   5. re-runs the branding pass so the vendored hbb_common keeps APP_NAME,
-#   6. bumps the version and pushes a `v<version>` tag.
+# The repository carries two branches on purpose:
 #
-# The tag push starts "Build DeskYar (Windows x64)", which is the only job that
-# publishes a release - so a rebase that compiles is what reaches users. If the
-# patch no longer applies cleanly (upstream touched the same lines), the job
-# stops and opens an issue instead of shipping something half-merged.
+#   upstream  a verbatim copy of rustdesk/rustdesk at each release, one commit
+#             per version. It holds no DeskYar code at all.
+#   main      that same history plus a single "DeskYar" commit on top: branding,
+#             the in-app installer, and the update feed.
+#
+# Because `upstream` is a real ancestor of `main`, a new release is merged with
+# git's three-way merge. Upstream's code flows in file by file, and anything we
+# changed is preserved unless upstream touched the exact same lines - in which
+# case the merge stops with a conflict instead of silently reverting branding.
+#
+# Flow: detect -> rebuild the `upstream` branch -> merge into main -> bump
+# version -> tag -> dispatch the Windows build.
 
 on:
   schedule:
-    # 03:17 UTC daily. Upstream usually publishes mid-week, so a day of lag is
-    # the worst case before a rebuild starts.
+    # 03:17 UTC daily. Upstream publishes mid-week, so a day of lag is the
+    # worst case before a rebuild starts.
     - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
@@ -28,13 +29,14 @@ on:
         required: false
         default: ""
       auto_publish:
-        description: "Commit to main and tag without review"
+        description: "Commit, tag and build without review"
         type: boolean
         default: true
 
 permissions:
   contents: write
   issues: write
+  actions: write
 
 concurrency:
   group: deskyar-upstream-sync
@@ -64,10 +66,9 @@ jobs:
             echo "::error::could not resolve the upstream release tag"
             exit 1
           fi
-          VERSION="${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "upstream release: $TAG (version $VERSION)"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "upstream release: $TAG"
 
       - name: Compare with current version
         id: compare
@@ -81,32 +82,30 @@ jobs:
             echo "already on $CURRENT, nothing to do"
           else
             echo "needs_sync=true" >> "$GITHUB_OUTPUT"
-            echo "will upgrade $CURRENT -> ${{ steps.upstream.outputs.version }}"
+            echo "will merge ${{ steps.upstream.outputs.version }} into $CURRENT"
           fi
 
-      - name: Rebuild tree on new upstream
-        id: rebase
+      - name: Build the upstream branch
+        id: upstream_branch
         if: steps.compare.outputs.needs_sync == 'true'
         continue-on-error: true
         run: |
           set -euo pipefail
           TAG="${{ steps.upstream.outputs.tag }}"
 
-          # Our delta and the tooling that re-applies it must survive the wipe.
-          cp scripts/deskyar.patch /tmp/deskyar.patch
-          cp scripts/apply-branding.py /tmp/apply-branding.py
-          cp scripts/bump-version.py /tmp/bump-version.py
-
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          git config user.name "DeskYar Sync"
+          git config user.email "sync@deskyar.local"
+          git checkout upstream
 
           echo "::group::fetch upstream source"
           curl -sSL "https://github.com/rustdesk/rustdesk/archive/refs/tags/${TAG}.tar.gz" -o /tmp/upstream.tgz
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           tar -xzf /tmp/upstream.tgz -C . --strip-components=1
           echo "::endgroup::"
 
-          echo "::group::fetch hbb_common at the pinned revision"
-          # The source tarball does not contain submodule content, and our patch
-          # deliberately excludes it, so it is fetched separately.
+          echo "::group::expand hbb_common"
+          # The source tarball omits submodule content, and this branch has to be
+          # a self-contained snapshot so the merge can diff it file by file.
           HBB_SHA=$(curl -sSL -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/rustdesk/rustdesk/contents/libs/hbb_common?ref=${TAG}" | jq -r '.sha')
           if [ -z "$HBB_SHA" ] || [ "$HBB_SHA" = "null" ]; then
@@ -121,52 +120,68 @@ jobs:
           echo "hbb_common @ $HBB_SHA"
           echo "::endgroup::"
 
-          echo "::group::re-apply DeskYar delta"
-          if ! git apply --check /tmp/deskyar.patch; then
-            echo "::error::scripts/deskyar.patch no longer applies to $TAG"
-            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          git add -A -f
+          git commit -m "upstream RustDesk ${TAG}"
+          echo "upstream branch now at ${TAG}"
+
+      - name: Merge into main
+        id: merge
+        if: |
+          steps.compare.outputs.needs_sync == 'true' &&
+          steps.upstream_branch.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.upstream.outputs.tag }}"
+
+          git checkout main
+          if ! git merge --no-commit --no-ff upstream; then
+            echo "conflicts=$(git diff --name-only --diff-filter=U | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+            git merge --abort
+            echo "::error::merge conflicts with ${TAG}"
             exit 1
           fi
-          git apply /tmp/deskyar.patch
-          echo "::endgroup::"
 
-          # The patch carries our branded files, but hbb_common is excluded from
-          # it, so APP_NAME is (re)applied here. Idempotent: reports
-          # "already branded" when the patch already did it.
-          python3 /tmp/apply-branding.py --root .
-          python3 /tmp/bump-version.py "${{ steps.upstream.outputs.version }}" --root .
+          # Keep both version files in step; a no-op when upstream already
+          # carries the new number.
+          python3 scripts/bump-version.py "${{ steps.upstream.outputs.version }}" --root .
 
-          # Prove the result is still a coherent tree before committing.
+          # Belt and braces: the merge should already preserve branding, but a
+          # silent revert here would ship a build that calls itself RustDesk.
+          python3 scripts/apply-branding.py --root . --check
           test -f src/deskyar.rs
           test -f flutter/lib/desktop/widgets/install_banner.dart
           grep -q 'mod deskyar;' src/lib.rs
           grep -q 'DeskYar' libs/hbb_common/src/config.rs
-          echo "rebased onto $TAG"
+          grep -q 'DeskYarInstallBanner' flutter/lib/desktop/pages/connection_page.dart
 
-      - name: Commit and tag
+          git add -A
+          git commit -m "chore: sync upstream RustDesk ${TAG}
+
+          Merged the ${TAG} snapshot from the upstream branch. Branding, the
+          in-app installer and the update feed are unchanged."
+
+      - name: Push and tag
         if: |
           steps.compare.outputs.needs_sync == 'true' &&
-          steps.rebase.outcome == 'success' &&
+          steps.merge.outcome == 'success' &&
           (inputs.auto_publish || github.event_name == 'schedule')
         run: |
           set -euo pipefail
           VERSION="${{ steps.upstream.outputs.version }}"
-          git config user.name "DeskYar Sync"
-          git config user.email "sync@deskyar.local"
-          git add -A
-          git commit -m "chore: sync upstream RustDesk ${{ steps.upstream.outputs.tag }}"
           git tag "v${VERSION}"
+          git push origin upstream
           git push origin "HEAD:${GITHUB_REF_NAME}"
           git push origin "v${VERSION}"
           echo "pushed v${VERSION}"
 
-      # A tag pushed with GITHUB_TOKEN does not raise a `push` event (GitHub
-      # suppresses self-triggering runs), so the build is dispatched explicitly.
-      # Swap GITHUB_TOKEN for a PAT secret if you would rather rely on the tag.
+      # A tag pushed with GITHUB_TOKEN does not raise a `push` event, so the
+      # build is dispatched explicitly. Swap in a PAT if you would rather rely
+      # on the tag trigger.
       - name: Trigger the build
         if: |
           steps.compare.outputs.needs_sync == 'true' &&
-          steps.rebase.outcome == 'success' &&
+          steps.merge.outcome == 'success' &&
           (inputs.auto_publish || github.event_name == 'schedule')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -175,63 +190,54 @@ jobs:
           gh workflow run deskyar-windows.yml \
             --ref "v${{ steps.upstream.outputs.version }}" \
             -f make_release=true
-          echo "dispatched the Windows build for v${{ steps.upstream.outputs.version }}"
+          echo "dispatched the Windows build"
 
       - name: Open a pull request instead
         if: |
           steps.compare.outputs.needs_sync == 'true' &&
-          steps.rebase.outcome == 'success' &&
+          steps.merge.outcome == 'success' &&
           inputs.auto_publish == false &&
           github.event_name != 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           BRANCH="deskyar-sync/upstream-${{ steps.upstream.outputs.version }}"
-          git config user.name "DeskYar Sync"
-          git config user.email "sync@deskyar.local"
           git checkout -b "$BRANCH"
-          git add -A
-          git commit -m "chore: sync upstream RustDesk ${{ steps.upstream.outputs.tag }}"
           git push origin "$BRANCH"
           gh pr create \
             --title "Sync upstream RustDesk ${{ steps.upstream.outputs.tag }}" \
-            --body "Automated rebase onto \`${{ steps.upstream.outputs.tag }}\`.
+            --body "Merged \`${{ steps.upstream.outputs.tag }}\` from the \`upstream\` branch.
 
-          \`scripts/deskyar.patch\` applied cleanly and the branding pass succeeded.
-          Merge, then push the tag \`v${{ steps.upstream.outputs.version }}\` to build and publish." \
+          The merge was clean and the branding checks passed. Merge this, then push
+          the tag \`v${{ steps.upstream.outputs.version }}\` to build and publish." \
             --base "${GITHUB_REF_NAME}" --head "$BRANCH"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Report a rebase conflict
+      - name: Report a failed sync
         if: |
           steps.compare.outputs.needs_sync == 'true' &&
-          steps.rebase.outcome != 'success'
+          (steps.upstream_branch.outcome != 'success' || steps.merge.outcome != 'success')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           gh issue create \
-            --title "Upstream ${{ steps.upstream.outputs.tag }} needs a manual rebase" \
-            --body "The automated rebase onto \`${{ steps.upstream.outputs.tag }}\` failed.
+            --title "Upstream ${{ steps.upstream.outputs.tag }} needs a manual merge" \
+            --body "The automated sync onto \`${{ steps.upstream.outputs.tag }}\` stopped.
 
-          \`scripts/deskyar.patch\` is generated from the delta between stock RustDesk
-          and this tree. Upstream changed lines we also touch, so the patch no longer
-          applies cleanly.
+          Upstream changed the same lines DeskYar changes, so git refused to merge
+          rather than silently dropping the branding. Nothing was pushed.
 
-          **To fix locally**
+          **Resolve locally**
 
           \`\`\`bash
-          # rebase onto the new upstream, resolve the conflicts git reports
-          git remote add upstream https://github.com/rustdesk/rustdesk.git
-          git fetch upstream --tags
-          git merge ${{ steps.upstream.outputs.tag }}
-
-          # once the tree builds, regenerate the patch so future syncs work
-          python3 scripts/apply-branding.py --root .
+          git fetch origin && git checkout main
+          git merge origin/upstream          # resolve the reported conflicts
+          python3 scripts/apply-branding.py --root .   # re-assert branding if needed
           python3 scripts/bump-version.py ${{ steps.upstream.outputs.version }} --root .
+          git commit && git push
+          git tag v${{ steps.upstream.outputs.version }} && git push origin v${{ steps.upstream.outputs.version }}
           \`\`\`
-
-          Then push a \`v${{ steps.upstream.outputs.version }}\` tag.
 
           Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label upstream-sync
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
