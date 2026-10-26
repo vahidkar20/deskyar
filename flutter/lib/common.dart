@@ -372,6 +372,7 @@ class MyTheme {
   static ThemeData lightTheme = ThemeData(
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
+    fontFamily: kDeskyarFontFamily,
     brightness: Brightness.light,
     hoverColor: Color.fromARGB(255, 224, 224, 224),
     scaffoldBackgroundColor: Colors.white,
@@ -470,6 +471,7 @@ class MyTheme {
   );
   static ThemeData darkTheme = ThemeData(
     useMaterial3: false,
+    fontFamily: kDeskyarFontFamily,
     brightness: Brightness.dark,
     hoverColor: Color.fromARGB(255, 20, 48, 60),
     scaffoldBackgroundColor: Color(0xFF0A141A),
@@ -689,6 +691,31 @@ List<Locale> supportedLocales = const [
   Locale('he'),
   Locale('hr'),
 ];
+
+/// App-wide Persian font, declared in pubspec.yaml under the same family name.
+const String kDeskyarFontFamily = 'Vazirmatn';
+
+/// Resolve the locale the UI should run in.
+///
+/// DeskYar ships Persian-first: an unset language - and the "Default" entry in
+/// the language picker, which stores the literal `default` - both resolve to
+/// Persian. Picking another language in Settings still wins, because a real
+/// language code is stored in that case.
+///
+/// The locale also decides text direction: `fa` is an RTL locale, so
+/// `GlobalWidgetsLocalizations` flips the whole app to right-to-left without
+/// any manual `Directionality` wrapping.
+Locale getDeskyarLocale() {
+  var lang = bind.mainGetLocalOption(key: kCommConfKeyLang);
+  if (lang.isEmpty || lang == 'default') {
+    lang = 'fa';
+  }
+  final parts = lang.split(RegExp(r'[-_]'));
+  if (parts.length >= 2 && parts[1].isNotEmpty) {
+    return Locale(parts[0], parts[1].toUpperCase());
+  }
+  return Locale(parts.first);
+}
 
 String formatDurationToTime(Duration duration) {
   var totalTime = duration.inSeconds;
@@ -3738,7 +3765,7 @@ Widget loadPowered(BuildContext context) {
     cursor: SystemMouseCursors.click,
     child: GestureDetector(
       onTap: () {
-        launchUrl(Uri.parse('https://rustdesk.com'));
+        launchUrl(Uri.parse('https://yar.one'));
       },
       child: Opacity(
           opacity: 0.5,

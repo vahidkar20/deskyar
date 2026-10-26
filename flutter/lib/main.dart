@@ -364,6 +364,8 @@ void _runApp(
       theme: MyTheme.lightTheme,
       darkTheme: MyTheme.darkTheme,
       themeMode: themeMode,
+      // Persian by default, which also drives RTL layout.
+      locale: getDeskyarLocale(),
       home: home,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -501,6 +503,8 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           theme: MyTheme.lightTheme,
           darkTheme: MyTheme.darkTheme,
           themeMode: MyTheme.currentThemeMode(),
+          // Persian by default, which also drives RTL layout.
+          locale: getDeskyarLocale(),
           home: isDesktop
               ? const DesktopTabPage()
               : isWeb

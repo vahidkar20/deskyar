@@ -181,12 +181,23 @@ pub fn translate(name: String) -> String {
     translate_locale(name, &locale)
 }
 
+/// The language chosen in Settings, with DeskYar's Persian default applied.
+///
+/// An unset value - and the "Default" entry in the language picker, which
+/// stores the literal `default` - both mean "no explicit choice", and this
+/// build ships Persian-first. Keeping the fallback here rather than inside
+/// `resolve_lang` leaves that function's locale matching (and its tests) intact.
+fn saved_lang() -> String {
+    let saved = hbb_common::config::LocalConfig::get_option("lang");
+    if saved.is_empty() || saved.eq_ignore_ascii_case("default") {
+        "fa".to_owned()
+    } else {
+        saved
+    }
+}
+
 pub fn translate_locale(name: String, locale: &str) -> String {
-    let lang = resolve_lang(
-        &hbb_common::config::LocalConfig::get_option("lang"),
-        locale,
-        cjk_ui_unavailable(),
-    );
+    let lang = resolve_lang(&saved_lang(), locale, cjk_ui_unavailable());
     let m = match lang.as_str() {
         "fr" => fr::T.deref(),
         "zh-cn" => cn::T.deref(),
