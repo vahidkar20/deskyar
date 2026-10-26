@@ -134,20 +134,33 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
+        // Wider than upstream's 200/280: Persian strings run noticeably longer
+        // than their English equivalents, and the pane also carries the banner
+        // slot now. The incoming-only size is measured after layout, so this is
+        // only a starting point.
+        width: isIncomingOnly ? 300.0 : 232.0,
         color: Theme.of(context).colorScheme.background,
         child: Stack(
           children: [
             Column(
               children: [
-                SingleChildScrollView(
-                  controller: _leftPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
+                // Expanded, not a shrink-wrapped scroll view plus a spacer:
+                // upstream sized the pane to its content and pushed a blank
+                // Container underneath, so a tall pane simply overflowed
+                // instead of scrolling. Adding the banner slot made that
+                // reachable on a small window.
+                Expanded(
+                  child: Scrollbar(
+                    controller: _leftPaneScrollController,
+                    child: SingleChildScrollView(
+                      controller: _leftPaneScrollController,
+                      child: Column(
+                        key: _childKey,
+                        children: children,
+                      ),
+                    ),
                   ),
                 ),
-                Expanded(child: Container())
               ],
             ),
             if (isOutgoingOnly)
@@ -979,7 +992,7 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
         ],
       ),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 500),
+        constraints: const BoxConstraints(minWidth: 540),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
