@@ -54,14 +54,14 @@ jobs:
 
     steps:
       - name: Export cache environment for vcpkg
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
         with:
           submodules: recursive
 
@@ -102,14 +102,71 @@ jobs:
 
       # RustDesk ships a patched Flutter engine (text input, multi-window).
       # The stock engine builds but misbehaves at runtime.
+      
       - name: Swap in the RustDesk Flutter engine
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+
           flutter doctor -v
           flutter precache --windows
-          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
-          Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
-          mv -Force windows-x64-release/* C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
+
+          # Detect the actual Flutter SDK installation path.
+          $flutterCommand = Get-Command flutter -ErrorAction Stop
+          $flutterRoot = Split-Path (Split-Path $flutterCommand.Source -Parent) -Parent
+          Write-Host "Flutter root: $flutterRoot"
+
+          # Download the custom RustDesk engine.
+          $zipPath = Join-Path $PWD "windows-x64-release.zip"
+          $extractPath = Join-Path $PWD "windows-x64-release"
+
+          Invoke-WebRequest `
+            -Uri "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" `
+            -OutFile $zipPath
+
+          if (-not (Test-Path $zipPath)) {
+            throw "RustDesk engine ZIP was not downloaded."
+          }
+
+          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+
+          # Locate the engine files regardless of the ZIP's folder structure.
+          $engineDll = Get-ChildItem `
+            -Path $extractPath `
+            -Filter "flutter_windows.dll" `
+            -Recurse `
+            -File |
+            Select-Object -First 1
+
+          if (-not $engineDll) {
+            Get-ChildItem $extractPath -Recurse |
+              Select-Object FullName |
+              Format-Table -AutoSize |
+              Out-String |
+              Write-Host
+
+            throw "flutter_windows.dll was not found in the downloaded RustDesk engine ZIP."
+          }
+
+          $sourcePath = $engineDll.Directory.FullName
+          $targetPath = Join-Path $flutterRoot "bin\cache\artifacts\engine\windows-x64-release"
+
+          New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
+
+          Write-Host "Engine source: $sourcePath"
+          Write-Host "Engine target: $targetPath"
+
+          Copy-Item `
+            -Path (Join-Path $sourcePath "*") `
+            -Destination $targetPath `
+            -Recurse `
+            -Force
+
+          if (-not (Test-Path (Join-Path $targetPath "flutter_windows.dll"))) {
+            throw "RustDesk Flutter engine installation failed."
+          }
+
+          Write-Host "RustDesk Flutter engine installed successfully."
 
       - name: Patch Flutter dropdown filter
         shell: bash
