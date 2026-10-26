@@ -13,6 +13,7 @@ import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/banner_slot.dart';
+import 'package:flutter_hbb/desktop/widgets/install_banner.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
@@ -465,6 +466,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
     if (isWindows && !bind.isDisableInstallation()) {
       if (!bind.mainIsInstalled()) {
+        // The banner at the top of the connection page is the primary install
+        // call to action. Showing this card at the same time means a portable
+        // run asks the user to install twice, in two different styles - so it
+        // only appears once the banner has been waved away, as a way back.
+        if (bind.mainGetLocalOption(key: kOptionInstallBannerDismissed) !=
+            'Y') {
+          return const SizedBox();
+        }
         return buildInstallCard(
             "", bind.isOutgoingOnly() ? "" : "install_tip", "Install",
             () async {
@@ -609,12 +618,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
           child: Container(
               decoration: BoxDecoration(
+                  // Brand gradient. Upstream hardcoded a pink->salmon pair here,
+                  // which every help card inherits and which clashes badly with
+                  // the navy/teal identity. Directional so it mirrors in RTL.
                   gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
+                begin: AlignmentDirectional.centerStart,
+                end: AlignmentDirectional.centerEnd,
                 colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
+                  Color(0xFF0F2B38),
+                  Color(0xFF0B6F66),
                 ],
               )),
               padding: EdgeInsets.all(20),

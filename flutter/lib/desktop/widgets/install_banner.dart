@@ -44,6 +44,8 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
     try {
       if (!isWindows || !isDesktop) return false;
       if (bind.mainIsInstalled()) return false;
+      // Respect a policy that forbids installation entirely.
+      if (bind.isDisableInstallation()) return false;
       final dismissed =
           bind.mainGetLocalOption(key: kOptionInstallBannerDismissed) == 'Y';
       return !dismissed;
