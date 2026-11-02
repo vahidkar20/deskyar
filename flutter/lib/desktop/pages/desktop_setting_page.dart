@@ -2516,12 +2516,18 @@ class _AboutState extends State<_About> {
       final buildDate = await bind.mainGetBuildDate();
       final fingerprint = await bind.mainGetFingerprint();
       final myId = await bind.mainGetMyId();
+      // The API server is derived from the rendezvous host, so it doubles as a
+      // readable answer to "which server is this client actually talking to?".
+      // Without it there is no way to tell a correctly configured build from
+      // one that silently fell back to RustDesk's public infrastructure.
+      final apiServer = await bind.mainGetApiServer();
       return {
         'license': license,
         'version': version,
         'buildDate': buildDate,
         'fingerprint': fingerprint,
-        'myId': myId
+        'myId': myId,
+        'apiServer': apiServer,
       };
     }(), hasData: (data) {
       final license = data['license'].toString();
@@ -2529,6 +2535,7 @@ class _AboutState extends State<_About> {
       final buildDate = data['buildDate'].toString();
       final fingerprint = data['fingerprint'].toString();
       final myId = data['myId'].toString();
+      final apiServer = data['apiServer'].toString();
       const linkStyle = TextStyle(decoration: TextDecoration.underline);
       final scrollController = ScrollController();
 
@@ -2539,7 +2546,12 @@ class _AboutState extends State<_About> {
       // digits only, and in the Persian (RTL) layout the bidi algorithm would
       // otherwise paint it backwards - the user could never read their own ID
       // correctly, nor tell whether a peer's ID was typed right.
-      Widget aboutRow(String label, String value, {bool ltr = false}) => Padding(
+      //
+      // `warn` paints the value in the error colour, used for the one piece of
+      // configuration that can be wrong without any other symptom.
+      Widget aboutRow(String label, String value,
+              {bool ltr = false, bool warn = false}) =>
+          Padding(
             padding: const EdgeInsets.symmetric(vertical: 5.0),
             child: SelectionArea(
               child: Row(
@@ -2560,8 +2572,20 @@ class _AboutState extends State<_About> {
                   ),
                   Expanded(
                     child: ltr
-                        ? LtrIdText(value, style: const TextStyle(fontSize: 13))
-                        : Text(value, style: const TextStyle(fontSize: 13)),
+                        ? LtrIdText(value,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: warn
+                                  ? Theme.of(context).colorScheme.error
+                                  : null,
+                            ))
+                        : Text(value,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: warn
+                                  ? Theme.of(context).colorScheme.error
+                                  : null,
+                            )),
                   ),
                 ],
               ),
@@ -2620,6 +2644,29 @@ class _AboutState extends State<_About> {
               ).marginOnly(bottom: 14),
               aboutRow(translate('Build Date'), buildDate),
               aboutRow(translate('ID'), myId, ltr: true),
+              // Which server this client is registered with. Shown because a
+              // build that lost its baked-in address falls back to RustDesk's
+              // public servers without any visible error - the ID still
+              // appears, connections still work, and the operator has no clue
+              // their traffic is leaving the country's network.
+              aboutRow(
+                translate('Server'),
+                _serverLabel(apiServer),
+                ltr: true,
+                warn: _isPublicServer(apiServer),
+              ),
+              if (_isPublicServer(apiServer))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    translate('server_is_public_tip'),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
               if (!isWeb) ...[
                 const SizedBox(height: 10),
                 Text(
@@ -2725,6 +2772,45 @@ class _AboutState extends State<_About> {
       );
     });
   }
+}
+
+//#endregion
+
+//#region server status
+
+/// Whether the client is still pointed at RustDesk's public infrastructure.
+///
+/// `get_api_server` returns `https://admin.rustdesk.com` when no custom
+/// rendezvous host is configured - that is upstream's fallback, not a
+/// deliberate choice. Any other value means a self-hosted server is in use.
+bool _isPublicServer(String apiServer) {
+  if (apiServer.isEmpty) return false;
+  final lower = apiServer.toLowerCase();
+  return lower.contains('rustdesk.com');
+}
+
+/// Short, readable form of the API server for the About card.
+///
+/// The full URL is long enough to wrap and mostly noise: the scheme and the
+/// `:21114` API port are always the same, and what the operator actually wants
+/// to confirm is the host.
+String _serverLabel(String apiServer) {
+  if (apiServer.isEmpty) return '-';
+  var value = apiServer;
+  for (final prefix in ['https://', 'http://']) {
+    if (value.startsWith(prefix)) {
+      value = value.substring(prefix.length);
+      break;
+    }
+  }
+  // Drop a trailing path or port, keeping IPv6 literals intact.
+  if (!value.startsWith('[')) {
+    final slash = value.indexOf('/');
+    if (slash >= 0) value = value.substring(0, slash);
+    final colon = value.lastIndexOf(':');
+    if (colon > 0 && !value.contains(']')) value = value.substring(0, colon);
+  }
+  return value;
 }
 
 //#endregion

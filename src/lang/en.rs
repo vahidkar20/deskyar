@@ -207,6 +207,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("deskyar_about_body", "DeskYar is a remote desktop application: encrypted sessions, file transfer, clipboard sync and the option to run on your own server. All traffic is encrypted with your server key and never passes through a third party."),
         ("deskyar_about_holding", "Yar.One Holding builds software products for Iranian businesses. DeskYar is one of its products, developed and supported in Iran."),
         ("deskyar_copyright", "All rights reserved by Yar.One Holding."),
+        ("Server", "Server"),
+        ("server_is_public_tip", "This build is connected to RustDesk's public server, not yours. No private server address was configured at build time."),
         ("outgoing_only_desk_tip", "This is a customized edition.\nYou can connect to other devices, but other devices cannot connect to your device."),
         ("preset_password_warning", "This customized edition comes with a preset password. Anyone knowing this password could gain full control of your device. If you did not expect this, uninstall the software immediately."),
         ("share_warning_tip", "The fields above are shared and visible to others."),

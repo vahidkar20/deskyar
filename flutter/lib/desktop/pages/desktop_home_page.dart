@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
@@ -330,94 +329,94 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     RxBool refreshHover = false.obs;
     RxBool editHover = false.obs;
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
+      // Same tinted card as the ID board above, so the two read as a pair
+      // rather than as one card followed by a loose row with an accent rule.
+      margin: const EdgeInsets.only(left: 20.0, right: 16, top: 10, bottom: 13),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: MyTheme.accent.withOpacity(isDark ? 0.10 : 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MyTheme.accent.withOpacity(0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 2,
-            height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
+          Text(
+            translate("One-time Password"),
+            style: TextStyle(fontSize: 12, color: textColor?.withOpacity(0.55)),
+            maxLines: 1,
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AutoSizeText(
-                    translate("One-time Password"),
-                    style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
-                    maxLines: 1,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onDoubleTap: () {
-                            if (showOneTime) {
-                              Clipboard.setData(
-                                  ClipboardData(text: model.serverPasswd.text));
-                              showToast(translate("Copied"));
-                            }
-                          },
-                          child: TextFormField(
-                            controller: model.serverPasswd,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.only(top: 14, bottom: 10),
-                            ),
-                            style: TextStyle(fontSize: 15),
-                          ).workaroundFreezeLinuxMint(),
-                        ),
-                      ),
-                      if (showOneTime)
-                        AnimatedRotationWidget(
-                          onPressed: () => bind.mainUpdateTemporaryPassword(),
-                          child: Tooltip(
-                            message: translate('Refresh Password'),
-                            child: Obx(() => RotatedBox(
-                                quarterTurns: 2,
-                                child: Icon(
-                                  Icons.refresh,
-                                  color: refreshHover.value
-                                      ? textColor
-                                      : Color(0xFFDDDDDD),
-                                  size: 22,
-                                ))),
-                          ),
-                          onHover: (value) => refreshHover.value = value,
-                        ).marginOnly(right: 8, top: 4),
-                      if (!bind.isDisableSettings())
-                        InkWell(
-                          child: Tooltip(
-                            message: translate('Change Password'),
-                            child: Obx(
-                              () => Icon(
-                                Icons.edit,
-                                color: editHover.value
-                                    ? textColor
-                                    : Color(0xFFDDDDDD),
-                                size: 22,
-                              ).marginOnly(right: 8, top: 4),
-                            ),
-                          ),
-                          onTap: () => DesktopSettingPage.switch2page(
-                              SettingsTabKey.safety),
-                          onHover: (value) => editHover.value = value,
-                        ),
-                    ],
-                  ),
-                ],
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onDoubleTap: () {
+                    if (showOneTime) {
+                      Clipboard.setData(
+                          ClipboardData(text: model.serverPasswd.text));
+                      showToast(translate("Copied"));
+                    }
+                  },
+                  child: TextFormField(
+                    controller: model.serverPasswd,
+                    readOnly: true,
+                    // A password can mix digits and letters; forcing LTR keeps
+                    // the character order stable in the RTL layout.
+                    textDirection: isRtlLocale ? TextDirection.ltr : null,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
+                  ).workaroundFreezeLinuxMint(),
+                ),
               ),
-            ),
+              if (showOneTime)
+                AnimatedRotationWidget(
+                  onPressed: () => bind.mainUpdateTemporaryPassword(),
+                  child: Tooltip(
+                    message: translate('Refresh Password'),
+                    child: Obx(() => RotatedBox(
+                        quarterTurns: 2,
+                        child: Icon(
+                          Icons.refresh,
+                          color: refreshHover.value
+                              ? textColor
+                              : MyTheme.accent.withOpacity(0.55),
+                          size: 19,
+                        ))),
+                  ),
+                  onHover: (value) => refreshHover.value = value,
+                ).marginOnly(right: 6),
+              if (!bind.isDisableSettings())
+                InkWell(
+                  child: Tooltip(
+                    message: translate('Change Password'),
+                    child: Obx(
+                      () => Icon(
+                        Icons.edit,
+                        color: editHover.value
+                            ? textColor
+                            : MyTheme.accent.withOpacity(0.55),
+                        size: 19,
+                      ).marginOnly(right: 6),
+                    ),
+                  ),
+                  onTap: () =>
+                      DesktopSettingPage.switch2page(SettingsTabKey.safety),
+                  onHover: (value) => editHover.value = value,
+                ),
+            ],
           ),
         ],
       ),
