@@ -48,7 +48,35 @@ use hbb_common::config::Config;
 /// Fallback used when neither the environment nor the option store carries a
 /// server address. Empty means "use whatever upstream provides", which is the
 /// safe default for a fork that has not been pointed at a server yet.
+///
+/// **To hard-code your own server, put its host here** - the DNS name or IP,
+/// without `https://` and without a port. The port is filled in automatically
+/// (21116 for rendezvous, 21117 for relay, 21114 for the API).
+///
+/// ```
+/// pub const DEFAULT_SERVER: &str = "rd.yar.one";
+/// ```
 pub const DEFAULT_SERVER: &str = "";
+
+/// Fallback public key of the server, base64.
+///
+/// **To hard-code your own server, paste the contents of
+/// `data/id_ed25519.pub` from the server here**, on a single line.
+///
+/// ```
+/// pub const DEFAULT_SERVER_KEY: &str = "abcdef...=";
+/// ```
+///
+/// This is a *public* key. It is handed to every client by design, so it is
+/// safe to commit. What must never be committed is `data/id_ed25519` - the
+/// private key, with no extension.
+///
+/// Getting it:
+///
+/// ```sh
+/// cat data/id_ed25519.pub
+/// ```
+pub const DEFAULT_SERVER_KEY: &str = "";
 
 /// Name of the environment variable holding the rendezvous host.
 pub const ENV_SERVER: &str = "DESKYAR_SERVER";
@@ -108,7 +136,7 @@ pub fn server_key() -> String {
     if !stored.is_empty() {
         return stored;
     }
-    compile_time_server_key().unwrap_or_default()
+    compile_time_server_key().unwrap_or_else(|| DEFAULT_SERVER_KEY.to_owned())
 }
 
 /// The rendezvous host baked in at build time.
@@ -208,6 +236,42 @@ mod tests {
         if let Some(key) = compile_time_server_key() {
             assert!(!key.is_empty());
             assert_eq!(key.trim(), key);
+        }
+    }
+
+    #[test]
+    fn hard_coded_values_are_well_formed() {
+        // These are the two constants a fork is expected to edit by hand, so
+        // guard against the mistakes that are easy to make there.
+        if !DEFAULT_SERVER.is_empty() {
+            assert_eq!(DEFAULT_SERVER.trim(), DEFAULT_SERVER);
+            assert!(
+                !DEFAULT_SERVER.contains("://"),
+                "DEFAULT_SERVER must be a bare host, not a URL - the scheme is \
+                 added by the caller"
+            );
+            assert!(
+                !DEFAULT_SERVER.contains(':'),
+                "DEFAULT_SERVER must not carry a port - 21116/21117/21114 are \
+                 appended automatically"
+            );
+            assert!(
+                !DEFAULT_SERVER.ends_with('/'),
+                "DEFAULT_SERVER must not end with a slash"
+            );
+        }
+        if !DEFAULT_SERVER_KEY.is_empty() {
+            assert_eq!(DEFAULT_SERVER_KEY.trim(), DEFAULT_SERVER_KEY);
+            // A real key is 44 base64 characters (32 bytes) and ends in `=`.
+            assert!(
+                DEFAULT_SERVER_KEY.len() >= 40,
+                "DEFAULT_SERVER_KEY looks truncated - paste the whole contents \
+                 of data/id_ed25519.pub"
+            );
+            assert!(
+                !DEFAULT_SERVER_KEY.contains(' '),
+                "DEFAULT_SERVER_KEY must be one line with no spaces"
+            );
         }
     }
 }
