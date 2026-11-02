@@ -24,6 +24,17 @@ on:
 permissions:
   contents: write
 
+# One build at a time. A Windows run costs ~120 billed minutes (the runner has
+# a 2x multiplier), so leaving two queued runs to finish after a second push
+# doubles the bill for an artifact nobody will download.
+#
+# `cancel-in-progress` only cancels runs that have not started yet and are
+# superseded by a newer commit on the same ref. A release tag is deliberately
+# excluded: cancelling a tagged build would leave a half-published release.
+concurrency:
+  group: deskyar-windows-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 env:
   # VERSION and ARTIFACT_NAME are derived from Cargo.toml in the first step, so
   # the upstream-sync job can bump the version and have this workflow pick it up
