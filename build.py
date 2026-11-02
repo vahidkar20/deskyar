@@ -1037,7 +1037,7 @@ def main():
     if windows:
         # build virtual display dynamic library
         os.chdir('libs/virtual_display/dylib')
-        system2('cargo build --locked --release')
+        system2('cargo build --release')
         os.chdir('../../..')
 
         if flutter:
