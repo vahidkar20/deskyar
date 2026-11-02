@@ -185,11 +185,20 @@ class _PeerCardState extends State<_PeerCard>
                       Row(children: [
                         getOnline(isPortrait ? 4 : 8, peer.online),
                         Expanded(
-                            child: Text(
-                          peer.alias.isEmpty ? formatID(peer.id) : peer.alias,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        )),
+                          child: peer.alias.isEmpty
+                              // A bare ID is digits only, so it must be forced
+                              // left-to-right or the RTL paragraph reverses it.
+                              ? LtrIdText(
+                                  formatID(peer.id),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                )
+                              : Text(
+                                  peer.alias,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                        ),
                       ]).marginOnly(top: isPortrait ? 0 : 2),
                       Row(
                         children: [
@@ -367,11 +376,18 @@ class _PeerCardState extends State<_PeerCard>
                           child: Row(children: [
                         getOnline(8, peer.online),
                         Expanded(
-                            child: Text(
-                          peer.alias.isEmpty ? formatID(peer.id) : peer.alias,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        )),
+                          child: peer.alias.isEmpty
+                              ? LtrIdText(
+                                  formatID(peer.id),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                )
+                              : Text(
+                                  peer.alias,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                        ),
                       ]).paddingSymmetric(vertical: 8)),
                       checkBoxOrActionMoreLandscape(peer, isTile: false),
                     ],
@@ -579,7 +595,8 @@ abstract class BasePeerCard extends StatelessWidget {
       context,
       (peer.alias.isEmpty
           ? translate('Connect')
-          : '${translate('Connect')} ${peer.id}'),
+          // The isolate keeps the digits in order inside the Persian label.
+          : '${translate('Connect')} ${ltrIsolate(peer.id)}'),
     );
   }
 
@@ -829,8 +846,9 @@ abstract class BasePeerCard extends StatelessWidget {
           }
         }
 
-        deleteConfirmDialog(onSubmit,
-            '${translate('Delete')} "${peer.alias.isEmpty ? formatID(peer.id) : peer.alias}"?');
+        deleteConfirmDialog(
+            onSubmit,
+            '${translate('Delete')} "${peer.alias.isEmpty ? ltrIsolate(formatID(peer.id)) : peer.alias}"?');
       },
       padding: menuPadding,
       dismissOnClicked: true,

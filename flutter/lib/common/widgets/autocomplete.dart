@@ -361,17 +361,35 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
                                                     getOnline(
                                                         8, widget.peer.online),
                                                     Expanded(
-                                                        child: Text(
-                                                      widget.peer.alias.isEmpty
-                                                          ? formatID(
-                                                              widget.peer.id)
-                                                          : widget.peer.alias,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .titleSmall,
-                                                    )),
+                                                        child: widget.peer
+                                                                .alias
+                                                                .isEmpty
+                                                            // Digits-only ID:
+                                                            // force LTR so the
+                                                            // RTL paragraph does
+                                                            // not reverse it.
+                                                            ? LtrIdText(
+                                                                formatID(widget
+                                                                    .peer.id),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                style: Theme.of(
+                                                                        context)
+                                                                    .textTheme
+                                                                    .titleSmall,
+                                                              )
+                                                            : Text(
+                                                                widget.peer
+                                                                    .alias,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                style: Theme.of(
+                                                                        context)
+                                                                    .textTheme
+                                                                    .titleSmall,
+                                                              )),
                                                     widget.peer.alias.isNotEmpty
                                                         ? Padding(
                                                             padding:
@@ -379,13 +397,25 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
                                                                     .only(
                                                                     left: 5,
                                                                     right: 5),
-                                                            child: Text(
-                                                              "(${widget.peer.id})",
-                                                              style: greyStyle,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                            ))
+                                                            // The parentheses
+                                                            // are neutral
+                                                            // characters, so in
+                                                            // an RTL run they
+                                                            // would swap sides
+                                                            // around the number.
+                                                            child: Directionality(
+                                                              textDirection:
+                                                                  TextDirection
+                                                                      .ltr,
+                                                              child: Text(
+                                                                "(${widget.peer.id})",
+                                                                style:
+                                                                    greyStyle,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              )),
+                                                          )
                                                         : Container(),
                                                   ])),
                                               Align(

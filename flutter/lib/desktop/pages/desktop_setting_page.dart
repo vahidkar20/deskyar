@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -2533,7 +2534,12 @@ class _AboutState extends State<_About> {
 
       // Small helpers so the About card reads as a structured page instead of a
       // wall of "label: value" lines.
-      Widget aboutRow(String label, String value) => Padding(
+      //
+      // `ltr` forces a left-to-right reading direction for the value. The ID is
+      // digits only, and in the Persian (RTL) layout the bidi algorithm would
+      // otherwise paint it backwards - the user could never read their own ID
+      // correctly, nor tell whether a peer's ID was typed right.
+      Widget aboutRow(String label, String value, {bool ltr = false}) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 5.0),
             child: SelectionArea(
               child: Row(
@@ -2553,7 +2559,9 @@ class _AboutState extends State<_About> {
                     ),
                   ),
                   Expanded(
-                    child: Text(value, style: const TextStyle(fontSize: 13)),
+                    child: ltr
+                        ? LtrIdText(value, style: const TextStyle(fontSize: 13))
+                        : Text(value, style: const TextStyle(fontSize: 13)),
                   ),
                 ],
               ),
@@ -2611,7 +2619,7 @@ class _AboutState extends State<_About> {
                 ],
               ).marginOnly(bottom: 14),
               aboutRow(translate('Build Date'), buildDate),
-              aboutRow(translate('ID'), myId),
+              aboutRow(translate('ID'), myId, ltr: true),
               if (!isWeb) ...[
                 const SizedBox(height: 10),
                 Text(

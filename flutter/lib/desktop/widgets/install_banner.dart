@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/desktop/widgets/banner_slot.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
@@ -36,6 +37,21 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
   void initState() {
     super.initState();
     _eligible = _evaluate();
+    // Publish the state so the ad banner in the left pane can switch to its
+    // tall placement. Deferred to after the first frame: writing an Rx value
+    // during initState would notify listeners while the tree is still being
+    // built.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      deskyarInstallPromptVisible.value = _eligible;
+    });
+  }
+
+  @override
+  void dispose() {
+    // Leave the banner in its compact size once this widget goes away.
+    deskyarInstallPromptVisible.value = false;
+    super.dispose();
   }
 
   /// Only Windows portable runs have anything to promote. Installed builds,
@@ -70,6 +86,9 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
         path: path,
       );
       if (!mounted) return;
+      // Installation succeeded, so the prompt is no longer actionable; let the
+      // ad banner drop back to its compact square.
+      deskyarInstallPromptVisible.value = false;
       setState(() => _phase = _Phase.done);
     } catch (e) {
       if (!mounted) return;
@@ -82,6 +101,7 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
 
   void _dismiss() {
     bind.mainSetLocalOption(key: kOptionInstallBannerDismissed, value: 'Y');
+    deskyarInstallPromptVisible.value = false;
     setState(() => _eligible = false);
   }
 

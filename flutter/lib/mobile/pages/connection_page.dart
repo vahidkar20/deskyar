@@ -227,6 +227,11 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         enableSuggestions: false,
                         keyboardType: TextInputType.visiblePassword,
                         // keyboardType: TextInputType.number,
+                        // The remote ID is digits only. In the RTL (Persian) UI
+                        // the bidi algorithm would paint it reversed, so the
+                        // user would type the mirrored number back.
+                        textDirection:
+                            isRtlLocale ? TextDirection.ltr : null,
                         onChanged: (String text) {
                           _idController.id = text;
                         },

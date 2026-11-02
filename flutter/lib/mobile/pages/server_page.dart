@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../common.dart';
+import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/dialog.dart';
 import '../../consts.dart';
 import '../../models/platform_model.dart';
@@ -518,7 +519,9 @@ class ServerInfo extends StatelessWidget {
               )
             ]),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text(
+              // Digits-only ID: force LTR so the RTL paragraph does not
+              // reverse the digits.
+              LtrIdText(
                 model.serverId.value.text,
                 style: textStyleValue,
               ),

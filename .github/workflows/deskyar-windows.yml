@@ -39,6 +39,18 @@ env:
   # Baked into the binary via `option_env!` in src/deskyar.rs so installed
   # clients poll this repository for updates.
   DESKYAR_UPDATE_REPO: ${{ github.repository }}
+  # Self-hosted rendezvous (hbbs) server, baked into the binary via
+  # `option_env!` in src/deskyar_server.rs.
+  #
+  # Set these as GitHub Actions *variables* (Settings -> Secrets and
+  # variables -> Actions -> Variables), not secrets - they are not confidential:
+  #   DESKYAR_SERVER      = "rd.your-domain.com"
+  #   DESKYAR_SERVER_KEY  = "base64 of data/id_ed25519.pub from the server"
+  #
+  # When DESKYAR_SERVER is empty the build falls back to upstream's public
+  # infrastructure, which is what you do not want for an Iranian audience.
+  DESKYAR_SERVER: ${{ vars.DESKYAR_SERVER }}
+  DESKYAR_SERVER_KEY: ${{ vars.DESKYAR_SERVER_KEY }}
 
 jobs:
   # The Dart <-> Rust bridge is generated, not committed, so it has to be
@@ -205,6 +217,24 @@ jobs:
               echo "=== $f ==="; cat "$f"; echo
             done
             exit 1
+          fi
+
+      - name: Report baked-in server
+        shell: bash
+        run: |
+          # The two values below are compiled into the exe via `option_env!`.
+          # If they are empty the client silently falls back to RustDesk's
+          # public infrastructure, which is exactly what a self-hosted build
+          # must not do - so say so loudly in the log.
+          if [ -z "${DESKYAR_SERVER:-}" ]; then
+            echo "::warning::DESKYAR_SERVER is empty - this build will use RustDesk's public servers. Set the repository variable DESKYAR_SERVER to bake in your own."
+          else
+            echo "rendezvous server: $DESKYAR_SERVER"
+          fi
+          if [ -z "${DESKYAR_SERVER_KEY:-}" ]; then
+            echo "::warning::DESKYAR_SERVER_KEY is empty - the server's signatures cannot be verified. Set it to the base64 contents of data/id_ed25519.pub on the server."
+          else
+            echo "server public key: ${#DESKYAR_SERVER_KEY} characters"
           fi
 
       - name: Build DeskYar

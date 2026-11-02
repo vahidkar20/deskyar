@@ -158,6 +158,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("verify_rustdesk_password_tip", "Verify RustDesk password"),
         ("System Sound", "System sound"),
         ("Copy Fingerprint", "Copy fingerprint"),
+        ("Copy", "Copy"),
         ("no fingerprints", "No fingerprints"),
         ("resolution_original_tip", "Original resolution"),
         ("resolution_fit_local_tip", "Fit local resolution"),

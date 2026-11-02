@@ -6,6 +6,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -205,66 +206,85 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = Theme.of(context)
+        .textTheme
+        .titleLarge
+        ?.color
+        ?.withOpacity(0.55);
+
+    // Copy the bare ID, not the space-grouped display form, and strip the bidi
+    // isolates so the pasted text is exactly what the peer expects.
+    void copyId() {
+      Clipboard.setData(ClipboardData(
+          text: trimID(stripBidiIsolates(model.serverId.text))));
+      showToast(translate("Copied"));
+    }
+
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 11),
-      height: 57,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: BoxDecoration(
+        // A tinted card instead of a bare row with a 2px rule: the ID is the
+        // one piece of text a user has to read out loud to someone else, so it
+        // should look like the primary datum on the pane rather than body text.
+        color: MyTheme.accent.withOpacity(isDark ? 0.10 : 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MyTheme.accent.withOpacity(0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
-          ).marginOnly(top: 5),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 25,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          translate("ID"),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
-                        buildPopupMenu(context)
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate("Copied"));
-                      },
-                      child: TextFormField(
-                        controller: model.serverId,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
-                        ),
-                        style: TextStyle(
-                          fontSize: 22,
-                        ),
-                      ).workaroundFreezeLinuxMint(),
-                    ),
-                  )
-                ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                translate("ID"),
+                style: TextStyle(fontSize: 12, color: labelColor),
               ),
-            ),
+              buildPopupMenu(context),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onDoubleTap: copyId,
+                  child: TextFormField(
+                    controller: model.serverId,
+                    readOnly: true,
+                    // The ID is digits only. In the RTL (Persian) layout the
+                    // bidi algorithm would paint it reversed, so the user
+                    // would read "79652014" for an ID that is really
+                    // "41025697" - and could never be sure which one to
+                    // dictate. Forcing LTR makes the digits read correctly.
+                    textDirection: isRtlLocale ? TextDirection.ltr : null,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ).workaroundFreezeLinuxMint(),
+                ),
+              ),
+              // An explicit control, because "double-tap the number" is not
+              // discoverable and a mis-copied ID is the failure mode that
+              // wastes the most support time.
+              IconButton(
+                onPressed: copyId,
+                tooltip: translate("Copy"),
+                visualDensity: VisualDensity.compact,
+                iconSize: 17,
+                icon: Icon(Icons.copy_rounded,
+                    color: MyTheme.accent.withOpacity(0.85)),
+              ),
+            ],
           ),
         ],
       ),

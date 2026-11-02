@@ -1060,6 +1060,22 @@ impl Config {
                 for x in &ma.bytes()[2..] {
                     id = (id << 8) | (*x as u32);
                 }
+                // Fold the product name into the hash.
+                //
+                // Upstream derives the ID from the NIC's MAC alone, which makes
+                // it *deterministic per machine*. Two clients built from the
+                // same source - stock RustDesk and a rebrand - therefore hand
+                // out the identical ID on the same computer, and if both are
+                // registered on one self-hosted server they collide: the server
+                // sees one ID claiming to be two different public keys, and
+                // whichever registered last wins. Peers then reach the wrong
+                // client, or neither.
+                //
+                // Salting with `APP_NAME` gives each product its own identity
+                // namespace on the same hardware while keeping the property
+                // that makes the MAC derivation useful: the ID is stable across
+                // reinstalls, so a user does not have to re-dictate it.
+                id = id.wrapping_add(fnv1a32(APP_NAME.read().unwrap().as_bytes()));
                 id &= 0x1FFFFFFF;
                 log::info!("Generated id {}", id);
                 Some(id.to_string())
@@ -1067,6 +1083,58 @@ impl Config {
                 None
             }
         }
+    }
+
+    /// The ID upstream would generate for this machine: the MAC hash with no
+    /// product salt.
+    ///
+    /// Kept separate from [`Self::get_auto_id`] so the migration below can tell
+    /// an auto-generated ID apart from one the user typed in.
+    fn legacy_auto_id() -> Option<String> {
+        let ma = mac_address::get_mac_address().ok().flatten()?;
+        let mut id = 0u32;
+        for x in &ma.bytes()[2..] {
+            id = (id << 8) | (*x as u32);
+        }
+        id &= 0x1FFFFFFF;
+        Some(id.to_string())
+    }
+
+    /// Re-derive an auto-generated ID under the current product's salt.
+    ///
+    /// Returns `true` when the ID was changed.
+    ///
+    /// ## Why a migration is needed at all
+    ///
+    /// Builds that predate the salt were handed the raw MAC-derived ID, so an
+    /// installed DeskYar and a stock RustDesk on the same machine carried the
+    /// *same* ID. That is not cosmetic: on one self-hosted server the two
+    /// clients overwrite each other's registration, and peers reach whichever
+    /// one registered last.
+    ///
+    /// ## Why it is safe
+    ///
+    /// Only an ID that is *exactly* the legacy value is touched. That proves it
+    /// was never chosen by the user - a custom ID contains letters or a
+    /// different number - so re-deriving it cannot discard a deliberate
+    /// choice. Anyone who picked their own ID keeps it.
+    pub fn migrate_auto_id() -> bool {
+        let Some(legacy) = Self::legacy_auto_id() else {
+            return false;
+        };
+        let current = CONFIG.read().unwrap().id.clone();
+        if current != legacy {
+            return false;
+        }
+        let Some(salted) = Self::get_auto_id() else {
+            return false;
+        };
+        if salted == legacy {
+            return false;
+        }
+        Self::set_id(&salted);
+        log::info!("Migrated auto id {} -> {}", legacy, salted);
+        true
     }
 
     pub fn get_auto_password(length: usize) -> String {
@@ -2934,6 +3002,23 @@ impl Status {
         st.values.insert(k.to_owned(), v);
         st.store();
     }
+}
+
+/// FNV-1a 32-bit hash.
+///
+/// Used to fold the product name into the auto-generated device ID. A crypto
+/// hash would be overkill: the goal is only to make two differently-branded
+/// builds of the same source produce different IDs on the same hardware, not to
+/// resist an attacker. FNV-1a is a dozen instructions, has no dependencies, and
+/// is stable across versions - which matters, because a change here would
+/// change every user's ID.
+fn fnv1a32(bytes: &[u8]) -> u32 {
+    let mut hash: u32 = 0x811C_9DC5;
+    for byte in bytes {
+        hash ^= *byte as u32;
+        hash = hash.wrapping_mul(0x0100_0193);
+    }
+    hash
 }
 
 #[cfg(test)]

@@ -62,6 +62,10 @@ mod updater;
 /// update check cannot be reused verbatim.
 mod deskyar;
 
+/// Self-hosted server configuration. See the module docs for why the server
+/// has to be baked into the build rather than typed in at runtime.
+pub mod deskyar_server;
+
 mod ui_cm_interface;
 mod ui_interface;
 mod ui_session_interface;

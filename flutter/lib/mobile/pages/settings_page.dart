@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../common.dart';
+import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/login.dart';
 import '../../consts.dart';
@@ -1057,7 +1058,8 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 title: Text(translate("ID")),
                 value: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text(_myId),
+                  // Digits-only: force LTR or the RTL paragraph reverses it.
+                  child: LtrIdText(_myId),
                 ),
                 leading: Icon(Icons.perm_identity)),
             SettingsTile(

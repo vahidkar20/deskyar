@@ -327,12 +327,35 @@ class _ConnectionPageState extends State<ConnectionPage>
   /// UI for the remote ID TextField.
   /// Search for a peer.
   Widget _buildRemoteIDTextField(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     var w = Container(
       width: 320 + 20 * 2,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
       decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
+          borderRadius: BorderRadius.circular(16),
+          // A brand-tinted panel rather than a flat bordered box: the connect
+          // field is the one thing every user looks at first, and it should
+          // read as the focal point of the page. The tint stays light enough
+          // that the theme's own text colours remain readable, so nothing
+          // inside has to be re-coloured for light vs dark.
+          gradient: LinearGradient(
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
+            colors: isDark
+                ? [const Color(0xFF0D2A33), const Color(0xFF103B45)]
+                : [const Color(0xFFF5FCFB), const Color(0xFFE6F5F2)],
+          ),
+          border: Border.all(
+            color: MyTheme.accent.withOpacity(isDark ? 0.35 : 0.28),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? Colors.black : MyTheme.accent)
+                  .withOpacity(isDark ? 0.30 : 0.09),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ]),
       child: Ink(
         child: Column(
           children: [
@@ -398,11 +421,19 @@ class _ConnectionPageState extends State<ConnectionPage>
                   ) {
                     updateTextAndPreserveSelection(
                         fieldTextEditingController, _idController.text);
+                    // The remote ID is digits only. In the Persian (RTL) UI the
+                    // bidi algorithm would paint it reversed, so the user sees
+                    // "79652014" for a peer whose real ID is "41025697" - and
+                    // types the mirrored number back. Forcing LTR on the field
+                    // fixes the reading direction; the isolate characters keep
+                    // the surrounding RTL layout intact.
+                    final isRtl = isRtlLocale;
                     return Obx(() => TextField(
                           autocorrect: false,
                           enableSuggestions: false,
                           keyboardType: TextInputType.visiblePassword,
                           focusNode: fieldFocusNode,
+                          textDirection: isRtl ? TextDirection.ltr : null,
                           style: const TextStyle(
                             fontFamily: 'WorkSans',
                             fontSize: 22,
@@ -500,24 +531,45 @@ class _ConnectionPageState extends State<ConnectionPage>
               ],
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 13.0),
-              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                SizedBox(
-                  height: 28.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      onConnect();
-                    },
-                    child: Text(translate("Connect")),
+              padding: const EdgeInsets.only(top: 14.0),
+              child: Row(children: [
+                // Full-width primary action. Upstream used a 28px-high button
+                // pinned to the end of the row, which read as a secondary
+                // control even though it is the only thing most users press.
+                Expanded(
+                  child: SizedBox(
+                    height: 42.0,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        onConnect();
+                      },
+                      // Direction-neutral glyph: an arrow would point the
+                      // wrong way in the RTL layout.
+                      icon: const Icon(Icons.link_rounded, size: 18),
+                      label: Text(translate("Connect")),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: MyTheme.button,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  height: 28.0,
-                  width: 28.0,
+                  height: 42.0,
+                  width: 42.0,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: MyTheme.accent.withOpacity(0.45)),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: StatefulBuilder(
