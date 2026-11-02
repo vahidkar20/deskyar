@@ -104,6 +104,32 @@ jobs:
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
           echo "building $ARTIFACT_NAME"
 
+      - name: Check Cargo.lock matches Cargo.toml
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `cargo build --locked` refuses to run when Cargo.lock disagrees with
+          # the manifests, and it refuses *after* the Flutter engine download and
+          # the vcpkg install - roughly forty minutes in, with a message that
+          # points at the lock file rather than at the version bump that caused
+          # it. Bumping the version in Cargo.toml without updating Cargo.lock is
+          # the usual reason, so check that pair here, in two seconds.
+          manifest=$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')
+          locked=$(grep -A2 '^name = "rustdesk"$' Cargo.lock \
+                   | grep -m1 '^version = ' \
+                   | sed -E 's/.*"(.*)".*/\1/')
+          if [ -z "$locked" ]; then
+            echo "::error::no [[package]] name = \"rustdesk\" entry in Cargo.lock"
+            exit 1
+          fi
+          if [ "$manifest" != "$locked" ]; then
+            echo "::error::Cargo.toml says $manifest but Cargo.lock says $locked."
+            echo "Fix: change the version line of the 'rustdesk' package in Cargo.lock to $manifest,"
+            echo "or run 'cargo generate-lockfile' locally and commit the result."
+            exit 1
+          fi
+          echo "Cargo.lock is in sync ($manifest)"
+
       - name: Restore generated bridge
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
