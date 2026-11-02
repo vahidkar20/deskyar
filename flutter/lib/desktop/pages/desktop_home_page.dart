@@ -135,10 +135,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       value: gFFI.serverModel,
       child: Container(
         // Wider than upstream's 200/280: Persian strings run noticeably longer
-        // than their English equivalents, and the pane also carries the banner
-        // slot now. The incoming-only size is measured after layout, so this is
-        // only a starting point.
-        width: isIncomingOnly ? 300.0 : 232.0,
+        // than their English equivalents, and the pane also carries a 240px
+        // square banner (240 + 2x12 margins = 264). The incoming-only size is
+        // measured after layout, so this is only a starting point.
+        width: isIncomingOnly ? 300.0 : 264.0,
         color: Theme.of(context).colorScheme.background,
         child: Stack(
           children: [

@@ -2530,70 +2530,186 @@ class _AboutState extends State<_About> {
       final myId = data['myId'].toString();
       const linkStyle = TextStyle(decoration: TextDecoration.underline);
       final scrollController = ScrollController();
+
+      // Small helpers so the About card reads as a structured page instead of a
+      // wall of "label: value" lines.
+      Widget aboutRow(String label, String value) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5.0),
+            child: SelectionArea(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 92,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withOpacity(.6)),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(value, style: const TextStyle(fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+          );
+
+      Widget aboutLink(String label, String url) => InkWell(
+            onTap: () => launchUrlString(url),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6.0),
+              child: Row(
+                children: [
+                  Icon(Icons.open_in_new, size: 13, color: MyTheme.accent),
+                  const SizedBox(width: 6),
+                  Text(label,
+                      style: linkStyle.copyWith(
+                          fontSize: 13, color: MyTheme.accent)),
+                ],
+              ),
+            ),
+          );
+
       return SingleChildScrollView(
         controller: scrollController,
         child: _Card(title: translate('About RustDesk'), children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(
-                height: 8.0,
-              ),
-              SelectionArea(
-                  child: Text('${translate('Version')}: $version')
-                      .marginSymmetric(vertical: 4.0)),
-              SelectionArea(
-                  child: Text('${translate('Build Date')}: $buildDate')
-                      .marginSymmetric(vertical: 4.0)),
-              if (!isWeb)
+              Row(
+                children: [
+                  loadIcon(32),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bind.mainGetAppNameSync(),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          '${translate('Version')} $version',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.color
+                                  ?.withOpacity(.6)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ).marginOnly(bottom: 14),
+              aboutRow(translate('Build Date'), buildDate),
+              aboutRow(translate('ID'), myId),
+              if (!isWeb) ...[
+                const SizedBox(height: 10),
+                Text(
+                  translate('Fingerprint'),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withOpacity(.6)),
+                ),
+                const SizedBox(height: 3),
                 SelectionArea(
-                    child: Text('${translate('Fingerprint')}: $fingerprint')
-                        .marginSymmetric(vertical: 4.0)),
-              SelectionArea(
-                  child: Text('${translate('ID')}: $myId')
-                      .marginSymmetric(vertical: 4.0)),
-              InkWell(
-                  onTap: () {
-                    launchUrlString('https://yar.one');
-                  },
                   child: Text(
-                    translate('Privacy Statement'),
-                    style: linkStyle,
-                  ).marginSymmetric(vertical: 4.0)),
-              InkWell(
-                  onTap: () {
-                    launchUrlString('https://yar.one');
-                  },
-                  child: Text(
-                    translate('Website'),
-                    style: linkStyle,
-                  ).marginSymmetric(vertical: 4.0)),
+                    fingerprint,
+                    style: const TextStyle(
+                        fontSize: 11, height: 1.7, fontFamily: 'Consolas'),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              aboutLink(translate('Privacy Statement'), 'https://yar.one'),
+              aboutLink(translate('Website'), 'https://yar.one'),
               Container(
-                decoration: const BoxDecoration(color: Color(0xFF2c8cff)),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: AlignmentDirectional.topStart,
+                    end: AlignmentDirectional.bottomEnd,
+                    colors: [Color(0xFF0F2B38), Color(0xFF0B6F66)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 padding:
-                    const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+                    const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
                 child: SelectionArea(
-                    child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
+                          Icon(Icons.shield_outlined,
+                              size: 17, color: Colors.white.withOpacity(.8)),
+                          const SizedBox(width: 7),
                           Text(
-                            'Copyright © ${DateTime.now().toString().substring(0, 4)} Purslane Tech Pte. Ltd.\n$license',
-                            style: const TextStyle(color: Colors.white),
+                            translate('deskyar_about_title'),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15),
                           ),
-                          Text(
-                            translate('Slogan_tip'),
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white),
-                          )
                         ],
                       ),
-                    ),
-                  ],
-                )),
+                      const SizedBox(height: 10),
+                      Text(
+                        translate('deskyar_about_body'),
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(.84),
+                            fontSize: 12.5,
+                            height: 1.75),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        translate('deskyar_about_holding'),
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(.84),
+                            fontSize: 12.5,
+                            height: 1.75),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 9, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          translate('deskyar_copyright'),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12.5),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // AGPL notice, kept verbatim - only toned down visually.
+                      Text(
+                        license,
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(.45),
+                            fontSize: 10,
+                            height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
               ).marginSymmetric(vertical: 4.0)
             ],
           ).marginOnly(left: _kContentHMargin)
