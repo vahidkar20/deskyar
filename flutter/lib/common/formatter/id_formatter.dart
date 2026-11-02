@@ -34,14 +34,24 @@ class IDTextInputFormatter extends TextInputFormatter {
   }
 }
 
+/// Format an ID with a space every three digits, for readability.
+///
+/// Bidi control characters are stripped first. This is not cosmetic: an ID
+/// copied out of a [LtrIdText] - or out of any Persian sentence wrapped by
+/// [ltrIsolate] - carries U+2066/U+2069. Left in place they make
+/// `int.tryParse` fail, so the grouping below would be skipped *and* the
+/// control characters would be sent to the server as part of the ID, which
+/// never matches a real peer.
 String formatID(String id) {
-  String id2 = id.replaceAll(' ', '');
+  String id2 = stripBidiIsolates(id).replaceAll(' ', '');
   String suffix = '';
   if (id2.endsWith(r'\r') || id2.endsWith(r'/r')) {
     suffix = id2.substring(id2.length - 2, id2.length);
     id2 = id2.substring(0, id2.length - 2);
   }
-  if (int.tryParse(id2) == null) return id;
+  // A custom ID can contain letters, in which case there is nothing to group -
+  // but the isolates still have to go, or they leak into the connection.
+  if (int.tryParse(id2) == null) return stripBidiIsolates(id);
   String newID = '';
   if (id2.length <= 3) {
     newID = id2;
@@ -56,8 +66,13 @@ String formatID(String id) {
   return newID + suffix;
 }
 
+/// Reduce a displayed ID to the value that actually identifies a peer.
+///
+/// Removes the grouping spaces *and* the invisible bidi isolates, so the result
+/// can be sent over the wire as-is. Every place that copies an ID or hands one
+/// to `connect()` must go through this.
 String trimID(String id) {
-  return id.replaceAll(' ', '');
+  return stripBidiIsolates(id).replaceAll(' ', '');
 }
 
 /// Wrap a numeric ID in the Unicode LEFT-TO-RIGHT isolate so it keeps its

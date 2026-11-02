@@ -212,11 +212,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ?.color
         ?.withOpacity(0.55);
 
-    // Copy the bare ID, not the space-grouped display form, and strip the bidi
-    // isolates so the pasted text is exactly what the peer expects.
+    // Copy the bare ID: no grouping spaces and no bidi isolates, so what lands
+    // on the clipboard is exactly what the peer expects. `trimID` handles both.
     void copyId() {
-      Clipboard.setData(ClipboardData(
-          text: trimID(stripBidiIsolates(model.serverId.text))));
+      Clipboard.setData(ClipboardData(text: trimID(model.serverId.text)));
       showToast(translate("Copied"));
     }
 
