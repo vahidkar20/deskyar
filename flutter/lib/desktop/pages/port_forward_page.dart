@@ -197,7 +197,7 @@ class _PortForwardPageState extends State<PortForwardPage>
         buildTunnelInputCell(context,
             controller: localPortController,
             inputFormatters: portInputFormatter),
-        const SizedBox(
+        SizedBox(
             width: _kColumn1Width,
             child: Icon(directionalIcon(
                 context, Icons.arrow_forward_sharp, Icons.arrow_back_sharp))),
@@ -342,7 +342,7 @@ class _PortForwardPageState extends State<PortForwardPage>
                       ).marginStart(20),
                     ),
                   ),
-                  const SizedBox(
+                  SizedBox(
                       width: _kColumn1Width,
                       child: Icon(directionalIcon(
                           context, Icons.arrow_forward_sharp, Icons.arrow_back_sharp))),
