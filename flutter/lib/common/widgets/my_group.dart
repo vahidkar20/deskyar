@@ -81,7 +81,7 @@ class _MyGroupState extends State<MyGroup> {
               ],
             ),
           ),
-        ).marginOnly(right: 12.0),
+        ).marginEnd(12.0),
         Expanded(
           child: Align(
               alignment: Alignment.topLeft,
@@ -241,7 +241,7 @@ class _MyGroupState extends State<MyGroup> {
                       ),
                     ),
                   ),
-                ).marginOnly(right: 4),
+                ).marginEnd(4),
                 if (isMe) Flexible(child: Text(displayName)),
                 if (isMe)
                   Flexible(
@@ -297,7 +297,7 @@ class _MyGroupState extends State<MyGroup> {
                   height: 20,
                   child: Icon(IconFont.deviceGroupOutline,
                       color: MyTheme.accent, size: 19),
-                ).marginOnly(right: 4),
+                ).marginEnd(4),
                 Expanded(child: Text(name)),
               ],
             ).paddingSymmetric(vertical: 4),

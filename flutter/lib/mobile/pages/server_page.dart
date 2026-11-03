@@ -484,19 +484,19 @@ class ServerInfo extends StatelessWidget {
         return Row(children: [
           const Icon(Icons.warning_amber_sharp,
                   color: colorNegative, size: iconSize)
-              .marginOnly(right: iconMarginRight),
+              .marginEnd(iconMarginRight),
           Expanded(child: Text(translate('not_ready_status')))
         ]);
       } else if (serverModel.connectStatus == 0) {
         return Row(children: [
           SizedBox(width: 20, height: 20, child: CircularProgressIndicator())
-              .marginOnly(left: 4, right: iconMarginRight),
+              .marginStart(4).marginEnd(iconMarginRight),
           Expanded(child: Text(translate('connecting_status')))
         ]);
       } else {
         return Row(children: [
           const Icon(Icons.check, color: colorPositive, size: iconSize)
-              .marginOnly(right: iconMarginRight),
+              .marginEnd(iconMarginRight),
           Expanded(child: Text(translate('Ready')))
         ]);
       }
@@ -512,7 +512,7 @@ class ServerInfo extends StatelessWidget {
             Row(children: [
               const Icon(Icons.perm_identity,
                       color: Colors.grey, size: iconSize)
-                  .marginOnly(right: iconMarginRight),
+                  .marginEnd(iconMarginRight),
               Text(
                 translate('ID'),
                 style: textStyleHeading,
@@ -531,11 +531,11 @@ class ServerInfo extends StatelessWidget {
                   onPressed: () {
                     copyToClipboard(model.serverId.value.text.trim());
                   })
-            ]).marginOnly(left: 39, bottom: 10),
+            ]).marginOnly(bottom: 10).marginStart(39),
             // Password
             Row(children: [
               const Icon(Icons.lock_outline, color: Colors.grey, size: iconSize)
-                  .marginOnly(right: iconMarginRight),
+                  .marginEnd(iconMarginRight),
               Text(
                 translate('One-time Password'),
                 style: textStyleHeading,
@@ -561,7 +561,7 @@ class ServerInfo extends StatelessWidget {
                                 model.serverPasswd.value.text.trim());
                           })
                     ])
-            ]).marginOnly(left: 40, bottom: 15),
+            ]).marginOnly(bottom: 15).marginStart(40),
             ConnectionStateNotification()
           ],
         ));
@@ -628,7 +628,7 @@ class _PermissionCheckerState extends State<PermissionChecker> {
                   serverModel.toggleAudio,
                   enabled: !permissionChangeLocked)
               : Row(children: [
-                  Icon(Icons.info_outline).marginOnly(right: 15),
+                  Icon(Icons.info_outline).marginEnd(15),
                   Expanded(
                       child: Text(
                     translate("android_version_audio_tip"),
@@ -768,7 +768,7 @@ class ConnectionManager extends StatelessWidget {
           child: Text(translate("Dismiss")),
           onPressed: () {
             serverModel.sendLoginResponse(client, false);
-          }).marginOnly(right: 15),
+          }).marginEnd(15),
       if (serverModel.approveMode != 'password')
         ElevatedButton.icon(
             icon: const Icon(Icons.check),
@@ -791,7 +791,7 @@ class ConnectionManager extends StatelessWidget {
             child: Text(translate("Dismiss")),
             onPressed: () {
               serverModel.handleVoiceCall(client, false);
-            }).marginOnly(right: 15),
+            }).marginEnd(15),
         if (serverModel.approveMode != 'password')
           ElevatedButton.icon(
               icon: const Icon(Icons.check),
@@ -822,7 +822,7 @@ class PaddingCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(0, 5, 0, 8),
               child: Row(
                 children: [
-                  titleIcon?.marginOnly(right: 10) ?? const SizedBox.shrink(),
+                  titleIcon?.marginEnd(10) ?? const SizedBox.shrink(),
                   Expanded(
                     child: Text(title!,
                         style: Theme.of(context)

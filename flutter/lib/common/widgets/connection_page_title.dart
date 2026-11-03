@@ -17,7 +17,7 @@ Widget getConnectionPageTitle(BuildContext context, bool isWeb) {
                 .textTheme
                 .titleLarge
                 ?.merge(TextStyle(height: 1)),
-          ).marginOnly(right: 4),
+          ).marginEnd(4),
           Tooltip(
             waitDuration: Duration(milliseconds: 300),
             message: translate(isWeb ? "web_id_input_tip" : "id_input_tip"),

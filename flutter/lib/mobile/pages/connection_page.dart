@@ -229,15 +229,16 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         // keyboardType: TextInputType.number,
                         // The remote ID is digits only. In the RTL (Persian) UI
                         // the bidi algorithm would paint it reversed, so the
-                        // user would type the mirrored number back.
-                        textDirection:
-                            isRtlLocale ? TextDirection.ltr : null,
+                        // user would type the mirrored number back. LTR is
+                        // forced in every locale - digits are LTR regardless of
+                        // the surrounding paragraph direction.
+                        textDirection: kNumberTextDirection,
+                        textAlign: isRtlLocale ? TextAlign.right : TextAlign.start,
                         onChanged: (String text) {
                           _idController.id = text;
                         },
                         style: const TextStyle(
-                          fontFamily: 'WorkSans',
-                          fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                           fontSize: 30,
                           color: MyTheme.idColor,
                         ),

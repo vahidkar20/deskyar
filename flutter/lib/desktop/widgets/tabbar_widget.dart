@@ -643,7 +643,7 @@ class _DesktopTabState extends State<DesktopTab>
                             child: const Text(
                               "DeskYar",
                               style: TextStyle(fontSize: 13),
-                            ).marginOnly(left: 2))
+                            ).marginStart(2))
                       ]).marginOnly(
                         left: 5,
                         right: 10,
@@ -693,7 +693,7 @@ class _DesktopTabState extends State<DesktopTab>
           showClose: showClose,
           onClose: onWindowCloseButton,
           labelGetter: labelGetter,
-        ).paddingOnly(left: 10)
+        ).paddingStart(10)
       ],
     );
   }
@@ -1080,7 +1080,7 @@ class _TabState extends State<_Tab> with RestorationMixin {
           color: isSelected
               ? MyTheme.tabbar(context).selectedTabIconColor
               : MyTheme.tabbar(context).unSelectedTabIconColor,
-        ).paddingOnly(right: 5));
+        ).paddingEnd(5));
     final labelWidget = Obx(() {
       return ConstrainedBox(
           constraints: BoxConstraints(maxWidth: widget.maxLabelWidth ?? 200),
@@ -1184,7 +1184,7 @@ class _TabState extends State<_Tab> with RestorationMixin {
                                   tabSelected: isSelected,
                                   onClose: () => widget.onClose(),
                                 )))
-                          ])).paddingOnly(left: 10, right: 5),
+                          ])).paddingStart(10).paddingEnd(5),
                   Offstage(
                     offstage: !showDivider,
                     child: VerticalDivider(
@@ -1244,7 +1244,7 @@ class _CloseButton extends StatelessWidget {
                 return Offstage();
               }
             }())
-        .paddingOnly(left: 10);
+        .paddingStart(10);
   }
 }
 

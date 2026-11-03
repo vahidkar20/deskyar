@@ -99,7 +99,7 @@ customImageQualityWidget(
               children: [
                 Expanded(
                   child: Align(
-                    alignment: Alignment.centerRight,
+                    alignment: AlignmentDirectional.centerEnd,
                     child: Checkbox(
                       value: moreQualityChecked.value,
                       onChanged: onMoreChanged,
@@ -388,7 +388,7 @@ class TrackpadSpeedWidgetState extends State<TrackpadSpeedWidget> {
                           EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
                     ),
                   ),
-                ).marginOnly(right: 8.0),
+                ).marginEnd(8.0),
                 Text(
                   '%',
                   style: const TextStyle(fontSize: 15),

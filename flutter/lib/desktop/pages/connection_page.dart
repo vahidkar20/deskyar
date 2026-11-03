@@ -2,13 +2,13 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
 import 'package:flutter_hbb/consts.dart';
+import 'package:flutter_hbb/desktop/widgets/anchor_menu.dart';
 import 'package:flutter_hbb/desktop/widgets/install_banner.dart';
-import 'package:flutter_hbb/desktop/widgets/popup_menu.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -20,7 +20,6 @@ import '../../common/formatter/id_formatter.dart';
 import '../../common/widgets/peer_tab_page.dart';
 import '../../common/widgets/autocomplete.dart';
 import '../../models/platform_model.dart';
-import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 
 class OnlineStatusWidget extends StatefulWidget {
   const OnlineStatusWidget({Key? key, this.onSvcStatusChanged})
@@ -66,7 +65,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                   child: Text(translate("Start service"),
                       style: TextStyle(
                           decoration: TextDecoration.underline, fontSize: em)))
-              .marginOnly(left: em),
+              .marginStart(em),
         );
 
     // Upstream nags "set up your own server" here. DeskYar replaces it with a
@@ -127,12 +126,13 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                 basicWidget(),
                 Align(
                         child: startServiceWidget(),
-                        alignment: Alignment.centerLeft)
-                    .marginOnly(top: 2.0, left: 22.0),
+                        alignment: AlignmentDirectional.centerStart)
+                    .marginOnly(top: 2.0)
+                    .paddingStart(22.0),
               ],
             )
           : basicWidget()),
-    ).paddingOnly(right: isIncomingOnly ? 8 : 0);
+    ).paddingStart(isIncomingOnly ? 8 : 0);
   }
 
   _buildConnStatusMsg() {
@@ -186,6 +186,10 @@ class _ConnectionPageState extends State<ConnectionPage>
   final FocusNode _idFocusNode = FocusNode();
   final TextEditingController _idEditingController = TextEditingController();
 
+  /// Mirrors "the ID field is not empty" so the primary button can disable
+  /// itself without rebuilding the whole page on every keystroke.
+  final RxBool _canConnect = false.obs;
+
   String selectedConnectionType = 'Connect';
 
   bool isWindowMinimized = false;
@@ -195,19 +199,20 @@ class _ConnectionPageState extends State<ConnectionPage>
   // https://github.com/flutter/flutter/issues/157244
   Iterable<Peer> _autocompleteOpts = [];
 
-  final _menuOpen = false.obs;
-
   @override
   void initState() {
     super.initState();
     _allPeersLoader.init(setState);
     _idFocusNode.addListener(onFocusChanged);
+    _canConnect.value = _idController.id.isNotEmpty;
     if (_idController.text.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final lastRemoteId = await bind.mainGetLastRemoteId();
+        if (!mounted) return;
         if (lastRemoteId != _idController.id) {
           setState(() {
             _idController.id = lastRemoteId;
+            _canConnect.value = _idController.id.isNotEmpty;
           });
         }
       });
@@ -299,10 +304,10 @@ class _ConnectionPageState extends State<ConnectionPage>
               ],
             ).marginOnly(top: 22),
             SizedBox(height: 12),
-            Divider().paddingOnly(right: 12),
+            Divider().paddingStart(12),
             Expanded(child: PeerTabPage()),
           ],
-        ).paddingOnly(left: 12.0)),
+        ).paddingEnd(12.0)),
         if (!isOutgoingOnly) const Divider(height: 1),
         if (!isOutgoingOnly) OnlineStatusWidget()
       ],
@@ -316,12 +321,52 @@ class _ConnectionPageState extends State<ConnectionPage>
       bool isViewCamera = false,
       bool isTerminal = false,
       bool isTcpTunneling = false}) {
-    var id = _idController.id;
+    // `id` strips the grouping spaces and any bidi isolates that came in with
+    // a pasted value. Handing the formatted text to `connect` would send
+    // "205 912 679" instead of "205912679" and never match a peer.
+    final id = _idController.id;
+    if (id.isEmpty) {
+      showToast(translate('Please enter the remote ID'));
+      _idFocusNode.requestFocus();
+      return;
+    }
     connect(context, id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
         isTerminal: isTerminal,
         isTcpTunneling: isTcpTunneling);
+  }
+
+  /// Put [raw] into both controllers with a valid caret.
+  ///
+  /// The field controller is the one RawAutocomplete listens to, so it has to be
+  /// updated through `value` (text + selection together) rather than `text`,
+  /// which would leave the caret at -1 and send the next keystroke to the start
+  /// of the string.
+  void _applyId(String raw) {
+    final id = trimID(raw);
+    _idController.id = id;
+    final formatted = formatID(id);
+    _idEditingController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+    _canConnect.value = id.isNotEmpty;
+  }
+
+  /// Paste an ID from the clipboard, stripping grouping spaces and any bidi
+  /// marks a chat client may have added. Support staff hand IDs out over chat,
+  /// so this is the fastest path from "here is my ID" to a connection.
+  Future<void> _pasteId() async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final id = trimID(data?.text ?? '');
+      if (id.isEmpty) return;
+      _applyId(id);
+      _idFocusNode.requestFocus();
+    } catch (_) {
+      // Clipboard access can fail when another process holds it; ignore.
+    }
   }
 
   /// UI for the remote ID TextField.
@@ -330,7 +375,7 @@ class _ConnectionPageState extends State<ConnectionPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     var w = Container(
       width: 320 + 20 * 2,
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           // A brand-tinted panel rather than a flat bordered box: the connect
@@ -359,7 +404,7 @@ class _ConnectionPageState extends State<ConnectionPage>
       child: Ink(
         child: Column(
           children: [
-            getConnectionPageTitle(context, false).marginOnly(bottom: 15),
+            getConnectionPageTitle(context, false).marginOnly(bottom: 12),
             Row(
               children: [
                 Expanded(
@@ -421,22 +466,24 @@ class _ConnectionPageState extends State<ConnectionPage>
                   ) {
                     updateTextAndPreserveSelection(
                         fieldTextEditingController, _idController.text);
-                    // The remote ID is digits only. In the Persian (RTL) UI the
-                    // bidi algorithm would paint it reversed, so the user sees
-                    // "79652014" for a peer whose real ID is "41025697" - and
-                    // types the mirrored number back. Forcing LTR on the field
-                    // fixes the reading direction; the isolate characters keep
-                    // the surrounding RTL layout intact.
-                    final isRtl = isRtlLocale;
+                    // The remote ID is digits only, grouped with spaces by
+                    // IDTextInputFormatter. In the Persian (RTL) UI the bidi
+                    // algorithm would paint those groups right-to-left, so the
+                    // user would type 519502 and watch "205 915" appear. The
+                    // field is pinned to LTR in every locale - numbers read
+                    // left-to-right even in an RTL page - while the alignment
+                    // follows the layout direction so the card keeps its RTL
+                    // reading order.
                     return Obx(() => TextField(
                           autocorrect: false,
                           enableSuggestions: false,
                           keyboardType: TextInputType.visiblePassword,
                           focusNode: fieldFocusNode,
-                          textDirection: isRtl ? TextDirection.ltr : null,
+                          textDirection: kNumberTextDirection,
+                          textAlign:
+                              isRtlLocale ? TextAlign.right : TextAlign.start,
                           style: const TextStyle(
-                            fontFamily: 'WorkSans',
-                            fontSize: 22,
+                                    fontSize: 20,
                             height: 1.4,
                           ),
                           maxLines: 1,
@@ -448,12 +495,26 @@ class _ConnectionPageState extends State<ConnectionPage>
                               hintText: _idInputFocused.value
                                   ? null
                                   : translate('Enter Remote ID'),
+                              suffixIcon: IconButton(
+                                onPressed: _pasteId,
+                                tooltip: translate('Paste'),
+                                iconSize: 17,
+                                visualDensity: VisualDensity.compact,
+                                icon: Icon(
+                                  Icons.content_paste_rounded,
+                                  color: MyTheme.accent.withOpacity(0.8),
+                                ),
+                              ),
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 15, vertical: 13)),
                           controller: fieldTextEditingController,
                           inputFormatters: [IDTextInputFormatter()],
                           onChanged: (v) {
                             _idController.id = v;
+                            final ready = _idController.id.isNotEmpty;
+                            if (ready != _canConnect.value) {
+                              _canConnect.value = ready;
+                            }
                           },
                           onSubmitted: (_) {
                             onConnect();
@@ -463,6 +524,7 @@ class _ConnectionPageState extends State<ConnectionPage>
                   onSelected: (option) {
                     setState(() {
                       _idController.id = option.id;
+                      _canConnect.value = _idController.id.isNotEmpty;
                       FocusScope.of(context).unfocus();
                     });
                   },
@@ -481,7 +543,10 @@ class _ConnectionPageState extends State<ConnectionPage>
                     maxHeight = maxHeight.clamp(0, 200);
 
                     return Align(
-                      alignment: Alignment.topLeft,
+                      // Directional so the suggestion list lines up with the
+                      // field's start edge in RTL instead of hanging off the
+                      // opposite side.
+                      alignment: AlignmentDirectional.topStart,
                       child: Container(
                           decoration: BoxDecoration(
                             boxShadow: [
@@ -538,115 +603,94 @@ class _ConnectionPageState extends State<ConnectionPage>
                 // control even though it is the only thing most users press.
                 Expanded(
                   child: SizedBox(
-                    height: 42.0,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        onConnect();
-                      },
-                      // Direction-neutral glyph: an arrow would point the
-                      // wrong way in the RTL layout.
-                      icon: const Icon(Icons.link_rounded, size: 18),
-                      label: Text(translate("Connect")),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: MyTheme.button,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    height: 44.0,
+                    child: Obx(() {
+                      final ready = _canConnect.value;
+                      return ElevatedButton.icon(
+                        onPressed: ready ? () => onConnect() : null,
+                        // Direction-neutral glyph: an arrow would point the
+                        // wrong way in the RTL layout.
+                        icon: const Icon(Icons.link_rounded, size: 18),
+                        label: Text(translate("Connect")),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: MyTheme.button,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              MyTheme.button.withOpacity(0.32),
+                          disabledForegroundColor:
+                              Colors.white.withOpacity(0.55),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        textStyle: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                      );
+                    }),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  height: 42.0,
-                  width: 42.0,
-                  decoration: BoxDecoration(
-                    border:
-                        Border.all(color: MyTheme.accent.withOpacity(0.45)),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: StatefulBuilder(
-                      builder: (context, setState) {
-                        var offset = Offset(0, 0);
-                        return Obx(() => InkWell(
-                              child: _menuOpen.value
-                                  ? Transform.rotate(
-                                      angle: pi,
-                                      child: Icon(IconFont.more, size: 14),
-                                    )
-                                  : Icon(IconFont.more, size: 14),
-                              onTapDown: (e) {
-                                offset = e.globalPosition;
-                              },
-                              onTap: () async {
-                                _menuOpen.value = true;
-                                final x = offset.dx;
-                                final y = offset.dy;
-                                await mod_menu
-                                    .showMenu(
-                                  context: context,
-                                  position: RelativeRect.fromLTRB(x, y, x, y),
-                                  items: [
-                                    (
-                                      'Transfer file',
-                                      () => onConnect(isFileTransfer: true)
-                                    ),
-                                    (
-                                      'View camera',
-                                      () => onConnect(isViewCamera: true)
-                                    ),
-                                    (
-                                      '${translate('Terminal')} (beta)',
-                                      () => onConnect(isTerminal: true)
-                                    ),
-                                    // `connect` routes this through the
-                                    // desktop path only; the peer card gates
-                                    // it the same way.
-                                    if (isDesktop)
-                                      (
-                                        'TCP tunneling',
-                                        () => onConnect(isTcpTunneling: true)
-                                      ),
-                                  ]
-                                      .map((e) => MenuEntryButton<String>(
-                                            childBuilder: (TextStyle? style) =>
-                                                Text(
-                                              translate(e.$1),
-                                              style: style,
-                                            ),
-                                            proc: () => e.$2(),
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal:
-                                                    kDesktopMenuPadding.left),
-                                            dismissOnClicked: true,
-                                          ))
-                                      .map((e) => e.build(
-                                          context,
-                                          const MenuConfig(
-                                              commonColor: CustomPopupMenuTheme
-                                                  .commonColor,
-                                              height:
-                                                  CustomPopupMenuTheme.height,
-                                              dividerHeight:
-                                                  CustomPopupMenuTheme
-                                                      .dividerHeight)))
-                                      .expand((i) => i)
-                                      .toList(),
-                                  elevation: 8,
-                                )
-                                    .then((_) {
-                                  _menuOpen.value = false;
-                                });
-                              },
-                            ));
-                      },
+                // Secondary actions (file transfer, camera, terminal, tunnel).
+                // The menu is anchored to this button rather than to the tap
+                // position, so it always opens directly under it - see
+                // widgets/anchor_menu.dart for why the stock showMenu call
+                // landed in the middle of the window.
+                AnchorMenu(
+                  width: 210,
+                  tooltip: translate('More'),
+                  items: [
+                    AnchorMenuItem(
+                      label: translate('Transfer file'),
+                      icon: Icons.drive_folder_upload_rounded,
+                      onTap: () => onConnect(isFileTransfer: true),
+                    ),
+                    AnchorMenuItem(
+                      label: translate('View camera'),
+                      icon: Icons.videocam_outlined,
+                      onTap: () => onConnect(isViewCamera: true),
+                    ),
+                    AnchorMenuItem(
+                      label: '${translate('Terminal')} (beta)',
+                      icon: Icons.terminal_rounded,
+                      onTap: () => onConnect(isTerminal: true),
+                    ),
+                    // `connect` routes this through the desktop path only; the
+                    // peer card gates it the same way.
+                    if (isDesktop)
+                      AnchorMenuItem(
+                        label: translate('TCP tunneling'),
+                        icon: Icons.cable_rounded,
+                        onTap: () => onConnect(isTcpTunneling: true),
+                      ),
+                  ],
+                  childBuilder: (context, open) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOut,
+                    height: 44.0,
+                    width: 44.0,
+                    decoration: BoxDecoration(
+                      color: open
+                          ? MyTheme.accent.withOpacity(0.14)
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: MyTheme.accent.withOpacity(open ? 0.75 : 0.45),
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: AnimatedRotation(
+                        turns: open ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        child: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 22,
+                          color: MyTheme.accent,
+                        ),
+                      ),
                     ),
                   ),
                 ),

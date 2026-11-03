@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/desktop/widgets/banner_slot.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
@@ -37,21 +36,6 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
   void initState() {
     super.initState();
     _eligible = _evaluate();
-    // Publish the state so the ad banner in the left pane can switch to its
-    // tall placement. Deferred to after the first frame: writing an Rx value
-    // during initState would notify listeners while the tree is still being
-    // built.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      deskyarInstallPromptVisible.value = _eligible;
-    });
-  }
-
-  @override
-  void dispose() {
-    // Leave the banner in its compact size once this widget goes away.
-    deskyarInstallPromptVisible.value = false;
-    super.dispose();
   }
 
   /// Only Windows portable runs have anything to promote. Installed builds,
@@ -86,9 +70,6 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
         path: path,
       );
       if (!mounted) return;
-      // Installation succeeded, so the prompt is no longer actionable; let the
-      // ad banner drop back to its compact square.
-      deskyarInstallPromptVisible.value = false;
       setState(() => _phase = _Phase.done);
     } catch (e) {
       if (!mounted) return;
@@ -101,7 +82,6 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
 
   void _dismiss() {
     bind.mainSetLocalOption(key: kOptionInstallBannerDismissed, value: 'Y');
-    deskyarInstallPromptVisible.value = false;
     setState(() => _eligible = false);
   }
 
@@ -114,11 +94,11 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 16, 12, 0),
-      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: AlignmentDirectional.centerStart,
+          end: AlignmentDirectional.centerEnd,
           colors: [accent.withOpacity(0.16), accent.withOpacity(0.03)],
         ),
         borderRadius: BorderRadius.circular(12),
@@ -131,7 +111,7 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
             padding: const EdgeInsets.only(top: 2),
             child: loadIcon(38),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,7 +122,7 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
                     'Install DeskYar on this computer',
                   ),
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: fg,
                   ),
@@ -157,7 +137,7 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
                         'service so it stays reachable after a reboot.',
                   ),
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     height: 1.45,
                     color: fg?.withOpacity(0.72),
                   ),
@@ -236,7 +216,7 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
                 child: Text(
                   _error,
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: fg?.withOpacity(0.6),
                   ),
                 ),

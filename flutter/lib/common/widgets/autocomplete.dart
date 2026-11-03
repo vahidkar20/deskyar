@@ -323,9 +323,9 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
                         decoration: BoxDecoration(
                           color: str2color(
                               '${widget.peer.id}${widget.peer.platform}', 0x7f),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(tileRadius),
-                            bottomLeft: Radius.circular(tileRadius),
+                          borderRadius: BorderRadiusDirectional.only(
+                            topStart: Radius.circular(tileRadius),
+                            bottomStart: Radius.circular(tileRadius),
                           ),
                         ),
                         alignment: Alignment.center,
@@ -337,12 +337,12 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
                                 size: 30))),
                     Expanded(
                       child: Container(
-                          padding: EdgeInsets.only(left: 10),
+                          padding: EdgeInsetsDirectional.only(start: 10),
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.background,
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(tileRadius),
-                              bottomRight: Radius.circular(tileRadius),
+                            borderRadius: BorderRadiusDirectional.only(
+                              topEnd: Radius.circular(tileRadius),
+                              bottomEnd: Radius.circular(tileRadius),
                             ),
                           ),
                           child: Row(
@@ -419,7 +419,7 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
                                                         : Container(),
                                                   ])),
                                               Align(
-                                                alignment: Alignment.centerLeft,
+                                                alignment: AlignmentDirectional.centerStart,
                                                 child: Text(
                                                   name,
                                                   style: greyStyle,

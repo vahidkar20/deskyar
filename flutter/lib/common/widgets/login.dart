@@ -963,7 +963,8 @@ Future<bool?> _openLoginDialog() async {
         ).marginOnly(top: 10, right: 15),
       ],
     );
-    final titlePadding = EdgeInsets.fromLTRB(MyTheme.dialogPadding, 0, 0, 0);
+    final titlePadding =
+        EdgeInsetsDirectional.only(start: MyTheme.dialogPadding);
 
     return CustomAlertDialog(
       title: title,

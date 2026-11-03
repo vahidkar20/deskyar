@@ -116,7 +116,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
               value: option.value,
               onChanged: (v) =>
                   btnEnabled.value ? option.value = !option.value : null,
-            ).marginOnly(right: 8),
+            ).marginEnd(8),
           ),
           Expanded(
             child: Text(translate(label)),
@@ -141,7 +141,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
               Row(
                 children: [
                   Text('${translate('Installation Path')}:')
-                      .marginOnly(right: 10),
+                      .marginEnd(10),
                   Expanded(
                     child: TextField(
                       controller: controller,
@@ -149,7 +149,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                       decoration: InputDecoration(
                         contentPadding: EdgeInsets.all(0.75 * em),
                       ),
-                    ).workaroundFreezeLinuxMint().marginOnly(right: 10),
+                    ).workaroundFreezeLinuxMint().marginEnd(10),
                   ),
                   Obx(
                     () => OutlinedButton.icon(
@@ -178,7 +178,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                   child: Row(
                     children: [
                       Icon(Icons.info_outline_rounded, size: 32)
-                          .marginOnly(right: 16),
+                          .marginEnd(16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -192,7 +192,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                               message: 'https://yar.one',
                               child: Row(children: [
                                 Icon(Icons.launch_outlined, size: 16)
-                                    .marginOnly(right: 5),
+                                    .marginEnd(5),
                                 Text(
                                   translate('End-user license agreement'),
                                   style: const TextStyle(
@@ -210,7 +210,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                   Expanded(
                     // NOT use Offstage to wrap LinearProgressIndicator
                     child: Obx(() => showProgress.value
-                        ? LinearProgressIndicator().marginOnly(right: 10)
+                        ? LinearProgressIndicator().marginEnd(10)
                         : Offstage()),
                   ),
                   Obx(
@@ -220,7 +220,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                       onPressed:
                           btnEnabled.value ? () => windowManager.close() : null,
                       style: buttonStyle,
-                    ).marginOnly(right: 10),
+                    ).marginEnd(10),
                   ),
                   Obx(
                     () => ElevatedButton.icon(
@@ -240,7 +240,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                             ? () => bind.installRunWithoutInstall()
                             : null,
                         style: buttonStyle,
-                      ).marginOnly(left: 10),
+                      ).marginStart(10),
                     ),
                   ),
                 ],

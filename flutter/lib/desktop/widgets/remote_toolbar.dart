@@ -2574,7 +2574,7 @@ class _KeyboardMenu extends StatelessWidget {
       if (ffi.ffiModel.keyboard) {
         final enabled = !ffi.ffiModel.viewOnly;
         final trackpad = MenuButton(
-          child: Text(translate('Trackpad speed')).paddingOnly(left: 26.0),
+          child: Text(translate('Trackpad speed')).paddingStart(26.0),
           onPressed: enabled ? () => trackpadSpeedDialog(sessionId, ffi) : null,
           ffi: ffi,
         );
@@ -2752,7 +2752,7 @@ class _KeyboardMenu extends StatelessWidget {
             },
             ffi: ffi,
             child: Text(translate('Show my cursor')))
-        .paddingOnly(left: 26.0);
+        .paddingStart(26.0);
   }
 
   mobileActions() {
@@ -3619,7 +3619,7 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
                   ),
                 ),
                 hoverColor: _ToolbarTheme.redColor,
-              ).paddingOnly(left: iconSize / 2);
+              ).paddingStart(iconSize / 2);
             }
           })
       ],

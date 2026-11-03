@@ -579,7 +579,7 @@ class _FileManagerViewState extends State<FileManagerView> {
                       Text(isLocal
                               ? translate("Local Computer")
                               : translate("Remote Computer"))
-                          .marginOnly(left: 8.0)
+                          .marginStart(8.0)
                     ],
                   ),
                   preferredSize: Size(double.infinity, 70))
@@ -924,8 +924,8 @@ class _FileManagerViewState extends State<FileManagerView> {
                         style: TextStyle(
                           color: Colors.white,
                         ),
-                      ).marginOnly(left: 8),
-                    )).marginOnly(left: 16),
+                      ).marginStart(8),
+                    )).marginStart(16),
               Obx(() => ElevatedButton.icon(
                     style: ButtonStyle(
                       padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
@@ -1482,7 +1482,7 @@ class _FileManagerViewState extends State<FileManagerView> {
                         name,
                         style: headerTextStyle,
                         overflow: TextOverflow.ellipsis,
-                      ).marginOnly(left: 4),
+                      ).marginStart(4),
                     ),
                     ascending.value != null
                         ? Icon(
@@ -1530,7 +1530,9 @@ class _FileManagerViewState extends State<FileManagerView> {
                     },
                     child: BreadCrumb(
                       items: items,
-                      divider: const Icon(Icons.keyboard_arrow_right_rounded),
+                      divider: Icon(directionalIcon(context,
+                          Icons.keyboard_arrow_right_rounded,
+                          Icons.keyboard_arrow_left_rounded)),
                       overflow: ScrollableOverflow(
                         controller: _breadCrumbScroller,
                       ),

@@ -99,22 +99,48 @@ String stripBidiIsolates(String text) {
   return text.replaceAll('\u2066', '').replaceAll('\u2069', '');
 }
 
+/// The locale the UI is actually running in.
+///
+/// `Get.locale` is not reliable here: `GetMaterialApp` receives an explicit
+/// `locale:` argument but does not necessarily publish it back through GetX
+/// before the first frame, so reading it alone can answer "not RTL" while the
+/// whole app is laid out right-to-left. `getDeskyarLocale` writes the resolved
+/// value here, which makes [isRtlLocale] independent of GetX's timing.
+Locale deskyarUiLocale = const Locale('fa');
+
 /// Whether the current UI locale is right-to-left.
+///
+/// Used only for *layout* decisions (isolates, alignment). Anything that
+/// formats a number must not depend on it - see [kNumberTextDirection].
 bool get isRtlLocale {
-  final code = Get.locale?.languageCode ?? '';
+  final code = deskyarUiLocale.languageCode.isNotEmpty
+      ? deskyarUiLocale.languageCode
+      : (Get.locale?.languageCode ?? '');
   return const ['fa', 'ar', 'he', 'ur', 'ps', 'sd', 'yi'].contains(code);
 }
+
+/// Text direction for anything that shows or edits a number.
+///
+/// Always left-to-right, in every locale. The Unicode bidi algorithm orders a
+/// digit run by the *paragraph* direction, so an ID such as `205 912 679` -
+/// grouped with spaces by [formatID] - is painted `679 912 205` inside an RTL
+/// paragraph, and every keystroke lands in the wrong visual place. Pinning the
+/// field to LTR is the only fix that does not depend on locale detection.
+const TextDirection kNumberTextDirection = TextDirection.ltr;
 
 /// Render an ID so its digits always read left-to-right.
 ///
 /// ## The bug this fixes
 ///
-/// DeskYar runs in Persian, so the whole app is laid out right-to-left. The
-/// Unicode bidirectional algorithm treats a run of digits inside an RTL
-/// paragraph as *right-to-left* text, because digits carry the "EN" (European
-/// Number) class and the resolved paragraph direction is RTL. The result is
-/// that `41025697` is painted as `79652014` - the digits are visually
-/// reversed while the underlying string is untouched.
+/// DeskYar runs in Persian, so the whole app is laid out right-to-left. An ID
+/// is grouped into three-digit blocks by [formatID] (`410 256 978`), and the
+/// spaces between those blocks are *neutral* characters: the bidi algorithm
+/// resolves them to the paragraph direction, which splits the ID into three
+/// separate number runs and lays them out right-to-left. The digits inside each
+/// block keep their order, but the blocks swap places, so `410 256 978` is
+/// painted `978 256 410`. An ungrouped ID (`410256978`) is a single run and
+/// survives intact - which is why the bug only shows up in the formatted
+/// fields.
 ///
 /// That is not cosmetic. A user who reads their own ID off the screen types
 /// the reversed number, the other side never connects, and neither party can

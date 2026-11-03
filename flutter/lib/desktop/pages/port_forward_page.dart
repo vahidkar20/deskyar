@@ -151,7 +151,7 @@ class _PortForwardPageState extends State<PortForwardPage>
 
   buildTunnel(BuildContext context) {
     text(String label) => Expanded(
-        child: Text(translate(label)).marginOnly(left: _kTextLeftMargin));
+        child: Text(translate(label)).marginStart(_kTextLeftMargin));
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -198,7 +198,9 @@ class _PortForwardPageState extends State<PortForwardPage>
             controller: localPortController,
             inputFormatters: portInputFormatter),
         const SizedBox(
-            width: _kColumn1Width, child: Icon(Icons.arrow_forward_sharp)),
+            width: _kColumn1Width,
+            child: Icon(directionalIcon(
+                context, Icons.arrow_forward_sharp, Icons.arrow_back_sharp))),
         buildTunnelInputCell(context,
             controller: remoteHostController, hint: 'localhost'),
         buildTunnelInputCell(context,
@@ -252,7 +254,7 @@ class _PortForwardPageState extends State<PortForwardPage>
   Widget buildTunnelDataRow(BuildContext context, _PortForward pf, int index) {
     text(String label) => Expanded(
         child: Text(label, style: const TextStyle(fontSize: 20))
-            .marginOnly(left: _kTextLeftMargin));
+            .marginStart(_kTextLeftMargin));
 
     return Container(
       height: _kRowHeight,
@@ -295,12 +297,12 @@ class _PortForwardPageState extends State<PortForwardPage>
 
   buildRdp(BuildContext context) {
     text1(String label) => Expanded(
-        child: Text(translate(label)).marginOnly(left: _kTextLeftMargin));
+        child: Text(translate(label)).marginStart(_kTextLeftMargin));
     text2(String label) => Expanded(
             child: Text(
           label,
           style: const TextStyle(fontSize: 20),
-        ).marginOnly(left: _kTextLeftMargin));
+        ).marginStart(_kTextLeftMargin));
     return Theme(
       data: Theme.of(context)
           .copyWith(colorScheme: Theme.of(context).colorScheme),
@@ -327,7 +329,7 @@ class _PortForwardPageState extends State<PortForwardPage>
                 child: Row(children: [
                   Expanded(
                     child: Align(
-                      alignment: Alignment.centerLeft,
+                      alignment: AlignmentDirectional.centerStart,
                       child: SizedBox(
                         width: 120,
                         child: ElevatedButton(
@@ -337,12 +339,13 @@ class _PortForwardPageState extends State<PortForwardPage>
                             translate('New RDP'),
                           ),
                         ).marginSymmetric(vertical: 10),
-                      ).marginOnly(left: 20),
+                      ).marginStart(20),
                     ),
                   ),
                   const SizedBox(
                       width: _kColumn1Width,
-                      child: Icon(Icons.arrow_forward_sharp)),
+                      child: Icon(directionalIcon(
+                          context, Icons.arrow_forward_sharp, Icons.arrow_back_sharp))),
                   text2('localhost'),
                   text2('RDP'),
                 ]),

@@ -94,7 +94,7 @@ class PasswordStrengthIndicator extends StatelessWidget {
                   ? Colors.grey
                   : _getColor(strength))),
           Text(password.isEmpty ? '' : translate(_getLabel(strength)))
-              .marginOnly(left: password.isEmpty ? 0 : 8),
+              .marginStart(password.isEmpty ? 0 : 8),
         ],
       );
     });

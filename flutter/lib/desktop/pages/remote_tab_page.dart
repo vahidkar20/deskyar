@@ -185,11 +185,11 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
                     'assets/${connectionType.secure.value}${connectionType.direct.value}.svg',
                     width: themeConf.iconSize,
                     height: themeConf.iconSize,
-                  ).paddingOnly(right: 5),
+                  ).paddingEnd(5),
                 ),
                 label,
                 unreadMessageCountBuilder(UnreadChatCountState.find(key))
-                    .marginOnly(left: 4),
+                    .marginStart(4),
               ],
             );
 

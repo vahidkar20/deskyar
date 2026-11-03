@@ -234,7 +234,7 @@ class MenuEntryRadios<T> extends MenuEntryBase<T> {
           getTextChild(),
           Expanded(
               child: Align(
-                  alignment: Alignment.centerRight,
+                  alignment: AlignmentDirectional.centerEnd,
                   child: Transform.scale(
                     scale: MenuConfig.iconScale,
                     child: Obx(() => opt.value == curOption.value
@@ -351,7 +351,7 @@ class MenuEntrySubRadios<T> extends MenuEntryBase<T> {
                   ),
                   Expanded(
                       child: Align(
-                    alignment: Alignment.centerRight,
+                    alignment: AlignmentDirectional.centerEnd,
                     child: Transform.scale(
                         scale: MenuConfig.iconScale,
                         child: Obx(() => opt.value == curOption.value
@@ -403,9 +403,10 @@ class MenuEntrySubRadios<T> extends MenuEntryBase<T> {
           ),
           Expanded(
               child: Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: Icon(
-              Icons.keyboard_arrow_right,
+              directionalIcon(context, Icons.keyboard_arrow_right,
+                  Icons.keyboard_arrow_left),
               color: conf.commonColor,
             ),
           ))
@@ -481,7 +482,7 @@ abstract class MenuEntrySwitchBase<T> extends MenuEntryBase<T> {
                         )),
                     Expanded(
                         child: Align(
-                      alignment: Alignment.centerRight,
+                      alignment: AlignmentDirectional.centerEnd,
                       child: Transform.scale(
                           scale: MenuConfig.iconScale,
                           child: Obx(() {
@@ -677,9 +678,10 @@ class MenuEntrySubMenu<T> extends MenuEntryBase<T> {
               )),
           Expanded(
               child: Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: Obx(() => Icon(
-                  Icons.keyboard_arrow_right,
+                  directionalIcon(context, Icons.keyboard_arrow_right,
+                      Icons.keyboard_arrow_left),
                   color: super.enabled!.value ? conf.commonColor : Colors.grey,
                 )),
           ))

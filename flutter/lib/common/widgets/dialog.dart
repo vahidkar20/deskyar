@@ -138,9 +138,9 @@ void changeIdDialog() {
                 suffixText: '${rxId.value.length}/16',
                 suffixStyle: const TextStyle(fontSize: 12, color: Colors.grey)),
             // An ID is read left-to-right even in the Persian UI. Without this
-            // the bidi algorithm reverses a purely numeric ID, and the letter
+            // the bidi algorithm reorders the digit groups, and the letter
             // prefix ends up on the wrong side.
-            textDirection: isRtlLocale ? TextDirection.ltr : null,
+            textDirection: kNumberTextDirection,
             inputFormatters: [
               LengthLimitingTextInputFormatter(16),
               // FilteringTextInputFormatter(RegExp(r"[a-zA-z][a-zA-z0-9\_]*"), allow: true)
@@ -412,6 +412,9 @@ Future<String> changeDirectAccessPort(
                 child: TextField(
                         maxLines: null,
                         keyboardType: TextInputType.number,
+                        // `prefix` carries the IP; without LTR the port and the
+                        // address are painted in the opposite order in RTL.
+                        textDirection: kNumberTextDirection,
                         decoration: InputDecoration(
                             hintText: '21118',
                             isCollapsed: true,
@@ -461,6 +464,7 @@ Future<String> changeAutoDisconnectTimeout(String old) async {
                 child: TextField(
                         maxLines: null,
                         keyboardType: TextInputType.number,
+                        textDirection: kNumberTextDirection,
                         decoration: InputDecoration(
                             hintText: '10',
                             isCollapsed: true,
@@ -555,14 +559,14 @@ class DialogTextField extends StatelessWidget {
               ),
               if (errorText != null)
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: SelectableText(
                     errorText!,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                       fontSize: 12,
                     ),
-                    textAlign: TextAlign.left,
+                    textAlign: TextAlign.start,
                   ).paddingOnly(top: 8, left: 12),
                 ),
             ],
@@ -1021,7 +1025,7 @@ _connectDialog(
       return Column(
         children: [
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: Text(
               text,
               maxLines: 3,
@@ -1067,15 +1071,15 @@ _connectDialog(
           ),
           if (errUsername.value.isNotEmpty)
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: SelectableText(
                 errUsername.value,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.error,
                   fontSize: 12,
                 ),
-                textAlign: TextAlign.left,
-              ).paddingOnly(left: 12, bottom: 2),
+                textAlign: TextAlign.start,
+              ).paddingOnly(bottom: 2).paddingStart(12),
             ),
           PasswordWidget(
             controller: osPasswordController,
@@ -1114,7 +1118,7 @@ _connectDialog(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.password_rounded, color: MyTheme.accent),
-          Text(translate('Password Required')).paddingOnly(left: 10),
+          Text(translate('Password Required')).paddingStart(10),
         ],
       ),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1188,7 +1192,7 @@ void showRequestElevationDialog(
           value: '',
           groupValue: groupValue.value,
           onChanged: onRadioChanged,
-        ).marginOnly(right: 10),
+        ).marginEnd(10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1220,7 +1224,7 @@ void showRequestElevationDialog(
           value: 'logon',
           groupValue: groupValue.value,
           onChanged: onRadioChanged,
-        ).marginOnly(right: 10),
+        ).marginEnd(10),
         Expanded(
           child: InkWell(
             hoverColor: Colors.transparent,
@@ -1235,7 +1239,7 @@ void showRequestElevationDialog(
   );
 
   Widget UacNote = Container(
-    padding: EdgeInsets.fromLTRB(10, 8, 8, 8),
+    padding: EdgeInsetsDirectional.fromSTEB(10, 8, 8, 8),
     decoration: BoxDecoration(
       color: MyTheme.currentThemeMode() == ThemeMode.dark
           ? Color.fromARGB(135, 87, 87, 90)
@@ -1245,7 +1249,7 @@ void showRequestElevationDialog(
     ),
     child: Row(
       children: [
-        Icon(Icons.info_outline_rounded, size: 20).marginOnly(right: 10),
+        Icon(Icons.info_outline_rounded, size: 20).marginEnd(10),
         Expanded(
           child: Text(
             translate('still_click_uac_tip'),
@@ -1280,7 +1284,7 @@ void showRequestElevationDialog(
                 errorText: errPwd.isEmpty ? null : errPwd.value,
               ),
             ],
-          ).marginOnly(left: stateGlobal.isPortrait.isFalse ? 35 : 0),
+          ).marginStart(stateGlobal.isPortrait.isFalse ? 35 : 0),
         ).marginOnly(top: 10),
       ],
     ),
@@ -1413,7 +1417,7 @@ void showRestartRemoteDevice(PeerInfo pi, String id, SessionID sessionId,
               Icon(Icons.warning_rounded, color: Colors.redAccent, size: 28),
               Flexible(
                   child: Text(translate("Restart remote device"))
-                      .paddingOnly(left: 10)),
+                      .paddingStart(10)),
             ]),
             content: Text(
                 "${translate('Are you sure you want to restart')} \n${pi.username}@${pi.hostname}($id) ?"),
@@ -1476,7 +1480,7 @@ showSetOSPassword(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.password_rounded, color: MyTheme.accent),
-          Text(translate('OS Password')).paddingOnly(left: 10),
+          Text(translate('OS Password')).paddingStart(10),
         ],
       ),
       content: Column(
@@ -1992,7 +1996,7 @@ void trackpadSpeedDialog(SessionID sessionId, FFI ffi) {
     return CustomAlertDialog(
       title: Text(
         translate('Trackpad speed'),
-        style: TextStyle(fontSize: 21),
+        style: TextStyle(fontSize: 18),
       ),
       content: TrackpadSpeedWidget(
         value: curSpeed,
@@ -2180,7 +2184,7 @@ void renameDialog(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.edit_rounded, color: MyTheme.accent),
-          Text(translate('Rename')).paddingOnly(left: 10),
+          Text(translate('Rename')).paddingStart(10),
         ],
       ),
       content: Column(
@@ -2531,7 +2535,7 @@ void addPeersToAbDialog(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(IconFont.addressBook, color: MyTheme.accent),
-          Text(translate('Add to address book')).paddingOnly(left: 10),
+          Text(translate('Add to address book')).paddingStart(10),
         ],
       ),
       content: Obx(() => Column(
@@ -2609,7 +2613,7 @@ void setSharedAbPasswordDialog(String abName, Peer peer) {
           Text(translate(peer.password.isEmpty
                   ? 'Set shared password'
                   : 'Change Password'))
-              .paddingOnly(left: 10),
+              .paddingStart(10),
         ],
       ),
       content: Obx(() => Column(children: [
@@ -2632,7 +2636,7 @@ void setSharedAbPasswordDialog(String abName, Peer peer) {
             ).workaroundFreezeLinuxMint(),
             if (!gFFI.abModel.current.isPersonal())
               Row(children: [
-                Icon(Icons.info, color: Colors.amber).marginOnly(right: 4),
+                Icon(Icons.info, color: Colors.amber).marginEnd(4),
                 Text(
                   translate('share_warning_tip'),
                   style: TextStyle(fontSize: 12),

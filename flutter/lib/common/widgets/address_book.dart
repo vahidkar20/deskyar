@@ -103,7 +103,7 @@ class _AddressBookState extends State<AddressBook> {
                   ],
                 ),
               ),
-            ).marginOnly(right: 12.0)),
+            ).marginEnd(12.0)),
         _buildPeersViews()
       ],
     );
@@ -127,7 +127,7 @@ class _AddressBookState extends State<AddressBook> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildAbDropdown(),
-                    _buildTagHeader().marginOnly(left: 8.0, right: 0),
+                    _buildTagHeader().marginStart(8.0),
                     Container(
                       width: double.infinity,
                       child: _buildTags(),
@@ -520,7 +520,7 @@ class _AddressBookState extends State<AddressBook> {
                 !isPortrait
                     ? ConstrainedBox(
                         constraints: const BoxConstraints(minWidth: 100),
-                        child: label.marginOnly(right: 10))
+                        child: label.marginEnd(10))
                     : SizedBox.shrink(),
                 Expanded(
                   child: ConstrainedBox(
@@ -625,7 +625,7 @@ class _AddressBookState extends State<AddressBook> {
                     )),
                 if (gFFI.abModel.currentAbTags.isNotEmpty)
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: Text(
                       translate('Tags'),
                       style: style,
@@ -633,7 +633,7 @@ class _AddressBookState extends State<AddressBook> {
                   ).marginOnly(top: 8, bottom: marginBottom),
                 if (gFFI.abModel.currentAbTags.isNotEmpty)
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: Wrap(
                       children: tags
                           .map((e) => AddressBookTag(
@@ -657,7 +657,7 @@ class _AddressBookState extends State<AddressBook> {
             ),
             if (!gFFI.abModel.current.isPersonal())
               Row(children: [
-                Icon(Icons.info, color: Colors.amber).marginOnly(right: 4),
+                Icon(Icons.info, color: Colors.amber).marginEnd(4),
                 Text(
                   translate('share_warning_tip'),
                   style: TextStyle(fontSize: 12),
@@ -802,7 +802,7 @@ class AddressBookTag extends StatelessWidget {
                           color: tags.contains(name)
                               ? Colors.white
                               : gFFI.abModel.getCurrentAbTagColor(name)),
-                    ).marginOnly(right: radius / 2),
+                    ).marginEnd(radius / 2),
                   Expanded(
                     child: Text(isUnTagged ? translate(name) : name,
                         style: TextStyle(

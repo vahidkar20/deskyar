@@ -398,7 +398,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                   offstage: !_onlyWhiteList,
                   child: const Icon(Icons.warning_amber_rounded,
                       color: Color.fromARGB(255, 255, 204, 0)))
-              .marginOnly(left: 5)
+              .marginStart(5)
         ]),
         initialValue: _onlyWhiteList,
         onToggle: (_) async {
@@ -421,7 +421,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                   offstage: !_onlyIdWhiteList,
                   child: const Icon(Icons.warning_amber_rounded,
                       color: Color.fromARGB(255, 255, 204, 0)))
-              .marginOnly(left: 5)
+              .marginStart(5)
         ]),
         initialValue: _onlyIdWhiteList,
         onToggle: (_) async {

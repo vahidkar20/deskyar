@@ -143,7 +143,7 @@ class _OidcAuthFallbackState extends State<_OidcAuthFallback> {
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(minHeight: actionSize),
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       padding: const EdgeInsets.symmetric(horizontal: _messageActionSpacing),
       decoration: BoxDecoration(
         border: Border.all(color: Theme.of(context).dividerColor),

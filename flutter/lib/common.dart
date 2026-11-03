@@ -305,13 +305,6 @@ class MyTheme {
     ),
   );
 
-  //tooltip
-  static TooltipThemeData tooltipTheme() {
-    return TooltipThemeData(
-      waitDuration: Duration(seconds: 1, milliseconds: 500),
-    );
-  }
-
   // Dialogs
   static const double dialogPadding = 24;
 
@@ -339,9 +332,9 @@ class MyTheme {
         : EdgeInsets.fromLTRB(p, 0, (p - mobileTextButtonPaddingLR), (p / 2));
   }
 
-  static EdgeInsets dialogButtonPadding = (isDesktop || isWebDesktop)
-      ? EdgeInsets.only(left: dialogPadding)
-      : EdgeInsets.only(left: dialogPadding / 3);
+  static EdgeInsetsGeometry dialogButtonPadding = (isDesktop || isWebDesktop)
+      ? const EdgeInsetsDirectional.only(start: dialogPadding)
+      : const EdgeInsetsDirectional.only(start: dialogPadding / 3);
 
   static ScrollbarThemeData scrollbarTheme = ScrollbarThemeData(
     thickness: MaterialStateProperty.all(6),
@@ -369,6 +362,219 @@ class MyTheme {
     }),
   );
 
+  // ---------------------------------------------------------------------
+  // Design tokens
+  //
+  // Every screen should compose from this scale instead of picking numbers
+  // locally: a 4px spacing grid, three corner radii, one control height and a
+  // single type ramp. Persian needs a taller line box than Latin (the
+  // descenders and the diacritics are deeper), which is why the body styles
+  // sit at 1.55-1.6 rather than Material's 1.25.
+  // ---------------------------------------------------------------------
+
+  static const double space2 = 2;
+  static const double space4 = 4;
+  static const double space6 = 6;
+  static const double space8 = 8;
+  static const double space12 = 12;
+  static const double space16 = 16;
+  static const double space20 = 20;
+  static const double space24 = 24;
+  static const double space32 = 32;
+
+  static const double radiusSm = 8;
+  static const double radiusMd = 10;
+  static const double radiusLg = 14;
+  static const double radiusXl = 18;
+
+  /// Height of a standard control: button, text field, dropdown.
+  static const double controlHeight = 40;
+
+  /// Ink colours. Titles use [ink], secondary copy uses [muted].
+  static const Color inkLight = Color(0xFF17262C);
+  static const Color mutedLight = Color(0xFF5C6F76);
+  static const Color inkDark = Color(0xFFE9F2F3);
+  static const Color mutedDark = Color(0xFF9FB3BA);
+
+  static Color ink(Brightness b) => b == Brightness.dark ? inkDark : inkLight;
+  static Color muted(Brightness b) => b == Brightness.dark ? mutedDark : mutedLight;
+
+  /// One type ramp for the whole app.
+  ///
+  /// Sizes step 11 → 24; weights stay at 400/500/600/700 so hierarchy comes
+  /// from size and colour rather than from a dozen ad-hoc values.
+  static TextTheme textThemeFor(Brightness brightness) {
+    final primary = ink(brightness);
+    final secondary = muted(brightness);
+    TextStyle style(double size, FontWeight weight, double height,
+            [Color? color]) =>
+        TextStyle(
+          fontSize: size,
+          fontWeight: weight,
+          height: height,
+          color: color ?? primary,
+        );
+    return TextTheme(
+      displayLarge: style(30, FontWeight.w700, 1.3),
+      displayMedium: style(26, FontWeight.w700, 1.3),
+      displaySmall: style(24, FontWeight.w700, 1.35),
+      headlineLarge: style(22, FontWeight.w700, 1.4),
+      headlineMedium: style(20, FontWeight.w600, 1.4),
+      headlineSmall: style(18, FontWeight.w600, 1.45),
+      titleLarge: style(17, FontWeight.w600, 1.45),
+      titleMedium: style(15, FontWeight.w600, 1.5),
+      titleSmall: style(13.5, FontWeight.w500, 1.5),
+      bodyLarge: style(14.5, FontWeight.w400, 1.6),
+      bodyMedium: style(13.5, FontWeight.w400, 1.6),
+      bodySmall: style(12, FontWeight.w400, 1.55, secondary),
+      labelLarge: style(14, FontWeight.w600, 1.2),
+      labelMedium: style(12, FontWeight.w600, 1.2),
+      labelSmall: style(11, FontWeight.w500, 1.2, secondary),
+    );
+  }
+
+  static ButtonStyle elevatedStyleFor(Brightness brightness) {
+    return ElevatedButton.styleFrom(
+      minimumSize: const Size(0, controlHeight),
+      padding: const EdgeInsets.symmetric(horizontal: space20),
+      elevation: 0,
+      backgroundColor: button,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: button.withOpacity(0.32),
+      disabledForegroundColor: Colors.white.withOpacity(0.55),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusMd),
+      ),
+      textStyle: const TextStyle(
+          fontSize: 14, fontWeight: FontWeight.w600, height: 1.2),
+    );
+  }
+
+  static ButtonStyle outlinedStyleFor(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return OutlinedButton.styleFrom(
+      minimumSize: const Size(0, controlHeight),
+      padding: const EdgeInsets.symmetric(horizontal: space20),
+      foregroundColor: ink(brightness),
+      side: BorderSide(
+        color: isDark ? const Color(0xFF2A4752) : const Color(0xFFD3E0E2),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusMd),
+      ),
+      textStyle: const TextStyle(
+          fontSize: 14, fontWeight: FontWeight.w500, height: 1.2),
+    );
+  }
+
+  static ButtonStyle textStyleFor(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return TextButton.styleFrom(
+      minimumSize: const Size(0, 36),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      foregroundColor: isDark ? const Color(0xFF7FE3D6) : button,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusSm),
+      ),
+      textStyle: const TextStyle(
+          fontSize: 13.5, fontWeight: FontWeight.w500, height: 1.2),
+    );
+  }
+
+  static InputDecorationTheme inputThemeFor(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    final fill = isDark ? const Color(0xFF10232C) : const Color(0xFFF2F7F7);
+    final line = isDark ? const Color(0xFF22404B) : const Color(0xFFD5E3E4);
+    OutlineInputBorder border(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: BorderSide(color: color, width: width),
+        );
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: fill,
+      isDense: true,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: border(line),
+      enabledBorder: border(line),
+      focusedBorder: border(accent, 1.6),
+      errorBorder: border(const Color(0xFFE05A6B)),
+      focusedErrorBorder: border(const Color(0xFFE05A6B), 1.6),
+      hintStyle: TextStyle(
+          fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
+      labelStyle: TextStyle(
+          fontSize: 13, color: isDark ? Colors.white60 : Colors.black54),
+      errorStyle: const TextStyle(fontSize: 11.5, height: 1.3),
+    );
+  }
+
+  static DialogTheme dialogThemeFor(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return DialogTheme(
+      elevation: 24,
+      backgroundColor: isDark ? const Color(0xFF0E1E26) : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF1B3542) : const Color(0xFFE6EEEF),
+        ),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.4,
+        color: ink(brightness),
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 13.5,
+        height: 1.6,
+        color: ink(brightness),
+      ),
+    );
+  }
+
+  static TooltipThemeData tooltipThemeFor(Brightness brightness) {
+    return TooltipThemeData(
+      waitDuration: const Duration(milliseconds: 500),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      textStyle: const TextStyle(
+          fontSize: 12, height: 1.4, color: Colors.white),
+      decoration: BoxDecoration(
+        color: brightness == Brightness.dark
+            ? const Color(0xFF1D333D)
+            : const Color(0xFF26343A),
+        borderRadius: BorderRadius.circular(radiusSm),
+      ),
+    );
+  }
+
+  static DividerThemeData dividerThemeFor(Brightness brightness) =>
+      DividerThemeData(
+        thickness: 1,
+        // `space` is left at the widget default: several screens rely on a
+        // Divider() carrying its own vertical breathing room.
+        color: brightness == Brightness.dark
+            ? Colors.white.withOpacity(0.08)
+            : Colors.black.withOpacity(0.08),
+      );
+
+  static ChipThemeData chipThemeFor(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return ChipThemeData(
+      backgroundColor:
+          isDark ? const Color(0xFF10232C) : const Color(0xFFF2F7F7),
+      side: BorderSide(
+          color: isDark ? const Color(0xFF22404B) : const Color(0xFFD5E3E4)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusSm)),
+      labelStyle: TextStyle(fontSize: 12, height: 1.2, color: ink(brightness)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+
   static ThemeData lightTheme = ThemeData(
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
@@ -380,71 +586,39 @@ class MyTheme {
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
     ),
-    dialogTheme: DialogTheme(
-      elevation: 15,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
-        side: BorderSide(
-          width: 1,
-          color: grayBg,
-        ),
-      ),
+    iconTheme: IconThemeData(color: ink(Brightness.light)),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: accent,
+      selectionColor: accent.withOpacity(0.25),
+      selectionHandleColor: accent,
     ),
+    focusColor: accent.withOpacity(0.12),
+    dialogTheme: dialogThemeFor(Brightness.light),
     scrollbarTheme: scrollbarTheme,
-    inputDecorationTheme: isDesktop
-        ? InputDecorationTheme(
-            fillColor: grayBg,
-            filled: true,
-            isDense: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          )
-        : null,
-    textTheme: const TextTheme(
-        titleLarge: TextStyle(fontSize: 19, color: Colors.black87),
-        titleSmall: TextStyle(fontSize: 14, color: Colors.black87),
-        bodySmall: TextStyle(fontSize: 12, color: Colors.black87, height: 1.25),
-        bodyMedium:
-            TextStyle(fontSize: 14, color: Colors.black87, height: 1.25),
-        labelLarge: TextStyle(fontSize: 16.0, color: MyTheme.accent80)),
+    inputDecorationTheme: inputThemeFor(Brightness.light),
+    textTheme: textThemeFor(Brightness.light),
+    dividerTheme: dividerThemeFor(Brightness.light),
+    chipTheme: chipThemeFor(Brightness.light),
     cardColor: grayBg,
     hintColor: Color(0xFFAAAAAA),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
       labelColor: Colors.black87,
     ),
-    tooltipTheme: tooltipTheme(),
+    tooltipTheme: tooltipThemeFor(Brightness.light),
     splashColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
     highlightColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
     splashFactory: (isDesktop || isWebDesktop) ? NoSplash.splashFactory : null,
     textButtonTheme: (isDesktop || isWebDesktop)
         ? TextButtonThemeData(
-            style: TextButton.styleFrom(
-              splashFactory: NoSplash.splashFactory,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.0),
-              ),
-            ),
+            style: textStyleFor(Brightness.light)
+                .copyWith(splashFactory: NoSplash.splashFactory),
           )
         : mobileTextButtonTheme,
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: MyTheme.accent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        backgroundColor: grayBg,
-        foregroundColor: Colors.black87,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-      ),
-    ),
+    elevatedButtonTheme:
+        ElevatedButtonThemeData(style: elevatedStyleFor(Brightness.light)),
+    outlinedButtonTheme:
+        OutlinedButtonThemeData(style: outlinedStyleFor(Brightness.light)),
     switchTheme: switchTheme(),
     radioTheme: radioTheme(),
     checkboxTheme: checkboxTheme,
@@ -456,12 +630,13 @@ class MyTheme {
         primary: Color(0xFF14B8A6), secondary: accent, background: grayBg),
     popupMenuTheme: PopupMenuThemeData(
         color: Colors.white,
+        elevation: 8,
         shape: RoundedRectangleBorder(
           side: BorderSide(
               color: (isDesktop || isWebDesktop)
-                  ? Color(0xFFECECEC)
+                  ? Color(0xFFE6EEEF)
                   : Colors.transparent),
-          borderRadius: BorderRadius.all(Radius.circular(8.0)),
+          borderRadius: BorderRadius.circular(radiusLg),
         )),
   ).copyWith(
     extensions: <ThemeExtension<dynamic>>[
@@ -479,81 +654,38 @@ class MyTheme {
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
     ),
-    dialogTheme: DialogTheme(
-      elevation: 15,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18.0),
-        side: BorderSide(
-          width: 1,
-          color: Color(0xFF1B3542),
-        ),
-      ),
+    iconTheme: IconThemeData(color: ink(Brightness.dark)),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: accent,
+      selectionColor: accent.withOpacity(0.3),
+      selectionHandleColor: accent,
     ),
+    focusColor: accent.withOpacity(0.16),
+    dialogTheme: dialogThemeFor(Brightness.dark),
     scrollbarTheme: scrollbarThemeDark,
-    inputDecorationTheme: (isDesktop || isWebDesktop)
-        ? InputDecorationTheme(
-            fillColor: Color(0xFF10232C),
-            filled: true,
-            isDense: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          )
-        : null,
-    textTheme: const TextTheme(
-      titleLarge: TextStyle(fontSize: 19),
-      titleSmall: TextStyle(fontSize: 14),
-      bodySmall: TextStyle(fontSize: 12, height: 1.25),
-      bodyMedium: TextStyle(fontSize: 14, height: 1.25),
-      labelLarge: TextStyle(
-        fontSize: 16.0,
-        fontWeight: FontWeight.bold,
-        color: accent80,
-      ),
-    ),
+    inputDecorationTheme: inputThemeFor(Brightness.dark),
+    textTheme: textThemeFor(Brightness.dark),
+    dividerTheme: dividerThemeFor(Brightness.dark),
+    chipTheme: chipThemeFor(Brightness.dark),
     cardColor: Color(0xFF10232C),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
       labelColor: Colors.white70,
     ),
-    tooltipTheme: tooltipTheme(),
+    tooltipTheme: tooltipThemeFor(Brightness.dark),
     splashColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
     highlightColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
     splashFactory: (isDesktop || isWebDesktop) ? NoSplash.splashFactory : null,
     textButtonTheme: (isDesktop || isWebDesktop)
         ? TextButtonThemeData(
-            style: TextButton.styleFrom(
-              splashFactory: NoSplash.splashFactory,
-              disabledForegroundColor: Colors.white70,
-              foregroundColor: Colors.white70,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18.0),
-              ),
-            ),
+            style: textStyleFor(Brightness.dark)
+                .copyWith(splashFactory: NoSplash.splashFactory),
           )
         : mobileTextButtonTheme,
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: MyTheme.accent,
-        foregroundColor: Colors.white,
-        disabledForegroundColor: Colors.white70,
-        disabledBackgroundColor: Colors.white10,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        backgroundColor: Color(0xFF10232C),
-        side: BorderSide(color: Colors.white12, width: 0.5),
-        disabledForegroundColor: Colors.white70,
-        foregroundColor: Colors.white70,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-      ),
-    ),
+    elevatedButtonTheme:
+        ElevatedButtonThemeData(style: elevatedStyleFor(Brightness.dark)),
+    outlinedButtonTheme:
+        OutlinedButtonThemeData(style: outlinedStyleFor(Brightness.dark)),
     switchTheme: switchTheme(),
     radioTheme: radioTheme(),
     checkboxTheme: checkboxTheme,
@@ -567,9 +699,11 @@ class MyTheme {
       background: Color(0xFF10232C),
     ),
     popupMenuTheme: PopupMenuThemeData(
+        color: const Color(0xFF10232C),
+        elevation: 8,
         shape: RoundedRectangleBorder(
-      side: BorderSide(color: Colors.white24),
-      borderRadius: BorderRadius.all(Radius.circular(8.0)),
+      side: BorderSide(color: Colors.white12),
+      borderRadius: BorderRadius.circular(radiusLg),
     )),
   ).copyWith(
     extensions: <ThemeExtension<dynamic>>[
@@ -711,10 +845,12 @@ Locale getDeskyarLocale() {
     lang = 'fa';
   }
   final parts = lang.split(RegExp(r'[-_]'));
-  if (parts.length >= 2 && parts[1].isNotEmpty) {
-    return Locale(parts[0], parts[1].toUpperCase());
-  }
-  return Locale(parts.first);
+  final resolved = (parts.length >= 2 && parts[1].isNotEmpty)
+      ? Locale(parts[0], parts[1].toUpperCase())
+      : Locale(parts.first);
+  // Publish it for helpers that cannot see a BuildContext (see isRtlLocale).
+  deskyarUiLocale = resolved;
+  return resolved;
 }
 
 String formatDurationToTime(Duration duration) {
@@ -1164,7 +1300,12 @@ Widget createDialogContent(String text) {
 
   // Early return: no link, use default theme color
   if (!hasLink) {
-    return SelectableText(text, style: const TextStyle(fontSize: 15));
+    return SelectableText(
+      text,
+      // Matches DialogTheme.contentTextStyle: 13.5 with a Persian-friendly
+      // line box. The colour is inherited from the dialog.
+      style: const TextStyle(fontSize: 13.5, height: 1.6),
+    );
   }
 
   final List<TextSpan> spans = [];
@@ -1370,7 +1511,7 @@ Widget msgboxIcon(String type) {
   }
   if (iconData != null) {
     return Icon(iconData, size: 50, color: _msgboxColor(type))
-        .marginOnly(right: 16);
+        .marginEnd(16);
   }
 
   return Offstage();
@@ -3293,7 +3434,7 @@ Widget buildErrorBanner(BuildContext context,
               ).marginAll(4),
               Flexible(
                 child: Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: Tooltip(
                       message: translate(err.value),
                       child: SelectableText(
@@ -3726,7 +3867,7 @@ class ComboBox extends StatelessWidget {
             icon: const Icon(
               Icons.expand_more_sharp,
               size: 20,
-            ).marginOnly(right: 15),
+            ).marginEnd(15),
             onChanged: enabled
                 ? (String? newValue) {
                     if (newValue != null && newValue != ref.value) {
@@ -3743,7 +3884,7 @@ class ComboBox extends StatelessWidget {
                   value,
                   style: const TextStyle(fontSize: 15),
                   overflow: TextOverflow.ellipsis,
-                ).marginOnly(left: 15),
+                ).marginStart(15),
               );
             }).toList(),
           )),
@@ -4110,6 +4251,43 @@ void checkUpdate() {
   }
 }
 
+/// Pick the mirror-image variant of an icon for the current direction.
+///
+/// Flutter mirrors *layout* automatically but not glyphs, so a "back" arrow
+/// still points left in the Persian UI. Pass the LTR glyph first and its RTL
+/// mirror second.
+IconData directionalIcon(BuildContext context, IconData ltr, IconData rtl) =>
+    Directionality.of(context) == TextDirection.rtl ? rtl : ltr;
+
+/// Direction-aware spacing helpers.
+///
+/// `marginOnly`/`paddingOnly` take physical `left`/`right`, so a gap that is
+/// meant to sit *between* two widgets (an icon and its label, a badge and the
+/// text after it) ends up on the outside edge as soon as the layout is mirrored
+/// for Persian. These helpers express the same gap in reading order, so it
+/// follows the ambient [Directionality] instead of the screen.
+extension DirectionalSpacing on Widget {
+  Widget marginStart(double value) => Container(
+        margin: EdgeInsetsDirectional.only(start: value),
+        child: this,
+      );
+
+  Widget marginEnd(double value) => Container(
+        margin: EdgeInsetsDirectional.only(end: value),
+        child: this,
+      );
+
+  Widget paddingStart(double value) => Padding(
+        padding: EdgeInsetsDirectional.only(start: value),
+        child: this,
+      );
+
+  Widget paddingEnd(double value) => Padding(
+        padding: EdgeInsetsDirectional.only(end: value),
+        child: this,
+      );
+}
+
 // https://github.com/flutter/flutter/issues/153560#issuecomment-2497160535
 // For TextField, TextFormField
 extension WorkaroundFreezeLinuxMint on Widget {
@@ -4179,18 +4357,44 @@ Widget workaroundWindowBorder(BuildContext context, Widget child) {
   );
 }
 
+/// Copy [text] into [controller] while keeping a usable caret.
+///
+/// This is called from `RawAutocomplete.fieldViewBuilder`, which runs on every
+/// keystroke (the autocomplete rebuilds whenever its controller changes).
+///
+/// Assigning `controller.text` unconditionally looks harmless when the value is
+/// already identical, but the setter always replaces the selection with
+/// `TextSelection.collapsed(offset: -1)`. With no valid caret the next
+/// character is inserted at position 0 instead of at the end, so typing
+/// `519502` lands in the field as `205 915` - the digits arrive in reverse
+/// order. That is the "the ID field types backwards" report, and it happens
+/// regardless of the text direction.
+///
+/// The early return leaves the caret exactly where the user put it when there
+/// is nothing to sync; when the text really did change (an autocomplete pick,
+/// a restored last-session ID) the caret is moved to a valid offset instead of
+/// being dropped.
 void updateTextAndPreserveSelection(
     TextEditingController controller, String text) {
+  if (controller.text == text) return;
+
   // Only care about select all for now.
-  final isSelected = controller.selection.isValid &&
-      controller.selection.end > controller.selection.start;
+  final selection = controller.selection;
+  final isSelected = selection.isValid && selection.end > selection.start;
 
   // Set text will make the selection invalid.
   controller.text = text;
 
+  final end = controller.value.text.length;
   if (isSelected) {
-    controller.selection = TextSelection(
-        baseOffset: 0, extentOffset: controller.value.text.length);
+    controller.selection =
+        TextSelection(baseOffset: 0, extentOffset: end);
+  } else if (selection.isValid) {
+    final offset =
+        selection.extentOffset > end ? end : selection.extentOffset;
+    controller.selection = TextSelection.collapsed(offset: offset);
+  } else {
+    controller.selection = TextSelection.collapsed(offset: end);
   }
 }
 

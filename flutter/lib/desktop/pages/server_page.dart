@@ -218,7 +218,7 @@ class ConnectionManagerState extends State<ConnectionManager>
                         waitDuration: Duration(seconds: 1),
                         child: label),
                     unreadMessageCountBuilder(client?.unreadChatMessageCount)
-                        .marginOnly(left: 4),
+                        .marginStart(4),
                   ],
                 );
               },
@@ -477,7 +477,7 @@ class _CmHeaderState extends State<_CmHeader>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildClientAvatar().marginOnly(right: 10.0),
+          _buildClientAvatar().marginEnd(10.0),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
@@ -539,7 +539,7 @@ class _CmHeaderState extends State<_CmHeader>
                               : translate("Connected")
                           : "${translate("Request access to your device")}...",
                       style: TextStyle(color: Colors.white),
-                    ).marginOnly(right: 8.0),
+                    ).marginEnd(8.0),
                     if (client.authorized)
                       Obx(
                         () => Text(
@@ -690,7 +690,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
             translate("Permissions"),
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
-          ).marginOnly(left: 4.0, bottom: 8.0),
+          ).marginOnly(bottom: 8.0).marginStart(4.0),
           Expanded(
             child: GridView.count(
               crossAxisCount: crossAxisCount,
@@ -1179,7 +1179,7 @@ class _CmControlPanel extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Offstage(offstage: icon == null, child: icon).marginOnly(right: 5),
+            Offstage(offstage: icon == null, child: icon).marginEnd(5),
             textWidget,
           ],
         ),
@@ -1349,7 +1349,7 @@ class __FileTransferLogPageState extends State<_FileTransferLogPage> {
                                   SizedBox(
                                     width: 50,
                                     child: iconLabel(item),
-                                  ).paddingOnly(left: 15),
+                                  ).paddingStart(15),
                                   const SizedBox(
                                     width: 16.0,
                                   ),

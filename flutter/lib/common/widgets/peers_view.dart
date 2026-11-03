@@ -192,7 +192,9 @@ class _PeersViewState extends State<_PeersView>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.sentiment_very_dissatisfied_rounded,
+                  // A neutral tray instead of a sad face: an empty "recent
+                  // sessions" list is a normal first-run state, not a fault.
+                  Icons.inbox_outlined,
                   color: Theme.of(context).tabBarTheme.labelColor,
                   size: 40,
                 ).paddingOnly(bottom: 10),

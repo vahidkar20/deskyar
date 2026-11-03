@@ -86,7 +86,6 @@ class DraggableChatWindow extends StatelessWidget {
                 translate("Chat"),
                 style: const TextStyle(
                     color: Colors.white,
-                    fontFamily: 'WorkSans',
                     fontWeight: FontWeight.bold,
                     fontSize: 20),
               )),
@@ -214,7 +213,8 @@ class DraggableMobileActions extends StatelessWidget {
                             color: Colors.white,
                             onPressed: onBackPressed,
                             splashRadius: kDesktopIconButtonSplashRadius,
-                            icon: const Icon(Icons.arrow_back),
+                            icon: Icon(directionalIcon(
+                                context, Icons.arrow_back, Icons.arrow_forward)),
                             iconSize: 24 * scale),
                         IconButton(
                             color: Colors.white,
@@ -569,7 +569,7 @@ class QualityMonitor extends StatelessWidget {
             flex: 8,
             child: AutoSizeText(info,
                 style: TextStyle(color: Color.fromARGB(255, 210, 210, 210)),
-                textAlign: TextAlign.right,
+                textAlign: TextAlign.end,
                 maxLines: 1)),
         Spacer(flex: 1),
         Expanded(

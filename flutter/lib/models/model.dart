@@ -643,9 +643,10 @@ class FfiModel with ChangeNotifier {
                               key: ValueKey(printerNames[index]),
                               height: printerItemHeight,
                               child: Align(
-                                alignment: Alignment.centerLeft,
+                                alignment: AlignmentDirectional.centerStart,
                                 child: Padding(
-                                  padding: const EdgeInsets.only(left: 10.0),
+                                  padding: const EdgeInsetsDirectional.only(
+                                      start: 10.0),
                                   child: Text(
                                     printerNames[index],
                                     style: TextStyle(fontSize: 14),

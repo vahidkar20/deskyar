@@ -112,8 +112,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           }
         },
       ),
-      // Reserved banner area, sized to the pane. Shows a placeholder until
-      // assets/banner.png exists. See widgets/banner_slot.dart.
+      // Live ad slot, sized to the pane. The creative is fetched from
+      // ad.yar.one at runtime - see widgets/banner_slot.dart.
       const DeskyarBannerSlot(),
     ];
     if (isIncomingOnly) {
@@ -164,11 +164,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ],
             ),
             if (isOutgoingOnly)
-              Positioned(
+              PositionedDirectional(
                 bottom: 6,
-                left: 12,
+                start: 12,
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: InkWell(
                     child: Obx(
                       () => Icon(
@@ -220,8 +220,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
 
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 11),
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      // Symmetric margins, matching the password card below it and the tip
+      // above it. The two cards used to be 5px different in width, which read
+      // as a rendering mistake rather than as a design choice.
+      margin: const EdgeInsets.only(left: 16, right: 16),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
       decoration: BoxDecoration(
         // A tinted card instead of a bare row with a 2px rule: the ID is the
         // one piece of text a user has to read out loud to someone else, so it
@@ -239,7 +242,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             children: [
               Text(
                 translate("ID"),
-                style: TextStyle(fontSize: 12, color: labelColor),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: labelColor,
+                ),
               ),
               buildPopupMenu(context),
             ],
@@ -252,21 +259,30 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   child: TextFormField(
                     controller: model.serverId,
                     readOnly: true,
-                    // The ID is digits only. In the RTL (Persian) layout the
-                    // bidi algorithm would paint it reversed, so the user
-                    // would read "79652014" for an ID that is really
-                    // "41025697" - and could never be sure which one to
-                    // dictate. Forcing LTR makes the digits read correctly.
-                    textDirection: isRtlLocale ? TextDirection.ltr : null,
+                    // The ID is digits only, grouped with spaces by formatID.
+                    // Inside the RTL layout the bidi algorithm reorders those
+                    // groups, so the user would read "796 520 141" for an ID
+                    // that is really "141 520 796". LTR is forced
+                    // unconditionally: it is correct in every locale, not just
+                    // when locale detection happens to succeed. Only the
+                    // alignment follows the layout direction, so the number
+                    // still starts at the card's reading edge.
+                    textDirection: kNumberTextDirection,
+                    textAlign: isRtlLocale ? TextAlign.right : TextAlign.start,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
+                      // The card already has a tinted surface; a filled field
+                      // would paint a second rectangle inside it.
+                      filled: false,
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(vertical: 6),
                     ),
                     style: const TextStyle(
-                      fontSize: 21,
+                      // 20px keeps the ID the largest datum on the pane while
+                      // staying inside the type ramp (headlineMedium is 20).
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.6,
                     ),
                   ).workaroundFreezeLinuxMint(),
                 ),
@@ -278,7 +294,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 onPressed: copyId,
                 tooltip: translate("Copy"),
                 visualDensity: VisualDensity.compact,
-                iconSize: 17,
+                iconSize: 18,
                 icon: Icon(Icons.copy_rounded,
                     color: MyTheme.accent.withOpacity(0.85)),
               ),
@@ -334,8 +350,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return Container(
       // Same tinted card as the ID board above, so the two read as a pair
       // rather than as one card followed by a loose row with an accent rule.
-      margin: const EdgeInsets.only(left: 20.0, right: 16, top: 10, bottom: 13),
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      margin: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
       decoration: BoxDecoration(
         color: MyTheme.accent.withOpacity(isDark ? 0.10 : 0.06),
         borderRadius: BorderRadius.circular(12),
@@ -346,7 +362,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            translate("One-time Password"),
+            // The label has to follow the verification method: with a
+            // permanent password set, calling it "one-time" tells the user the
+            // code they are reading will change, which it will not.
+            translate(showOneTime ? "One-time Password" : "Password"),
             style: TextStyle(fontSize: 12, color: textColor?.withOpacity(0.55)),
             maxLines: 1,
           ),
@@ -364,16 +383,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   child: TextFormField(
                     controller: model.serverPasswd,
                     readOnly: true,
-                    // A password can mix digits and letters; forcing LTR keeps
-                    // the character order stable in the RTL layout.
-                    textDirection: isRtlLocale ? TextDirection.ltr : null,
+                    // A password can mix digits and letters; LTR keeps the
+                    // character order stable in the RTL layout.
+                    textDirection: kNumberTextDirection,
+                    textAlign: isRtlLocale ? TextAlign.right : TextAlign.start,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
+                      // The card already has a tinted surface; a filled field
+                      // would paint a second rectangle inside it.
+                      filled: false,
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(vertical: 6),
                     ),
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.4,
                     ),
@@ -385,18 +408,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   onPressed: () => bind.mainUpdateTemporaryPassword(),
                   child: Tooltip(
                     message: translate('Refresh Password'),
-                    child: Obx(() => RotatedBox(
-                        quarterTurns: 2,
-                        child: Icon(
+                    child: Obx(() => Icon(
+                          // No RotatedBox here: flipping a refresh glyph 180
+                          // degrees turns it into an "undo" arrow that points
+                          // the wrong way. The widget above already animates a
+                          // full turn when pressed.
                           Icons.refresh,
                           color: refreshHover.value
                               ? textColor
                               : MyTheme.accent.withOpacity(0.55),
                           size: 19,
-                        ))),
+                        )),
                   ),
                   onHover: (value) => refreshHover.value = value,
-                ).marginOnly(right: 6),
+                ).marginEnd(6),
               if (!bind.isDisableSettings())
                 InkWell(
                   child: Tooltip(
@@ -408,7 +433,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             ? textColor
                             : MyTheme.accent.withOpacity(0.55),
                         size: 19,
-                      ).marginOnly(right: 6),
+                      ).marginEnd(6),
                     ),
                   ),
                   onTap: () =>
@@ -426,7 +451,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Padding(
       padding:
-          const EdgeInsets.only(left: 20.0, right: 16, top: 16.0, bottom: 5),
+          const EdgeInsets.only(left: 16.0, right: 16, top: 16.0, bottom: 8),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,7 +460,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             children: [
               if (!isOutgoingOnly)
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: Text(
                     translate("Your Desktop"),
                     style: Theme.of(context).textTheme.titleLarge,
@@ -600,7 +625,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
     if (bind.isIncomingOnly()) {
       return Align(
-        alignment: Alignment.centerRight,
+        alignment: AlignmentDirectional.centerEnd,
         child: OutlinedButton(
           onPressed: () {
             SystemNavigator.pop(); // Close the application
@@ -645,8 +670,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return Stack(
       children: [
         Container(
-          margin: EdgeInsets.fromLTRB(
-              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
+          // Inset like the ID and password cards above it: a full-bleed slab
+          // with square corners was the only block on the pane not following
+          // the card rhythm.
+          margin: EdgeInsetsDirectional.only(
+            start: 16,
+            end: 16,
+            top: marginTop,
+            bottom: bind.isIncomingOnly() ? marginTop : 0,
+          ),
           child: Container(
               decoration: BoxDecoration(
                   // Brand gradient. Upstream hardcoded a pink->salmon pair here,
@@ -659,8 +691,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   Color(0xFF0F2B38),
                   Color(0xFF0B6F66),
                 ],
-              )),
-              padding: EdgeInsets.all(20),
+              ),
+                  borderRadius: BorderRadius.circular(MyTheme.radiusLg)),
+              padding: const EdgeInsets.all(20),
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -671,9 +704,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 translate(title),
                                 style: TextStyle(
                                     color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15),
-                              ).marginOnly(bottom: 6)),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14),
+                              ).marginOnly(bottom: 8)),
                             ]
                           : <Widget>[]) +
                       <Widget>[
@@ -685,7 +718,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 color: Colors.white,
                                 fontWeight: FontWeight.normal,
                                 fontSize: 13),
-                          ).marginOnly(bottom: 20)
+                          ).marginOnly(bottom: 16)
                       ] +
                       (btnText.isNotEmpty
                           ? <Widget>[
@@ -699,7 +732,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                       text: translate(btnText),
                                       textColor: Colors.white,
                                       borderColor: Colors.white,
-                                      textSize: 20,
+                                      textSize: 14,
                                       radius: 10,
                                       onTap: onPressed,
                                     )
@@ -719,14 +752,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                                 TextDecoration.underline,
                                             color: Colors.white,
                                             fontSize: 12),
-                                      )).marginOnly(top: 6)),
+                                      )).marginOnly(top: 8)),
                             ]
                           : <Widget>[]))),
         ),
         if (closeButton != null && closeButton == true)
-          Positioned(
-            top: 18,
-            right: 0,
+          PositionedDirectional(
+            top: marginTop + 6,
+            end: 22,
             child: IconButton(
               icon: Icon(
                 Icons.close,
@@ -1006,7 +1039,7 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.key, color: MyTheme.accent),
-          Text(translate("Set Password")).paddingOnly(left: 10),
+          Text(translate("Set Password")).paddingStart(10),
         ],
       ),
       content: ConstrainedBox(
@@ -1071,7 +1104,7 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
               Row(
                 children: [
                   Icon(Icons.info, color: Colors.amber, size: 18)
-                      .marginOnly(right: 6),
+                      .marginEnd(6),
                   Expanded(
                       child: Text(
                     statusTip,
@@ -1139,10 +1172,10 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
         if (!isDesktop && !isWebDesktop && localPasswordSet) {
           return [
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerEnd,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

@@ -128,7 +128,7 @@ class _PeerTabPageState extends State<PeerTabPage>
                   ],
                 )),
               ),
-            ).paddingOnly(right: stateGlobal.isPortrait.isTrue ? 0 : 12)),
+            ).paddingEnd(stateGlobal.isPortrait.isTrue ? 0 : 12)),
         _createPeersView(),
       ],
     );
@@ -450,7 +450,7 @@ class _PeerTabPageState extends State<PeerTabPage>
           showToast(translate('Successful'));
         },
         child: Icon(PeerTabModel.icons[PeerTabIndex.fav.index]),
-      ).marginOnly(left: !(isDesktop || isWebDesktop) ? 11 : 6),
+      ).marginStart(!(isDesktop || isWebDesktop) ? 11 : 6),
     );
   }
 
@@ -471,7 +471,7 @@ class _PeerTabPageState extends State<PeerTabPage>
           model.setMultiSelectionMode(false);
         },
         child: Icon(PeerTabModel.icons[PeerTabIndex.ab.index]),
-      ).marginOnly(left: !(isDesktop || isWebDesktop) ? 11 : 6),
+      ).marginStart(!(isDesktop || isWebDesktop) ? 11 : 6),
     );
   }
 
@@ -494,7 +494,7 @@ class _PeerTabPageState extends State<PeerTabPage>
                 });
               },
               child: Icon(Icons.tag))
-          .marginOnly(left: !(isDesktop || isWebDesktop) ? 11 : 6),
+          .marginStart(!(isDesktop || isWebDesktop) ? 11 : 6),
     );
   }
 
@@ -516,7 +516,7 @@ class _PeerTabPageState extends State<PeerTabPage>
           model.selectAll();
         },
         child: Icon(Icons.select_all),
-      ).marginOnly(left: 6),
+      ).marginStart(6),
     );
   }
 
@@ -529,7 +529,7 @@ class _PeerTabPageState extends State<PeerTabPage>
               model.setMultiSelectionMode(false);
             },
             child: Icon(Icons.clear))
-        .marginOnly(left: 6);
+        .marginStart(6);
   }
 
   Widget _toggleTags() {
@@ -552,7 +552,7 @@ class _PeerTabPageState extends State<PeerTabPage>
   List<Widget> _landscapeRightActions(BuildContext context) {
     final model = Provider.of<PeerTabModel>(context);
     return [
-      const PeerSearchBar().marginOnly(right: 13),
+      const PeerSearchBar().marginEnd(13),
       _createRefresh(
           index: PeerTabIndex.ab, loading: gFFI.abModel.currentAbLoading),
       _createRefresh(
