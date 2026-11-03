@@ -302,12 +302,16 @@ class _ConnectionPageState extends State<ConnectionPage>
               children: [
                 Flexible(child: _buildRemoteIDTextField(context)),
               ],
-            ).marginOnly(top: 22),
-            SizedBox(height: 12),
+            ).marginOnly(top: 24),
+            const SizedBox(height: 12),
             Divider().paddingStart(12),
             Expanded(child: PeerTabPage()),
           ],
-        ).paddingEnd(12.0)),
+        )
+            // 16 on the sidebar side so the connect card and its shadow do not
+            // touch the panel, 12 on the window side as before.
+            .paddingStart(16.0)
+            .paddingEnd(12.0)),
         if (!isOutgoingOnly) const Divider(height: 1),
         if (!isOutgoingOnly) OnlineStatusWidget()
       ],
