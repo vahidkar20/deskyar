@@ -347,6 +347,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
+
+    // The password is dictated to the other side or pasted into a chat just as
+    // often as the ID, but only the ID had a visible copy control; the password
+    // relied on an undiscoverable double tap.
+    void copyPassword() {
+      final password = model.serverPasswd.text;
+      if (password.isEmpty) return;
+      Clipboard.setData(ClipboardData(text: password));
+      showToast(translate("Copied"));
+    }
     return Container(
       // Same tinted card as the ID board above, so the two read as a pair
       // rather than as one card followed by a loose row with an accent rule.
@@ -373,13 +383,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             children: [
               Expanded(
                 child: GestureDetector(
-                  onDoubleTap: () {
-                    if (showOneTime) {
-                      Clipboard.setData(
-                          ClipboardData(text: model.serverPasswd.text));
-                      showToast(translate("Copied"));
-                    }
-                  },
+                  onDoubleTap: copyPassword,
                   child: TextFormField(
                     controller: model.serverPasswd,
                     readOnly: true,
@@ -403,6 +407,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   ).workaroundFreezeLinuxMint(),
                 ),
               ),
+              InkWell(
+                onTap: copyPassword,
+                child: Tooltip(
+                  message: translate('Copy'),
+                  child: Icon(
+                    Icons.copy_rounded,
+                    size: 18,
+                    color: MyTheme.accent.withOpacity(0.55),
+                  ),
+                ),
+              ).marginEnd(10),
               if (showOneTime)
                 AnimatedRotationWidget(
                   onPressed: () => bind.mainUpdateTemporaryPassword(),
