@@ -509,33 +509,6 @@ class MyTheme {
     );
   }
 
-  static DialogTheme dialogThemeFor(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    return DialogTheme(
-      elevation: 24,
-      backgroundColor: isDark ? const Color(0xFF0E1E26) : Colors.white,
-      surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF1B3542) : const Color(0xFFE6EEEF),
-        ),
-      ),
-      titleTextStyle: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        height: 1.4,
-        color: ink(brightness),
-      ),
-      contentTextStyle: TextStyle(
-        fontSize: 13.5,
-        height: 1.6,
-        color: ink(brightness),
-      ),
-    );
-  }
-
   static TooltipThemeData tooltipThemeFor(Brightness brightness) {
     return TooltipThemeData(
       waitDuration: const Duration(milliseconds: 500),
@@ -593,7 +566,26 @@ class MyTheme {
       selectionHandleColor: accent,
     ),
     focusColor: accent.withOpacity(0.12),
-    dialogTheme: dialogThemeFor(Brightness.light),
+    dialogTheme: DialogTheme(
+      elevation: 24,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Color(0xFFE6EEEF)),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.4,
+        color: inkLight,
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 13.5,
+        height: 1.6,
+        color: inkLight,
+      ),
+    ),
     scrollbarTheme: scrollbarTheme,
     inputDecorationTheme: inputThemeFor(Brightness.light),
     textTheme: textThemeFor(Brightness.light),
@@ -661,7 +653,26 @@ class MyTheme {
       selectionHandleColor: accent,
     ),
     focusColor: accent.withOpacity(0.16),
-    dialogTheme: dialogThemeFor(Brightness.dark),
+    dialogTheme: DialogTheme(
+      elevation: 24,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Color(0xFF1B3542)),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.4,
+        color: inkDark,
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 13.5,
+        height: 1.6,
+        color: inkDark,
+      ),
+    ),
     scrollbarTheme: scrollbarThemeDark,
     inputDecorationTheme: inputThemeFor(Brightness.dark),
     textTheme: textThemeFor(Brightness.dark),
