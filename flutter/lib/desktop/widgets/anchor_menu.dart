@@ -148,6 +148,7 @@ class _AnchorMenuState extends State<AnchorMenu> {
         left: left,
         top: top,
         width: menuWidth,
+        rowHeight: widget.rowHeight,
         rtl: rtl,
         items: widget.items,
         onDismiss: _close,
@@ -175,6 +176,7 @@ class _MenuOverlay extends StatefulWidget {
     required this.left,
     required this.top,
     required this.width,
+    required this.rowHeight,
     required this.rtl,
     required this.items,
     required this.onDismiss,
@@ -183,6 +185,7 @@ class _MenuOverlay extends StatefulWidget {
   final double left;
   final double top;
   final double width;
+  final double rowHeight;
   final bool rtl;
   final List<AnchorMenuItem> items;
   final VoidCallback onDismiss;
