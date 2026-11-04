@@ -187,9 +187,9 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                           InkWell(
                             hoverColor: Colors.transparent,
                             onTap: () => launchUrlString(
-                                'https://yar.one'),
+                                'https://nexdesk.ir'),
                             child: Tooltip(
-                              message: 'https://yar.one',
+                              message: 'https://nexdesk.ir',
                               child: Row(children: [
                                 Icon(Icons.launch_outlined, size: 16)
                                     .marginEnd(5),

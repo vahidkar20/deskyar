@@ -3954,7 +3954,7 @@ Widget loadPowered(BuildContext context) {
     cursor: SystemMouseCursors.click,
     child: GestureDetector(
       onTap: () {
-        launchUrl(Uri.parse('https://yar.one'));
+        launchUrl(Uri.parse('https://nexdesk.ir'));
       },
       child: Opacity(
           opacity: 0.5,

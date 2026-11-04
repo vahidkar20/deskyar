@@ -81,7 +81,7 @@ def make_parser():
         help='Connection type, e.g. "incoming", "outgoing". Default is empty, means incoming-outgoing',
     )
     parser.add_argument(
-        "--app-name", type=str, default="RustDesk", help="The app name."
+        "--app-name", type=str, default="NexDesk", help="The app name."
     )
     parser.add_argument(
         "-v", "--version", type=str, default="", help="The app version."
@@ -93,7 +93,7 @@ def make_parser():
         "-m",
         "--manufacturer",
         type=str,
-        default="Purslane Tech Pte. Ltd.",
+        default="Yar Holding",
         help="The app manufacturer.",
     )
     return parser
@@ -462,6 +462,13 @@ def prepare_resources():
 
 def init_global_vars(dist_dir, app_name, args):
     dist_app = dist_dir.joinpath(app_name + ".exe")
+    if not dist_app.exists():
+        # The shipped executable is named after the product. If the product is
+        # renamed again, fall back to the only executable in the dist dir
+        # instead of failing with an undefined-preprocessor-variable MSI build.
+        candidates = sorted(p for p in dist_dir.glob("*.exe") if p.is_file())
+        if len(candidates) == 1:
+            dist_app = candidates[0]
 
     def read_process_output(args):
         process = subprocess.Popen(

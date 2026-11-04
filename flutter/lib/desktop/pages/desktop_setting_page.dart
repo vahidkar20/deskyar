@@ -2692,8 +2692,8 @@ class _AboutState extends State<_About> {
                 ),
               ],
               const SizedBox(height: 14),
-              aboutLink(translate('Privacy Statement'), 'https://yar.one'),
-              aboutLink(translate('Website'), 'https://yar.one'),
+              aboutLink(translate('Privacy Statement'), 'https://nexdesk.ir'),
+              aboutLink(translate('Website'), 'https://nexdesk.ir'),
               Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(

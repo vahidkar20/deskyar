@@ -78,7 +78,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               Text(', ', style: TextStyle(fontSize: em)),
               Flexible(
                 child: InkWell(
-                  onTap: () => launchUrlString('https://yar.one'),
+                  onTap: () => launchUrlString('https://nexdesk.ir'),
                   child: Text(
                     translate('powered_by_me'),
                     style: TextStyle(

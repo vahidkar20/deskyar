@@ -37,7 +37,7 @@ class SettingsPage extends StatefulWidget implements PageShape {
   State<SettingsPage> createState() => _SettingsState();
 }
 
-const url = 'https://yar.one/';
+const url = 'https://nexdesk.ir/';
 
 enum KeepScreenOn {
   never,
@@ -1031,7 +1031,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 title: Text(translate("Version: ") + version),
                 value: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text('yar.one',
+                  child: Text('nexdesk.ir',
                       style: TextStyle(
                         decoration: TextDecoration.underline,
                       )),
@@ -1065,7 +1065,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             SettingsTile(
               title: Text(translate("Privacy Statement")),
               onPressed: (context) =>
-                  launchUrlString('https://yar.one'),
+                  launchUrlString('https://nexdesk.ir'),
               leading: Icon(Icons.privacy_tip),
             )
           ],
@@ -1178,12 +1178,12 @@ void showAbout(OverlayDialogManager dialogManager) {
         Text('Version: $version'),
         InkWell(
             onTap: () async {
-              const url = 'https://yar.one/';
+              const url = 'https://nexdesk.ir/';
               await launchUrl(Uri.parse(url));
             },
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('yar.one',
+              child: Text('nexdesk.ir',
                   style: TextStyle(
                     decoration: TextDecoration.underline,
                   )),
