@@ -45,7 +45,8 @@ env:
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
   VCPKG_CMAKE_VERSION: "4.3.0"
   ARMV7_VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836" # 2025.01.13, got "/opt/artifacts/vcpkg/vcpkg: No such file or directory" with latest version
-  VERSION: "1.5.0"
+  # Keep in sync with Cargo.toml: it names the APK/RPM/deb artifacts.
+  VERSION: "1.5.3"
   NDK_VERSION: "r28c"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
@@ -418,7 +419,13 @@ jobs:
         run: |
           git checkout -- res/msi
           cp -r ./rustdesk ./rustdesk-msi-template
-          mv ./rustdesk-msi-template/rustdesk.exe ./rustdesk-msi-template/RDAPPNAM.exe
+          # The executable is named after the product (NexDesk.exe since the
+          # rebrand); pick it by name and fall back to the only exe in the dist.
+          $exes = Get-ChildItem -Path ./rustdesk-msi-template -Filter *.exe -ErrorAction SilentlyContinue
+          $appExe = $exes | Where-Object { $_.Name -match '^(rustdesk|nexdesk)\.exe$' } | Select-Object -First 1
+          if (-not $appExe) { $appExe = $exes | Select-Object -First 1 }
+          if (-not $appExe) { throw 'no application executable in the dist dir' }
+          mv $appExe.FullName ./rustdesk-msi-template/RDAPPNAM.exe
           Set-Content -Path ./rustdesk-msi-template/custom.txt -Value 'placeholder' -NoNewline
           $assets = './rustdesk-msi-template/data/flutter_assets/assets'
           New-Item -ItemType Directory -Force -Path $assets | Out-Null
