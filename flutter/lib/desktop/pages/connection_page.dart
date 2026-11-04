@@ -361,11 +361,21 @@ class _ConnectionPageState extends State<ConnectionPage>
   /// Paste an ID from the clipboard, stripping grouping spaces and any bidi
   /// marks a chat client may have added. Support staff hand IDs out over chat,
   /// so this is the fastest path from "here is my ID" to a connection.
+  /// A remote ID is a single token: digits, or a custom alphanumeric ID.
+  /// Anything with spaces or sentence punctuation is clipboard noise (a chat
+  /// message, a URL) and must not be pasted into the field, where it used to
+  /// land as an unreadable sentence that could never connect.
+  static final RegExp _idPattern = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
+
   Future<void> _pasteId() async {
     try {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
-      final id = trimID(data?.text ?? '');
+      final id = trimID((data?.text ?? '').trim());
       if (id.isEmpty) return;
+      if (!_idPattern.hasMatch(id)) {
+        showToast(translate('Clipboard does not contain an ID'));
+        return;
+      }
       _applyId(id);
       _idFocusNode.requestFocus();
     } catch (_) {

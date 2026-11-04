@@ -234,8 +234,45 @@ class _PeerTabPageState extends State<PeerTabPage>
     );
   }
 
+  /// Grid and list as two explicit buttons.
+  ///
+  /// They used to hide behind a single "change view" popup, which made the
+  /// toolbar read as if it only had search. The active mode is tinted with the
+  /// brand colour so the current layout is visible at a glance.
   Widget _createPeerViewTypeSwitch(BuildContext context) {
-    return PeerViewDropdown();
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+
+    Widget button(PeerUiType type, IconData icon, String tooltip) {
+      return Obx(() {
+        final selected = peerCardUiType.value == type;
+        return _hoverAction(
+          context: context,
+          toolTip: translate(tooltip),
+          onTap: () async {
+            if (isOptionFixed(kOptionPeerCardUiType)) return;
+            peerCardUiType.value = type;
+            await bind.setLocalFlutterOption(
+              k: kOptionPeerCardUiType,
+              v: type.index.toString(),
+            );
+          },
+          child: Icon(
+            icon,
+            size: 18,
+            color: selected ? MyTheme.accent : textColor,
+          ),
+        );
+      });
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        button(PeerUiType.grid, Icons.grid_view_rounded, 'Big tiles'),
+        const SizedBox(width: 2),
+        button(PeerUiType.list, Icons.view_list_rounded, 'List'),
+      ],
+    );
   }
 
   Widget _createMultiSelection() {
@@ -557,10 +594,7 @@ class _PeerTabPageState extends State<PeerTabPage>
           index: PeerTabIndex.ab, loading: gFFI.abModel.currentAbLoading),
       _createRefresh(
           index: PeerTabIndex.group, loading: gFFI.groupModel.groupLoading),
-      Offstage(
-        offstage: model.currentTabCachedPeers.isEmpty,
-        child: _createMultiSelection(),
-      ),
+      _createMultiSelection(),
       _createPeerViewTypeSwitch(context),
       Offstage(
         offstage: model.currentTab == PeerTabIndex.recent.index,

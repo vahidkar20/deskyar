@@ -60,8 +60,11 @@ env:
   #
   # When NEXDESK_SERVER is empty the build falls back to upstream's public
   # infrastructure, which is what you do not want for an Iranian audience.
-  NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER }}
-  NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY }}
+  # Accept the pre-rebrand variable names too: the repository still carries
+  # DESKYAR_SERVER / DESKYAR_SERVER_KEY, and an empty value would silently bake
+  # in RustDesk's public servers.
+  NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER || vars.DESKYAR_SERVER }}
+  NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY || vars.DESKYAR_SERVER_KEY }}
 
 jobs:
   # The Dart <-> Rust bridge is generated, not committed, so it has to be

@@ -1771,8 +1771,11 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
   }
 
   Widget network(BuildContext context) {
-    final hideServer =
-        bind.mainGetBuildinOption(key: kOptionHideServerSetting) == 'Y';
+    // The rendezvous/relay address and its public key are provisioned in the
+    // build. Exposing the editor would let a user point the client at another
+    // server, which this product does not support and which silently breaks
+    // the connection.
+    final hideServer = true;
     final hideProxy =
         isWeb || bind.mainGetBuildinOption(key: kOptionHideProxySetting) == 'Y';
     final hideWebSocket = isWeb ||
