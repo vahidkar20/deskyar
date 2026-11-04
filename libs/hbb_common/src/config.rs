@@ -1090,6 +1090,7 @@ impl Config {
     ///
     /// Kept separate from [`Self::get_auto_id`] so the migration below can tell
     /// an auto-generated ID apart from one the user typed in.
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     fn legacy_auto_id() -> Option<String> {
         let ma = mac_address::get_mac_address().ok().flatten()?;
         let mut id = 0u32;
@@ -1098,6 +1099,13 @@ impl Config {
         }
         id &= 0x1FFFFFFF;
         Some(id.to_string())
+    }
+
+    /// Mobile IDs are random, never MAC-derived, so there is no legacy value
+    /// to migrate from.
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    fn legacy_auto_id() -> Option<String> {
+        None
     }
 
     /// Re-derive an auto-generated ID under the current product's salt.
