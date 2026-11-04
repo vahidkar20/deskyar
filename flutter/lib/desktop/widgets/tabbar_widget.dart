@@ -641,13 +641,10 @@ class _DesktopTabState extends State<DesktopTab>
                         Offstage(
                             offstage: !showTitle,
                             child: const Text(
-                              "DeskYar",
+                              "NexDesk",
                               style: TextStyle(fontSize: 13),
                             ).marginStart(2))
-                      ]).marginOnly(
-                        left: 5,
-                        right: 10,
-                      ),
+                      ]).marginSymmetric(horizontal: 8),
                     ),
                     Expanded(
                         child: Listener(
@@ -1340,8 +1337,6 @@ class _TabDropDownButton extends StatefulWidget {
 }
 
 class _TabDropDownButtonState extends State<_TabDropDownButton> {
-  var position = RelativeRect.fromLTRB(0, 0, 0, 0);
-
   @override
   Widget build(BuildContext context) {
     List<String> sortedKeys = widget.controller.state.value.tabs
@@ -1349,16 +1344,13 @@ class _TabDropDownButtonState extends State<_TabDropDownButton> {
         .map((e) => e.key)
         .toList();
     return ActionIcon(
-      onTapDown: (details) {
-        final x = details.globalPosition.dx;
-        final y = details.globalPosition.dy;
-        position = RelativeRect.fromLTRB(x, y, x, y);
-      },
       icon: Icons.arrow_drop_down,
       onTap: () {
         showMenu(
           context: context,
-          position: position,
+          // Under the arrow, mirrored correctly in RTL. A tap-point anchor used
+          // to land the list against the window edge instead.
+          position: menuPositionUnder(context),
           items: sortedKeys.map((e) {
             var label = e;
             final tabInfo = widget.controller.state.value.tabs

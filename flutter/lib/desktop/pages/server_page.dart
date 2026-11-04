@@ -459,11 +459,13 @@ class _CmHeaderState extends State<_CmHeader>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10.0),
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
+          // Directional so the highlight follows the reading direction; the
+          // old blue pair was the last upstream accent left in the shell.
+          begin: AlignmentDirectional.topEnd,
+          end: AlignmentDirectional.bottomStart,
           colors: [
-            Color(0xff00bfe1),
-            Color(0xff0071ff),
+            Color(0xFF34D399),
+            Color(0xFF16A34A),
           ],
         ),
       ),
@@ -914,7 +916,7 @@ class _CmControlPanel extends StatelessWidget {
                   String currentDevice = devicesInfo['current'] as String;
                   final x = details.globalPosition.dx;
                   final y = details.globalPosition.dy;
-                  final position = RelativeRect.fromLTRB(x, y, x, y);
+                  final position = menuPositionForTap(context, Offset(x, y));
                   showMenu(
                     context: context,
                     position: position,

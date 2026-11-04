@@ -1,12 +1,12 @@
 name: Sync upstream RustDesk
 
-# Pulls new RustDesk releases in without losing the DeskYar customisations.
+# Pulls new RustDesk releases in without losing the NexDesk customisations.
 #
 # The repository carries two branches on purpose:
 #
 #   upstream  a verbatim copy of rustdesk/rustdesk at each release, one commit
-#             per version. It holds no DeskYar code at all.
-#   main      that same history plus a single "DeskYar" commit on top: branding,
+#             per version. It holds no NexDesk code at all.
+#   main      that same history plus a single "NexDesk" commit on top: branding,
 #             the in-app installer, and the update feed.
 #
 # Because `upstream` is a real ancestor of `main`, a new release is merged with
@@ -39,7 +39,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: deskyar-upstream-sync
+  group: nexdesk-upstream-sync
   cancel-in-progress: false
 
 jobs:
@@ -93,8 +93,8 @@ jobs:
           set -euo pipefail
           TAG="${{ steps.upstream.outputs.tag }}"
 
-          git config user.name "DeskYar Sync"
-          git config user.email "sync@deskyar.local"
+          git config user.name "NexDesk Sync"
+          git config user.email "sync@nexdesk.local"
           git checkout upstream
 
           echo "::group::fetch upstream source"
@@ -149,11 +149,11 @@ jobs:
           # Belt and braces: the merge should already preserve branding, but a
           # silent revert here would ship a build that calls itself RustDesk.
           python3 scripts/apply-branding.py --root . --check
-          test -f src/deskyar.rs
+          test -f src/nexdesk.rs
           test -f flutter/lib/desktop/widgets/install_banner.dart
-          grep -q 'mod deskyar;' src/lib.rs
-          grep -q 'DeskYar' libs/hbb_common/src/config.rs
-          grep -q 'DeskYarInstallBanner' flutter/lib/desktop/pages/connection_page.dart
+          grep -q 'mod nexdesk;' src/lib.rs
+          grep -q 'NexDesk' libs/hbb_common/src/config.rs
+          grep -q 'NexDeskInstallBanner' flutter/lib/desktop/pages/connection_page.dart
 
           git add -A
           git commit -m "chore: sync upstream RustDesk ${TAG}
@@ -187,7 +187,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          gh workflow run deskyar-windows.yml \
+          gh workflow run nexdesk-windows.yml \
             --ref "v${{ steps.upstream.outputs.version }}" \
             -f make_release=true
           echo "dispatched the Windows build"
@@ -202,7 +202,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          BRANCH="deskyar-sync/upstream-${{ steps.upstream.outputs.version }}"
+          BRANCH="nexdesk-sync/upstream-${{ steps.upstream.outputs.version }}"
           git checkout -b "$BRANCH"
           git push origin "$BRANCH"
           gh pr create \
@@ -225,7 +225,7 @@ jobs:
             --title "Upstream ${{ steps.upstream.outputs.tag }} needs a manual merge" \
             --body "The automated sync onto \`${{ steps.upstream.outputs.tag }}\` stopped.
 
-          Upstream changed the same lines DeskYar changes, so git refused to merge
+          Upstream changed the same lines NexDesk changes, so git refused to merge
           rather than silently dropping the branding. Nothing was pushed.
 
           **Resolve locally**

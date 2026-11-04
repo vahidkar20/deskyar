@@ -168,11 +168,11 @@ void changeIdDialog() {
                             e.name,
                             style: TextStyle(
                                 color: checked
-                                    ? const Color(0xFF0A9471)
+                                    ? const Color(0xFF15803D)
                                     : Color.fromARGB(255, 198, 86, 157)),
                           ),
                           backgroundColor: checked
-                              ? const Color(0xFFD0F7ED)
+                              ? const Color(0xFFDCFCE7)
                               : Color.fromARGB(255, 247, 205, 232));
                     }).toList(),
                   )).marginOnly(bottom: 8)

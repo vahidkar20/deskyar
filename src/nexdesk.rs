@@ -1,4 +1,4 @@
-//! DeskYar release feed.
+//! NexDesk release feed.
 //!
 //! RustDesk's updater asks `api.rustdesk.com` for the newest release and then
 //! rebuilds the asset name as `rustdesk-<version>-<arch>.exe`. Two things make
@@ -9,36 +9,36 @@
 //!      is not literally "RustDesk". Rebranded clients therefore never update.
 //!   2. The asset naming and the release host are hard-wired to upstream.
 //!
-//! This module supplies the missing piece: it resolves the newest DeskYar
+//! This module supplies the missing piece: it resolves the newest NexDesk
 //! release from GitHub and reports it in the shape `updater.rs` already
 //! understands (a `releases/tag/<tag>` URL). Everything downstream — download,
 //! staging directory, `--update` handoff, service restart — is reused as-is.
 //!
 //! The repository is configurable so a fork can point at its own releases:
 //!
-//!   1. `DESKYAR_UPDATE_REPO` environment variable at runtime (useful for
+//!   1. `NEXDESK_UPDATE_REPO` environment variable at runtime (useful for
 //!      testing against a scratch repo), else
-//!   2. `DESKYAR_UPDATE_REPO` at compile time (the release workflow sets it), else
+//!   2. `NEXDESK_UPDATE_REPO` at compile time (the release workflow sets it), else
 //!   3. [`DEFAULT_REPO`].
 
 use serde_json::Value;
 
 /// Fallback when neither build-time nor runtime configuration is present.
 /// Replace with the real `owner/repo` before publishing.
-pub const DEFAULT_REPO: &str = "deskyar/deskyar";
+pub const DEFAULT_REPO: &str = "vahidkar20/nexdesk";
 
 /// GitHub rejects API requests that do not identify a client.
-pub const USER_AGENT: &str = concat!("DeskYar/", env!("CARGO_PKG_VERSION"));
+pub const USER_AGENT: &str = concat!("NexDesk/", env!("CARGO_PKG_VERSION"));
 
 /// Resolve the `owner/repo` whose releases we track.
 pub fn update_repo() -> String {
-    if let Ok(value) = std::env::var("DESKYAR_UPDATE_REPO") {
+    if let Ok(value) = std::env::var("NEXDESK_UPDATE_REPO") {
         let value = value.trim().to_string();
         if !value.is_empty() {
             return value;
         }
     }
-    option_env!("DESKYAR_UPDATE_REPO")
+    option_env!("NEXDESK_UPDATE_REPO")
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| DEFAULT_REPO.to_string())
@@ -82,14 +82,14 @@ pub fn asset_name(version: &str) -> String {
 ///
 /// `allow-auto-update` is an `allow-` option, so `option2bool` only reads it as
 /// enabled when it is literally `Y`. Nothing ships a default for it, which
-/// leaves a fresh install with auto-update silently off. DeskYar wants new
+/// leaves a fresh install with auto-update silently off. NexDesk wants new
 /// installs to stay current, so "never configured" counts as enabled while an
 /// explicit `N` from the settings page still wins.
 pub fn auto_update_default() -> bool {
     hbb_common::config::Config::get_option(base::config::keys::OPTION_ALLOW_AUTO_UPDATE).is_empty()
 }
 
-/// Persist the auto-update preference the first time DeskYar runs.
+/// Persist the auto-update preference the first time NexDesk runs.
 ///
 /// `check_update` already treats "unset" as enabled, but the settings checkbox
 /// renders the raw option value, so an unset key would show as "off" while
@@ -107,9 +107,9 @@ pub fn ensure_update_defaults() {
 ///
 /// Without it, every start would rewrite the options and silently undo a
 /// deliberate change the user made in Settings.
-pub const OPTION_DEFAULTS_APPLIED: &str = "deskyar-defaults-applied";
+pub const OPTION_DEFAULTS_APPLIED: &str = "nexdesk-defaults-applied";
 
-/// Apply DeskYar's product defaults exactly once per installation.
+/// Apply NexDesk's product defaults exactly once per installation.
 ///
 /// ## Why this exists
 ///
@@ -217,10 +217,10 @@ mod tests {
 
     const SAMPLE: &str = r#"{
         "tag_name": "v1.5.1",
-        "name": "DeskYar 1.5.1",
+        "name": "NexDesk 1.5.1",
         "assets": [
-            {"name": "DeskYar-1.5.1-x86_64.exe", "size": 25900000},
-            {"name": "DeskYar-1.5.1-aarch64.exe", "size": 24000000}
+            {"name": "NexDesk-1.5.1-x86_64.exe", "size": 25900000},
+            {"name": "NexDesk-1.5.1-aarch64.exe", "size": 24000000}
         ]
     }"#;
 
@@ -269,12 +269,12 @@ mod tests {
     #[test]
     fn urls_are_well_formed() {
         assert_eq!(
-            api_url("acme/deskyar"),
-            "https://api.github.com/repos/acme/deskyar/releases/latest"
+            api_url("acme/nexdesk"),
+            "https://api.github.com/repos/acme/nexdesk/releases/latest"
         );
         assert_eq!(
-            release_page("acme/deskyar", "v1.5.1"),
-            "https://github.com/acme/deskyar/releases/tag/v1.5.1"
+            release_page("acme/nexdesk", "v1.5.1"),
+            "https://github.com/acme/nexdesk/releases/tag/v1.5.1"
         );
     }
 }

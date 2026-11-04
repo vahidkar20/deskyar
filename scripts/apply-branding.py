@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-DeskYar branding pass.
+NexDesk branding pass.
 
-Rewrites upstream RustDesk 1.5.0 into the DeskYar product identity. Every
+Rewrites upstream RustDesk 1.5.0 into the NexDesk product identity. Every
 edit is asserted, so re-running against an already-branded tree reports
 "already applied" instead of silently corrupting files.
 
@@ -19,8 +19,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-BRAND = "DeskYar"
-BRAND_FA = "دسکیار"
+BRAND = "NexDesk"
+BRAND_FA = "نکس دسک"
 VERSION_SUFFIX = "1.5.0"
 
 # --------------------------------------------------------------- file edits --
@@ -95,7 +95,7 @@ EDITS: list[tuple[str, str, str, int]] = [
         f'VALUE "LegalCopyright", "Copyright © 2026 {BRAND}. Based on RustDesk (AGPL-3.0)." "\\0"',
         1,
     ),
-    # ---- packaging: emit DeskYar.exe, not rustdesk.exe ---------------------
+    # ---- packaging: emit NexDesk.exe, not rustdesk.exe ---------------------
     (
         "build.py",
         "-e ../../{flutter_build_dir_2}/rustdesk.exe'",
@@ -117,48 +117,51 @@ EDITS: list[tuple[str, str, str, int]] = [
 ]
 
 # --------------------------------------------------------------- theme ------
-# RustDesk ships a blue accent; DeskYar uses a navy -> teal identity.
+# RustDesk ships a blue accent on near-black chrome; NexDesk is a green identity
+# on deep green surfaces. See brand/palette.json for the source of truth.
 THEME_EDITS: list[tuple[str, str, str]] = [
     # ordered: the dialog border must be recoloured before the generic
     # card-surface pass below sweeps every remaining 24252B.
-    ("color: Color(0xFF24252B),", "color: Color(0xFF1B3542),"),
-    ("0xFF24252B", "0xFF10232C"),
+    ("color: Color(0xFF24252B),", "color: Color(0xFF1C4529),"),
+    ("0xFF24252B", "0xFF0E2317"),
 
     ("static const Color accent = Color(0xFF0071FF);",
-     "static const Color accent = Color(0xFF14B8A6);"),
+     "static const Color accent = Color(0xFF22C55E);"),
     ("static const Color accent50 = Color(0x770071FF);",
-     "static const Color accent50 = Color(0x7714B8A6);"),
+     "static const Color accent50 = Color(0x7722C55E);"),
     ("static const Color accent80 = Color(0xAA0071FF);",
-     "static const Color accent80 = Color(0xAA14B8A6);"),
+     "static const Color accent80 = Color(0xAA22C55E);"),
     ("static const Color button = Color(0xFF2C8CFF);",
-     "static const Color button = Color(0xFF12A99B);"),
+     "static const Color button = Color(0xFF16A34A);"),
     ("static const Color idColor = Color(0xFF00B6F0);",
-     "static const Color idColor = Color(0xFF2FD8EA);"),
+     "static const Color idColor = Color(0xFF4ADE80);"),
     ("static const Color canvasColor = Color(0xFF212121);",
-     "static const Color canvasColor = Color(0xFF0B1A22);"),
+     "static const Color canvasColor = Color(0xFF08120C);"),
     ("static const Color grayBg = Color(0xFFEFEFF2);",
-     "static const Color grayBg = Color(0xFFF2F7F7);"),
+     "static const Color grayBg = Color(0xFFF1F8F3);"),
     ("scaffoldBackgroundColor: Color(0xFF18191E),",
-     "scaffoldBackgroundColor: Color(0xFF0A141A),"),
+     "scaffoldBackgroundColor: Color(0xFF07130D),"),
     ("dialogBackgroundColor: Color(0xFF18191E),",
-     "dialogBackgroundColor: Color(0xFF0A141A),"),
+     "dialogBackgroundColor: Color(0xFF07130D),"),
     ("hoverColor: Color.fromARGB(255, 45, 46, 53),",
-     "hoverColor: Color.fromARGB(255, 20, 48, 60),"),
-    ("primary: Colors.blue,", "primary: Color(0xFF14B8A6),"),
+     "hoverColor: Color.fromARGB(255, 22, 52, 34),"),
+    ("primary: Colors.blue,", "primary: Color(0xFF22C55E),"),
 ]
 
 # ------------------------------------------------------------- asset copies --
 ASSETS: list[tuple[str, str]] = [
-    ("brand/deskyar-icon.ico", "res/icon.ico"),
-    ("brand/deskyar-icon-512.png", "res/icon.png"),
-    ("brand/deskyar-32x32.png", "res/32x32.png"),
-    ("brand/deskyar-64x64.png", "res/64x64.png"),
-    ("brand/deskyar-128x128.png", "res/128x128.png"),
-    ("brand/deskyar-128x128@2x.png", "res/128x128@2x.png"),
-    ("brand/deskyar-tray.ico", "res/tray-icon.ico"),
-    ("brand/deskyar-tray-dark-x2.png", "res/mac-tray-dark-x2.png"),
-    ("brand/deskyar-icon-512.png", "res/mac-icon.png"),
-    ("brand/deskyar-icon.ico", "flutter/windows/runner/resources/app_icon.ico"),
+    ("brand/nexdesk-icon.ico", "res/icon.ico"),
+    ("brand/nexdesk-icon-512.png", "res/icon.png"),
+    ("brand/nexdesk-32x32.png", "res/32x32.png"),
+    ("brand/nexdesk-64x64.png", "res/64x64.png"),
+    ("brand/nexdesk-128x128.png", "res/128x128.png"),
+    ("brand/nexdesk-128x128@2x.png", "res/128x128@2x.png"),
+    ("brand/nexdesk-tray.ico", "res/tray-icon.ico"),
+    ("brand/nexdesk-tray-dark-x2.png", "res/mac-tray-dark-x2.png"),
+    ("brand/nexdesk-icon-512.png", "res/mac-icon.png"),
+    ("brand/nexdesk-icon.ico", "flutter/windows/runner/resources/app_icon.ico"),
+    ("brand/nexdesk-tray-light-x2.png", "res/mac-tray-light-x2.png"),
+    ("brand/nexdesk-256x256.png", "flutter/assets/icon.png"),
 ]
 
 

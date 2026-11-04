@@ -654,7 +654,7 @@ class AdDocumentView extends StatelessWidget {
     // glaring slab inside a dark window: there the theme surface wins and the
     // text colour is inverted to stay readable.
     final usePaper = !(paper.computeLuminance() > 0.5 && isDark);
-    final surface = usePaper ? paper : const Color(0xFF10232C);
+    final surface = usePaper ? paper : const Color(0xFF0E2317);
     final textColor = usePaper ? ink : Colors.white.withOpacity(0.92);
 
     return Directionality(

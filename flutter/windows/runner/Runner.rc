@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "DeskYar" "\0"
-            VALUE "FileDescription", "DeskYar Remote Desktop" "\0"
+            VALUE "CompanyName", "NexDesk" "\0"
+            VALUE "FileDescription", "NexDesk Remote Desktop" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "DeskYar" "\0"
-            VALUE "LegalCopyright", "Copyright © 2026 DeskYar. Based on RustDesk (AGPL-3.0)." "\0"
-            VALUE "OriginalFilename", "DeskYar.exe" "\0"
-            VALUE "ProductName", "DeskYar" "\0"
+            VALUE "InternalName", "NexDesk" "\0"
+            VALUE "LegalCopyright", "Copyright © 2026 NexDesk. Based on RustDesk (AGPL-3.0)." "\0"
+            VALUE "OriginalFilename", "NexDesk.exe" "\0"
+            VALUE "ProductName", "NexDesk" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

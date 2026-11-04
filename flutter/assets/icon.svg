@@ -1,27 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="dy" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0A2431"/>
-      <stop offset="0.45" stop-color="#0B3A47"/>
-      <stop offset="1" stop-color="#12A99B"/>
+    <linearGradient id="plate" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#34D97B"/>
+      <stop offset="0.45" stop-color="#16C060"/>
+      <stop offset="1" stop-color="#0A9E4A"/>
     </linearGradient>
-    <clipPath id="dyr">
-      <rect x="0" y="0" width="512" height="512" rx="115" ry="115"/>
-    </clipPath>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D8F7E2"/>
+    </linearGradient>
   </defs>
-
-  <g clip-path="url(#dyr)">
-    <rect x="0" y="0" width="512" height="512" fill="url(#dy)"/>
+  <rect x="20" y="20" width="472" height="472" rx="116" fill="url(#plate)"/>
+  <rect x="20" y="20" width="472" height="472" rx="116" fill="url(#sheen)"/>
+  <rect x="38" y="38" width="436" height="436" rx="100" fill="none" stroke="#FFFFFF" stroke-opacity="0.30" stroke-width="7"/>
+  <g fill="none" stroke="url(#ink)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M170 352V202L342 352V202"/>
   </g>
-
-  <!-- monitor -->
-  <rect x="89.6" y="115.2" width="332.8" height="250.9" rx="28.2" ry="28.2"
-        fill="none" stroke="#FFFFFF" stroke-width="29.7"/>
-  <!-- stand -->
-  <rect x="244.5" y="351" width="23" height="61" fill="#FFFFFF"/>
-  <rect x="176.6" y="407" width="158.8" height="24.6" rx="12.3" ry="12.3" fill="#FFFFFF"/>
-  <!-- cursor -->
-  <polygon fill="#FFFFFF" points="
-    212.5,181.8 212.5,292.4 241.7,267.8 260.1,313.9
-    281.6,303.1 263.2,258.6 298.5,258.6"/>
+  <rect x="376" y="118" width="52" height="52" rx="14" fill="url(#ink)"/>
+  <rect x="432" y="172" width="38" height="38" rx="11" fill="url(#ink)" fill-opacity="0.92"/>
 </svg>

@@ -2730,7 +2730,7 @@ pub fn main_get_common(key: String) -> String {
         } else if key.starts_with("download-file-") {
             let _version = key.replace("download-file-", "");
             // Tags may carry a `v` prefix; the published asset name never does.
-            // Keep in sync with `deskyar::asset_name`.
+            // Keep in sync with `nexdesk::asset_name`.
             let _version = _version
                 .trim_start_matches('v')
                 .trim_start_matches('V')

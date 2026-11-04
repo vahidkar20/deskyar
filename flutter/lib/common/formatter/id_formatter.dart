@@ -104,17 +104,17 @@ String stripBidiIsolates(String text) {
 /// `Get.locale` is not reliable here: `GetMaterialApp` receives an explicit
 /// `locale:` argument but does not necessarily publish it back through GetX
 /// before the first frame, so reading it alone can answer "not RTL" while the
-/// whole app is laid out right-to-left. `getDeskyarLocale` writes the resolved
+/// whole app is laid out right-to-left. `getNexDeskLocale` writes the resolved
 /// value here, which makes [isRtlLocale] independent of GetX's timing.
-Locale deskyarUiLocale = const Locale('fa');
+Locale nexdeskUiLocale = const Locale('fa');
 
 /// Whether the current UI locale is right-to-left.
 ///
 /// Used only for *layout* decisions (isolates, alignment). Anything that
 /// formats a number must not depend on it - see [kNumberTextDirection].
 bool get isRtlLocale {
-  final code = deskyarUiLocale.languageCode.isNotEmpty
-      ? deskyarUiLocale.languageCode
+  final code = nexdeskUiLocale.languageCode.isNotEmpty
+      ? nexdeskUiLocale.languageCode
       : (Get.locale?.languageCode ?? '');
   return const ['fa', 'ar', 'he', 'ur', 'ps', 'sd', 'yi'].contains(code);
 }
@@ -132,7 +132,7 @@ const TextDirection kNumberTextDirection = TextDirection.ltr;
 ///
 /// ## The bug this fixes
 ///
-/// DeskYar runs in Persian, so the whole app is laid out right-to-left. An ID
+/// NexDesk runs in Persian, so the whole app is laid out right-to-left. An ID
 /// is grouped into three-digit blocks by [formatID] (`410 256 978`), and the
 /// spaces between those blocks are *neutral* characters: the bidi algorithm
 /// resolves them to the paragraph direction, which splits the ID into three

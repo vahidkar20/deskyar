@@ -34,16 +34,16 @@ pub fn core_main() -> Option<Vec<String>> {
         return None;
     }
     crate::load_custom_client();
-    // Auto-update ships on for DeskYar; make the stored option match so the
+    // Auto-update ships on for NexDesk; make the stored option match so the
     // settings checkbox does not disagree with actual behaviour.
-    crate::deskyar::ensure_update_defaults();
+    crate::nexdesk::ensure_update_defaults();
     // File transfer on by default - see the function docs for why relying on
     // the "unset means enabled" fallback is not enough.
-    crate::deskyar::ensure_product_defaults();
+    crate::nexdesk::ensure_product_defaults();
     // Point the client at the self-hosted server that was baked into this
     // build. Without this the client falls back to upstream's public
     // infrastructure, which cannot work if the network blocks it.
-    crate::deskyar_server::ensure_server_defaults();
+    crate::nexdesk_server::ensure_server_defaults();
     #[cfg(windows)]
     if !crate::platform::windows::bootstrap() {
         // return None to terminate the process

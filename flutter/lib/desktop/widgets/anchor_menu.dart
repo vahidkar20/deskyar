@@ -8,7 +8,7 @@
 // computes the position from the trigger's own render box, so it stays attached
 // to the button in either direction and is clamped to the window.
 //
-// It also gives the menu a look that matches the rest of DeskYar (rounded card,
+// It also gives the menu a look that matches the rest of NexDesk (rounded card,
 // brand border, icon per row, hover highlight) instead of the stock Material
 // popup, which is what the connection page needs.
 
@@ -220,9 +220,9 @@ class _MenuOverlayState extends State<_MenuOverlay> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = MyTheme.accent;
-    final surface = isDark ? const Color(0xFF10232C) : Colors.white;
+    final surface = isDark ? const Color(0xFF0E2317) : Colors.white;
     final border = isDark
-        ? const Color(0xFF1B3542)
+        ? const Color(0xFF1C4529)
         : accent.withOpacity(0.22);
 
     return Directionality(

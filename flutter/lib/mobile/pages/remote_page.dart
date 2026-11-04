@@ -791,7 +791,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     () async {
       var index = await showMenu(
         context: context,
-        position: RelativeRect.fromLTRB(x, y, x, y),
+        position: menuPositionForTap(context, Offset(x, y)),
         items: more,
         elevation: 8,
       );
@@ -867,7 +867,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       final y = size.height;
       var index = await showMenu(
         context: context,
-        position: RelativeRect.fromLTRB(x, y, x, y),
+        position: menuPositionForTap(context, Offset(x, y)),
         items: menuItems,
         elevation: 8,
       );

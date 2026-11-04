@@ -1020,9 +1020,9 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 pub fn check_software_update() {
     // Upstream refuses to look for updates in any rebranded build, which is why
     // a custom client normally stays on the version it shipped with forever.
-    // DeskYar publishes its own releases, so only bail out when no feed is
+    // NexDesk publishes its own releases, so only bail out when no feed is
     // configured at all.
-    if is_custom_client() && crate::deskyar::update_repo().is_empty() {
+    if is_custom_client() && crate::nexdesk::update_repo().is_empty() {
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);
@@ -1038,7 +1038,7 @@ pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
     // Rebranded builds track their own release repository instead of the
     // upstream version endpoint.
     if is_custom_client() {
-        return do_check_deskyar_update().await;
+        return do_check_nexdesk_update().await;
     }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
@@ -1087,18 +1087,18 @@ pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
     Ok(())
 }
 
-/// Resolve the newest DeskYar release from GitHub.
+/// Resolve the newest NexDesk release from GitHub.
 ///
 /// Publishes the result through the same `SOFTWARE_UPDATE_URL` channel upstream
 /// uses, so `updater.rs` keeps ownership of downloading and installing. The URL
 /// is left in `releases/tag/<tag>` form because the updater rewrites `tag` to
 /// `download` and appends the asset name itself.
-async fn do_check_deskyar_update() -> hbb_common::ResultType<()> {
-    let repo = crate::deskyar::update_repo();
+async fn do_check_nexdesk_update() -> hbb_common::ResultType<()> {
+    let repo = crate::nexdesk::update_repo();
     if repo.is_empty() {
         return Ok(());
     }
-    let url = crate::deskyar::api_url(&repo);
+    let url = crate::nexdesk::api_url(&repo);
 
     let proxy_conf = Config::get_socks();
     let tls_url = get_url_for_tls(&url, &proxy_conf);
@@ -1119,7 +1119,7 @@ async fn do_check_deskyar_update() -> hbb_common::ResultType<()> {
         let client = create_http_client_async(tls_type, false);
         match client
             .get(&url)
-            .header("User-Agent", crate::deskyar::USER_AGENT)
+            .header("User-Agent", crate::nexdesk::USER_AGENT)
             .header("Accept", "application/vnd.github+json")
             .send()
             .await
@@ -1146,7 +1146,7 @@ async fn do_check_deskyar_update() -> hbb_common::ResultType<()> {
         ));
     };
 
-    let Some(release) = crate::deskyar::parse_latest_release(&body) else {
+    let Some(release) = crate::nexdesk::parse_latest_release(&body) else {
         return Err(anyhow!("malformed release payload from {repo}"));
     };
 
@@ -1154,18 +1154,18 @@ async fn do_check_deskyar_update() -> hbb_common::ResultType<()> {
         // The release exists but carries nothing we can install - advertising it
         // would make the updater download a 404 and leave a corrupt file behind.
         log::warn!(
-            "DeskYar release {} has no {} asset, skipping update",
+            "NexDesk release {} has no {} asset, skipping update",
             release.tag,
-            crate::deskyar::asset_name(&release.version)
+            crate::nexdesk::asset_name(&release.version)
         );
         *SOFTWARE_UPDATE_URL.lock().unwrap() = "".to_string();
         return Ok(());
     }
 
     if get_version_number(&release.version) > get_version_number(crate::VERSION) {
-        let response_url = crate::deskyar::release_page(&repo, &release.tag);
+        let response_url = crate::nexdesk::release_page(&repo, &release.tag);
         log::info!(
-            "DeskYar update available: {} -> {}",
+            "NexDesk update available: {} -> {}",
             crate::VERSION,
             release.version
         );

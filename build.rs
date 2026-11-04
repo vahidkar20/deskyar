@@ -86,10 +86,10 @@ fn install_android_deps() {
 }
 
 fn main() {
-    // `src/deskyar.rs` bakes the release repository in via `option_env!`.
+    // `src/nexdesk.rs` bakes the release repository in via `option_env!`.
     // Without this directive cargo caches the old value across rebuilds when
     // only the environment changed.
-    println!("cargo:rerun-if-env-changed=DESKYAR_UPDATE_REPO");
+    println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_REPO");
     hbb_common::gen_version();
     install_android_deps();
     #[cfg(all(windows, feature = "inline"))]

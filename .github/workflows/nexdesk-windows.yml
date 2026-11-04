@@ -1,13 +1,13 @@
-name: Build DeskYar (Windows x64)
+name: Build NexDesk (Windows x64)
 
 # Produces the single-file portable exe:
-#   DeskYar-1.5.0-x64.exe
+#   NexDesk-1.5.0-x64.exe
 #
-# Running it extracts the payload to %LOCALAPPDATA%\deskyar and starts the app
-# in portable mode. The home page then shows the "Install DeskYar" button,
+# Running it extracts the payload to %LOCALAPPDATA%\nexdesk and starts the app
+# in portable mode. The home page then shows the "Install NexDesk" button,
 # which promotes the run into a real installation under Program Files.
 #
-# Trigger: Actions -> "Build DeskYar (Windows x64)" -> Run workflow,
+# Trigger: Actions -> "Build NexDesk (Windows x64)" -> Run workflow,
 # or push a tag like v1.5.0.
 
 on:
@@ -32,7 +32,7 @@ permissions:
 # superseded by a newer commit on the same ref. A release tag is deliberately
 # excluded: cancelling a tagged build would leave a half-published release.
 concurrency:
-  group: deskyar-windows-${{ github.ref }}
+  group: nexdesk-windows-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 env:
@@ -47,21 +47,21 @@ env:
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
   VCPKG_CMAKE_VERSION: "4.3.0"
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-  # Baked into the binary via `option_env!` in src/deskyar.rs so installed
+  # Baked into the binary via `option_env!` in src/nexdesk.rs so installed
   # clients poll this repository for updates.
-  DESKYAR_UPDATE_REPO: ${{ github.repository }}
+  NEXDESK_UPDATE_REPO: ${{ github.repository }}
   # Self-hosted rendezvous (hbbs) server, baked into the binary via
-  # `option_env!` in src/deskyar_server.rs.
+  # `option_env!` in src/nexdesk_server.rs.
   #
   # Set these as GitHub Actions *variables* (Settings -> Secrets and
   # variables -> Actions -> Variables), not secrets - they are not confidential:
-  #   DESKYAR_SERVER      = "rd.your-domain.com"
-  #   DESKYAR_SERVER_KEY  = "base64 of data/id_ed25519.pub from the server"
+  #   NEXDESK_SERVER      = "rd.your-domain.com"
+  #   NEXDESK_SERVER_KEY  = "base64 of data/id_ed25519.pub from the server"
   #
-  # When DESKYAR_SERVER is empty the build falls back to upstream's public
+  # When NEXDESK_SERVER is empty the build falls back to upstream's public
   # infrastructure, which is what you do not want for an Iranian audience.
-  DESKYAR_SERVER: ${{ vars.DESKYAR_SERVER }}
-  DESKYAR_SERVER_KEY: ${{ vars.DESKYAR_SERVER_KEY }}
+  NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER }}
+  NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY }}
 
 jobs:
   # The Dart <-> Rust bridge is generated, not committed, so it has to be
@@ -97,9 +97,9 @@ jobs:
             echo "::error::could not read the version from Cargo.toml"
             exit 1
           fi
-          # Asset name must match `deskyar::asset_name()` and the URL the
+          # Asset name must match `nexdesk::asset_name()` and the URL the
           # updater builds: <product>-<version>-<arch>.exe
-          ARTIFACT_NAME="DeskYar-${VERSION}-x86_64.exe"
+          ARTIFACT_NAME="NexDesk-${VERSION}-x86_64.exe"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
           echo "building $ARTIFACT_NAME"
@@ -277,26 +277,26 @@ jobs:
           # If they are empty the client silently falls back to RustDesk's
           # public infrastructure, which is exactly what a self-hosted build
           # must not do - so say so loudly in the log.
-          if [ -z "${DESKYAR_SERVER:-}" ]; then
-            echo "::warning::DESKYAR_SERVER is empty - this build will use RustDesk's public servers. Set the repository variable DESKYAR_SERVER to bake in your own."
+          if [ -z "${NEXDESK_SERVER:-}" ]; then
+            echo "::warning::NEXDESK_SERVER is empty - this build will use RustDesk's public servers. Set the repository variable NEXDESK_SERVER to bake in your own."
           else
-            echo "rendezvous server: $DESKYAR_SERVER"
+            echo "rendezvous server: $NEXDESK_SERVER"
           fi
-          if [ -z "${DESKYAR_SERVER_KEY:-}" ]; then
-            echo "::warning::DESKYAR_SERVER_KEY is empty - the server's signatures cannot be verified. Set it to the base64 contents of data/id_ed25519.pub on the server."
+          if [ -z "${NEXDESK_SERVER_KEY:-}" ]; then
+            echo "::warning::NEXDESK_SERVER_KEY is empty - the server's signatures cannot be verified. Set it to the base64 contents of data/id_ed25519.pub on the server."
           else
-            echo "server public key: ${#DESKYAR_SERVER_KEY} characters"
+            echo "server public key: ${#NEXDESK_SERVER_KEY} characters"
           fi
 
-      - name: Build DeskYar
+      - name: Build NexDesk
         shell: pwsh
         run: |
           python .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
-          if (-not (Test-Path ".\flutter\build\windows\x64\runner\Release\DeskYar.exe")) {
-            Write-Error "DeskYar.exe was not produced - branding or CMake config is broken"
+          if (-not (Test-Path ".\flutter\build\windows\x64\runner\Release\NexDesk.exe")) {
+            Write-Error "NexDesk.exe was not produced - branding or CMake config is broken"
             exit 1
           }
-          mv .\flutter\build\windows\x64\runner\Release .\DeskYar
+          mv .\flutter\build\windows\x64\runner\Release .\NexDesk
 
       # Optional runtime helpers. Missing ones degrade gracefully rather than
       # failing the build, since they are not needed for the install flow.
@@ -308,7 +308,7 @@ jobs:
           Expand-Archive usbmmidd_v2.zip -DestinationPath .
           Remove-Item -Path usbmmidd_v2\Win32 -Recurse -ErrorAction SilentlyContinue
           Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe","usbmmidd_v2\deviceinstaller.exe","usbmmidd_v2\usbmmidd.bat" -ErrorAction SilentlyContinue
-          mv -Force .\usbmmidd_v2 .\DeskYar
+          mv -Force .\usbmmidd_v2 .\NexDesk
 
       - name: Pack single-file portable exe
         shell: bash
@@ -316,7 +316,7 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip install -r requirements.txt
-          python ./generate.py -f ../../DeskYar -o . -e ../../DeskYar/DeskYar.exe
+          python ./generate.py -f ../../NexDesk -o . -e ../../NexDesk/NexDesk.exe
           popd
           mkdir -p dist
           cp ./target/release/rustdesk-portable-packer.exe "./dist/${ARTIFACT_NAME}"
@@ -325,7 +325,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: DeskYar-windows-x64
+          name: NexDesk-windows-x64
           path: dist/${{ env.ARTIFACT_NAME }}
           if-no-files-found: error
 
@@ -334,5 +334,5 @@ jobs:
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           files: dist/${{ env.ARTIFACT_NAME }}
-          name: DeskYar ${{ env.VERSION }}
+          name: NexDesk ${{ env.VERSION }}
           draft: true

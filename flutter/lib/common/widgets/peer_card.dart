@@ -455,7 +455,7 @@ class _PeerCardState extends State<_PeerCard>
           onTapDown: (e) {
             final x = e.globalPosition.dx;
             final y = e.globalPosition.dy;
-            _menuPos = RelativeRect.fromLTRB(x, y, x, y);
+            _menuPos = menuPositionForTap(context, Offset(x, y));
           },
           onTap: () {
             _showPeerMenu(peer.id);
@@ -493,7 +493,7 @@ class _PeerCardState extends State<_PeerCard>
       onPointerDown: (e) {
         final x = e.position.dx;
         final y = e.position.dy;
-        _menuPos = RelativeRect.fromLTRB(x, y, x, y);
+        _menuPos = menuPositionForTap(context, Offset(x, y));
       },
       onPointerUp: (_) => _showPeerMenu(peer.id),
       child: build_more(context));

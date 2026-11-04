@@ -58,13 +58,13 @@ mod whiteboard;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod updater;
 
-/// Release feed for the DeskYar build. See the module docs for why upstream's
+/// Release feed for the NexDesk build. See the module docs for why upstream's
 /// update check cannot be reused verbatim.
-mod deskyar;
+mod nexdesk;
 
 /// Self-hosted server configuration. See the module docs for why the server
 /// has to be baked into the build rather than typed in at runtime.
-pub mod deskyar_server;
+pub mod nexdesk_server;
 
 mod ui_cm_interface;
 mod ui_interface;

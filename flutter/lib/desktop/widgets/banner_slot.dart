@@ -26,7 +26,7 @@
 //
 // ## Responsiveness
 //
-// The slot is as wide as the pane allows (capped at [kDeskyarBannerWidth]); the
+// The slot is as wide as the pane allows (capped at [kNexDeskBannerWidth]); the
 // document's height comes from its own content, and image heights come from the
 // decoded aspect ratio, so nothing is stretched or letterboxed.
 
@@ -40,27 +40,27 @@ import 'package:flutter_hbb/desktop/widgets/ad_document.dart';
 import 'package:http/http.dart' as http;
 
 /// Where the ad page is served from.
-const String kDeskyarBannerUrl = 'https://ad.yar.one';
+const String kNexDeskBannerUrl = 'https://ad.yar.one';
 
 /// Maximum width of the slot, in logical pixels.
-const double kDeskyarBannerWidth = 240;
+const double kNexDeskBannerWidth = 240;
 
 /// How often the creative is re-fetched while the window stays open.
-const Duration kDeskyarBannerRefresh = Duration(minutes: 5);
+const Duration kNexDeskBannerRefresh = Duration(minutes: 5);
 
 /// How many images in a document get a cache-busting version. An ad has one
 /// hero image; the cap keeps a pathological page from costing a dozen HEADs.
 const int _kMaxVersionedImages = 3;
 
 /// The banner slot itself.
-class DeskyarBannerSlot extends StatefulWidget {
-  const DeskyarBannerSlot({Key? key}) : super(key: key);
+class NexDeskBannerSlot extends StatefulWidget {
+  const NexDeskBannerSlot({Key? key}) : super(key: key);
 
   @override
-  State<DeskyarBannerSlot> createState() => _DeskyarBannerSlotState();
+  State<NexDeskBannerSlot> createState() => _NexDeskBannerSlotState();
 }
 
-class _DeskyarBannerSlotState extends State<DeskyarBannerSlot>
+class _NexDeskBannerSlotState extends State<NexDeskBannerSlot>
     with WidgetsBindingObserver {
   AdDocument? _document;
   bool _loading = true;
@@ -77,7 +77,7 @@ class _DeskyarBannerSlotState extends State<DeskyarBannerSlot>
     // needless risk. The slot already renders its skeleton for this frame.
     Future.microtask(_load);
     _refreshTimer = Timer.periodic(
-      kDeskyarBannerRefresh,
+      kNexDeskBannerRefresh,
       (_) => _load(silent: true),
     );
   }
@@ -110,7 +110,7 @@ class _DeskyarBannerSlotState extends State<DeskyarBannerSlot>
       // Normalise to an absolute path so relative `src="logo.png"` in the
       // markup resolves to `https://host/logo.png` rather than to a path that
       // depends on how the base URL was written.
-      final parsedBase = Uri.parse(kDeskyarBannerUrl);
+      final parsedBase = Uri.parse(kNexDeskBannerUrl);
       final base =
           parsedBase.path.isEmpty ? parsedBase.replace(path: '/') : parsedBase;
       // A cache-busting parameter keeps an intermediate proxy from pinning an
@@ -195,10 +195,10 @@ class _DeskyarBannerSlotState extends State<DeskyarBannerSlot>
       builder: (context, constraints) {
         final available = constraints.maxWidth.isFinite
             ? constraints.maxWidth
-            : kDeskyarBannerWidth + 24;
+            : kNexDeskBannerWidth + 24;
         final width = math
-            .min(kDeskyarBannerWidth, available - 24)
-            .clamp(72.0, kDeskyarBannerWidth)
+            .min(kNexDeskBannerWidth, available - 24)
+            .clamp(72.0, kNexDeskBannerWidth)
             .toDouble();
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -277,7 +277,7 @@ class _Skeleton extends StatelessWidget {
       width: width,
       height: width,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF10323F) : const Color(0xFFEAF7F5),
+        color: isDark ? const Color(0xFF0E2E1C) : const Color(0xFFECFAF1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: accent.withOpacity(0.18)),
       ),
@@ -327,8 +327,8 @@ class _FallbackState extends State<_Fallback> {
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
           colors: isDark
-              ? [const Color(0xFF10323F), const Color(0xFF0B3A47)]
-              : [const Color(0xFFEAF7F5), const Color(0xFFDDF1EE)],
+              ? [const Color(0xFF0E2E1C), const Color(0xFF0C3520)]
+              : [const Color(0xFFECFAF1), const Color(0xFFDCF3E3)],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: accent.withOpacity(_hover ? 0.5 : 0.25)),

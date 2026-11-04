@@ -1,9 +1,9 @@
-//! DeskYar server configuration.
+//! NexDesk server configuration.
 //!
 //! ## The problem this solves
 //!
 //! A stock RustDesk build talks to the public RustDesk infrastructure
-//! (`rs-ny.rustdesk.com`) for two things that matter to a DeskYar user:
+//! (`rs-ny.rustdesk.com`) for two things that matter to a NexDesk user:
 //!
 //!   1. **The rendezvous (hbbs) server.** Every client registers its ID and
 //!      its public key there. The server signs those registrations, and peers
@@ -14,7 +14,7 @@
 //!   2. **The API server**, which handles address book, tags and the online
 //!      peer list.
 //!
-//! When DeskYar was pointed at a self-hosted server by typing the address into
+//! When NexDesk was pointed at a self-hosted server by typing the address into
 //! Settings, the client still reported the *same* ID as RustDesk. The reason
 //! is that `Config::get_rendezvous_server()` walks a chain of sources and
 //! falls back to the compiled-in `RENDEZVOUS_SERVERS` list - and the public
@@ -31,8 +31,8 @@
 //!
 //! Bake the server into the build:
 //!
-//!   * `DESKYAR_SERVER` - the rendezvous host, e.g. `rd.example.com`
-//!   * `DESKYAR_SERVER_KEY` - the server's Ed25519 public key, the contents of
+//!   * `NEXDESK_SERVER` - the rendezvous host, e.g. `rd.example.com`
+//!   * `NEXDESK_SERVER_KEY` - the server's Ed25519 public key, the contents of
 //!     `data/id_ed25519.pub` on the server, base64-encoded
 //!
 //! Both can be supplied at build time (environment variable for
@@ -79,10 +79,10 @@ pub const DEFAULT_SERVER: &str = "";
 pub const DEFAULT_SERVER_KEY: &str = "";
 
 /// Name of the environment variable holding the rendezvous host.
-pub const ENV_SERVER: &str = "DESKYAR_SERVER";
+pub const ENV_SERVER: &str = "NEXDESK_SERVER";
 
 /// Name of the environment variable holding the server's public key.
-pub const ENV_SERVER_KEY: &str = "DESKYAR_SERVER_KEY";
+pub const ENV_SERVER_KEY: &str = "NEXDESK_SERVER_KEY";
 
 /// Option key under which the rendezvous host is stored.
 pub const OPTION_SERVER: &str = "custom-rendezvous-server";
@@ -97,9 +97,9 @@ pub const OPTION_SERVER_KEY: &str = "key";
 /// The configured rendezvous host, without a port.
 ///
 /// Resolution order:
-///   1. `DESKYAR_SERVER` in the environment (run time override)
+///   1. `NEXDESK_SERVER` in the environment (run time override)
 ///   2. the `custom-rendezvous-server` option (written on first run)
-///   3. `DESKYAR_SERVER` compiled into the binary (build time)
+///   3. `NEXDESK_SERVER` compiled into the binary (build time)
 ///
 /// Returns an empty string when no server is configured.
 pub fn server_host() -> String {
@@ -119,7 +119,7 @@ pub fn server_host() -> String {
 /// The configured server public key, base64-encoded.
 ///
 /// Resolution order mirrors [`server_host`]:
-///   1. `DESKYAR_SERVER_KEY` in the environment
+///   1. `NEXDESK_SERVER_KEY` in the environment
 ///   2. the `key` option
 ///   3. the value compiled into the binary
 ///
@@ -141,14 +141,14 @@ pub fn server_key() -> String {
 
 /// The rendezvous host baked in at build time.
 fn compile_time_server() -> Option<String> {
-    option_env!("DESKYAR_SERVER")
+    option_env!("NEXDESK_SERVER")
         .map(|value| value.trim().to_owned())
         .filter(|value| !value.is_empty())
 }
 
 /// The server public key baked in at build time.
 fn compile_time_server_key() -> Option<String> {
-    option_env!("DESKYAR_SERVER_KEY")
+    option_env!("NEXDESK_SERVER_KEY")
         .map(|value| value.trim().to_owned())
         .filter(|value| !value.is_empty())
 }

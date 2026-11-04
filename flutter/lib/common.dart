@@ -248,17 +248,17 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 class MyTheme {
   MyTheme._();
 
-  static const Color grayBg = Color(0xFFF2F7F7);
-  static const Color accent = Color(0xFF14B8A6);
-  static const Color accent50 = Color(0x7714B8A6);
-  static const Color accent80 = Color(0xAA14B8A6);
-  static const Color canvasColor = Color(0xFF0B1A22);
+  static const Color grayBg = Color(0xFFF1F8F3);
+  static const Color accent = Color(0xFF22C55E);
+  static const Color accent50 = Color(0x7722C55E);
+  static const Color accent80 = Color(0xAA22C55E);
+  static const Color canvasColor = Color(0xFF08120C);
   static const Color border = Color(0xFFCCCCCC);
-  static const Color idColor = Color(0xFF2FD8EA);
+  static const Color idColor = Color(0xFF4ADE80);
   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
   static const Color cmIdColor = Color(0xFF21790B);
   static const Color dark = Colors.black87;
-  static const Color button = Color(0xFF12A99B);
+  static const Color button = Color(0xFF16A34A);
   static const Color hoverBorder = Color(0xFF999999);
 
   // ListTile
@@ -391,10 +391,10 @@ class MyTheme {
   static const double controlHeight = 40;
 
   /// Ink colours. Titles use [ink], secondary copy uses [muted].
-  static const Color inkLight = Color(0xFF17262C);
-  static const Color mutedLight = Color(0xFF5C6F76);
-  static const Color inkDark = Color(0xFFE9F2F3);
-  static const Color mutedDark = Color(0xFF9FB3BA);
+  static const Color inkLight = Color(0xFF16261C);
+  static const Color mutedLight = Color(0xFF5C6F62);
+  static const Color inkDark = Color(0xFFEAF4ED);
+  static const Color mutedDark = Color(0xFF9DB3A5);
 
   static Color ink(Brightness b) => b == Brightness.dark ? inkDark : inkLight;
   static Color muted(Brightness b) => b == Brightness.dark ? mutedDark : mutedLight;
@@ -457,7 +457,7 @@ class MyTheme {
       padding: const EdgeInsets.symmetric(horizontal: space20),
       foregroundColor: ink(brightness),
       side: BorderSide(
-        color: isDark ? const Color(0xFF2A4752) : const Color(0xFFD3E0E2),
+        color: isDark ? const Color(0xFF2A6040) : const Color(0xFFD3E2D7),
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusMd),
@@ -472,7 +472,7 @@ class MyTheme {
     return TextButton.styleFrom(
       minimumSize: const Size(0, 36),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      foregroundColor: isDark ? const Color(0xFF7FE3D6) : button,
+      foregroundColor: isDark ? const Color(0xFF86EFAC) : button,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusSm),
       ),
@@ -483,8 +483,8 @@ class MyTheme {
 
   static InputDecorationTheme inputThemeFor(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final fill = isDark ? const Color(0xFF10232C) : const Color(0xFFF2F7F7);
-    final line = isDark ? const Color(0xFF22404B) : const Color(0xFFD5E3E4);
+    final fill = isDark ? const Color(0xFF0E2317) : const Color(0xFFF1F8F3);
+    final line = isDark ? const Color(0xFF205034) : const Color(0xFFD5E4DA);
     OutlineInputBorder border(Color color, [double width = 1]) =>
         OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
@@ -538,9 +538,9 @@ class MyTheme {
     final isDark = brightness == Brightness.dark;
     return ChipThemeData(
       backgroundColor:
-          isDark ? const Color(0xFF10232C) : const Color(0xFFF2F7F7),
+          isDark ? const Color(0xFF0E2317) : const Color(0xFFF1F8F3),
       side: BorderSide(
-          color: isDark ? const Color(0xFF22404B) : const Color(0xFFD5E3E4)),
+          color: isDark ? const Color(0xFF205034) : const Color(0xFFD5E4DA)),
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSm)),
       labelStyle: TextStyle(fontSize: 12, height: 1.2, color: ink(brightness)),
@@ -551,9 +551,9 @@ class MyTheme {
   static ThemeData lightTheme = ThemeData(
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
-    fontFamily: kDeskyarFontFamily,
+    fontFamily: kNexDeskFontFamily,
     brightness: Brightness.light,
-    hoverColor: Color.fromARGB(255, 224, 224, 224),
+    hoverColor: Color.fromARGB(255, 224, 238, 227),
     scaffoldBackgroundColor: Colors.white,
     dialogBackgroundColor: Colors.white,
     appBarTheme: AppBarTheme(
@@ -572,7 +572,7 @@ class MyTheme {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Color(0xFFE6EEEF)),
+        side: BorderSide(color: Color(0xFFE4EEE7)),
       ),
       titleTextStyle: TextStyle(
         fontSize: 18,
@@ -619,14 +619,14 @@ class MyTheme {
         style:
             MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
     colorScheme: ColorScheme.light(
-        primary: Color(0xFF14B8A6), secondary: accent, background: grayBg),
+        primary: Color(0xFF22C55E), secondary: accent, background: grayBg),
     popupMenuTheme: PopupMenuThemeData(
         color: Colors.white,
         elevation: 8,
         shape: RoundedRectangleBorder(
           side: BorderSide(
               color: (isDesktop || isWebDesktop)
-                  ? Color(0xFFE6EEEF)
+                  ? Color(0xFFE4EEE7)
                   : Colors.transparent),
           borderRadius: BorderRadius.circular(radiusLg),
         )),
@@ -638,11 +638,11 @@ class MyTheme {
   );
   static ThemeData darkTheme = ThemeData(
     useMaterial3: false,
-    fontFamily: kDeskyarFontFamily,
+    fontFamily: kNexDeskFontFamily,
     brightness: Brightness.dark,
-    hoverColor: Color.fromARGB(255, 20, 48, 60),
-    scaffoldBackgroundColor: Color(0xFF0A141A),
-    dialogBackgroundColor: Color(0xFF0A141A),
+    hoverColor: Color.fromARGB(255, 22, 52, 34),
+    scaffoldBackgroundColor: Color(0xFF07130D),
+    dialogBackgroundColor: Color(0xFF07130D),
     appBarTheme: AppBarTheme(
       shadowColor: Colors.transparent,
     ),
@@ -659,7 +659,7 @@ class MyTheme {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Color(0xFF1B3542)),
+        side: BorderSide(color: Color(0xFF1C4529)),
       ),
       titleTextStyle: TextStyle(
         fontSize: 18,
@@ -678,7 +678,7 @@ class MyTheme {
     textTheme: textThemeFor(Brightness.dark),
     dividerTheme: dividerThemeFor(Brightness.dark),
     chipTheme: chipThemeFor(Brightness.dark),
-    cardColor: Color(0xFF10232C),
+    cardColor: Color(0xFF0E2317),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
       labelColor: Colors.white70,
@@ -703,14 +703,14 @@ class MyTheme {
     listTileTheme: listTileTheme,
     menuBarTheme: MenuBarThemeData(
         style: MenuStyle(
-            backgroundColor: MaterialStatePropertyAll(Color(0xFF121212)))),
+            backgroundColor: MaterialStatePropertyAll(Color(0xFF0E2317)))),
     colorScheme: ColorScheme.dark(
-      primary: Color(0xFF14B8A6),
+      primary: Color(0xFF22C55E),
       secondary: accent,
-      background: Color(0xFF10232C),
+      background: Color(0xFF0E2317),
     ),
     popupMenuTheme: PopupMenuThemeData(
-        color: const Color(0xFF10232C),
+        color: const Color(0xFF0E2317),
         elevation: 8,
         shape: RoundedRectangleBorder(
       side: BorderSide(color: Colors.white12),
@@ -838,11 +838,11 @@ List<Locale> supportedLocales = const [
 ];
 
 /// App-wide Persian font, declared in pubspec.yaml under the same family name.
-const String kDeskyarFontFamily = 'Vazirmatn';
+const String kNexDeskFontFamily = 'Vazirmatn';
 
 /// Resolve the locale the UI should run in.
 ///
-/// DeskYar ships Persian-first: an unset language - and the "Default" entry in
+/// NexDesk ships Persian-first: an unset language - and the "Default" entry in
 /// the language picker, which stores the literal `default` - both resolve to
 /// Persian. Picking another language in Settings still wins, because a real
 /// language code is stored in that case.
@@ -850,7 +850,7 @@ const String kDeskyarFontFamily = 'Vazirmatn';
 /// The locale also decides text direction: `fa` is an RTL locale, so
 /// `GlobalWidgetsLocalizations` flips the whole app to right-to-left without
 /// any manual `Directionality` wrapping.
-Locale getDeskyarLocale() {
+Locale getNexDeskLocale() {
   var lang = bind.mainGetLocalOption(key: kCommConfKeyLang);
   if (lang.isEmpty || lang == 'default') {
     lang = 'fa';
@@ -860,7 +860,7 @@ Locale getDeskyarLocale() {
       ? Locale(parts[0], parts[1].toUpperCase())
       : Locale(parts.first);
   // Publish it for helpers that cannot see a BuildContext (see isRtlLocale).
-  deskyarUiLocale = resolved;
+  nexdeskUiLocale = resolved;
   return resolved;
 }
 
@@ -1495,12 +1495,12 @@ Color? _msgboxColor(String type) {
     return Color(0xFFAD448E);
   }
   if (type.contains("success")) {
-    return Color(0xFF32bea6);
+    return Color(0xFF34D399);
   }
   if (type.contains("error") || type == "re-input-password") {
     return Color(0xFFE04F5F);
   }
-  return Color(0xFF2C8CFF);
+  return Color(0xFF16A34A);
 }
 
 Widget msgboxIcon(String type) {
@@ -3909,6 +3909,43 @@ Color? disabledTextColor(BuildContext context, bool enabled) {
       : Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.6);
 }
 
+/// Where a Material popup should open, given the point that opened it.
+///
+/// The common shortcut `RelativeRect.fromLTRB(x, y, x, y)` passes the tap
+/// point as *both* the left and the right inset. Those are insets from opposite
+/// edges, so the result is only a zero-width anchor on the overlay's left edge;
+/// everywhere else the menu is displaced, and because the popup layout mirrors
+/// the anchor in an RTL layout the menu jumps to the far side of the window.
+/// That is exactly the "sort menu opens on the right edge" bug. Anchoring the
+/// popup with a rect expressed inside the overlay keeps it on the pointer in
+/// either direction.
+RelativeRect menuPositionForTap(BuildContext context, Offset globalPosition) {
+  final overlayBox =
+      Overlay.of(context, rootOverlay: true).context.findRenderObject();
+  final size = overlayBox is RenderBox
+      ? overlayBox.size
+      : MediaQuery.of(context).size;
+  return RelativeRect.fromRect(globalPosition & Size.zero, Offset.zero & size);
+}
+
+/// Where a Material popup should open to sit directly under [anchor].
+///
+/// Used by the toolbar dropdowns (sort, view, tab list): measuring the control
+/// itself is the only way to get "below this button" in both LTR and RTL,
+/// instead of "wherever the pointer happened to be".
+RelativeRect menuPositionUnder(BuildContext context, {double gap = 4}) {
+  final overlayBox =
+      Overlay.of(context, rootOverlay: true).context.findRenderObject();
+  final anchor = context.findRenderObject();
+  if (overlayBox is! RenderBox || anchor is! RenderBox || !anchor.hasSize) {
+    return menuPositionForTap(context, Offset.zero);
+  }
+  final rect = (anchor.localToGlobal(Offset.zero, ancestor: overlayBox) &
+          anchor.size)
+      .translate(0, gap);
+  return RelativeRect.fromRect(rect, Offset.zero & overlayBox.size);
+}
+
 Widget loadPowered(BuildContext context) {
   if (bind.mainGetBuildinOption(key: "hide-powered-by-me") == 'Y') {
     return SizedBox.shrink();
@@ -3933,66 +3970,41 @@ Widget loadPowered(BuildContext context) {
   ).marginOnly(top: 6);
 }
 
-const _kDefaultLogoAsset = 'assets/logo.png';
-const _kLightLogoAsset = 'assets/logo_light.png';
-const _kDarkLogoAsset = 'assets/logo_dark.png';
-
-List<String> _logoAssetCandidatesForBrightness(Brightness brightness) {
-  return brightness == Brightness.dark
-      ? [_kDarkLogoAsset, _kDefaultLogoAsset]
-      : [_kLightLogoAsset, _kDefaultLogoAsset];
-}
-
-Future<String?> _resolveLogoAsset(Brightness brightness) async {
-  for (final asset in _logoAssetCandidatesForBrightness(brightness)) {
-    try {
-      await rootBundle.load(asset);
-      return asset;
-    } on FlutterError {
-      continue;
-    }
-  }
-  return null;
-}
-
-class _Logo extends StatefulWidget {
+/// The NexDesk lockup: the app mark plus the wordmark.
+///
+/// Composed from the icon asset and a text widget instead of a single bitmap
+/// so it stays sharp at every scale and picks up the theme's ink colour in both
+/// light and dark. The wordmark is Latin, so it is pinned LTR: inside the
+/// Persian RTL paragraph the bidi algorithm would otherwise reorder it.
+class _Logo extends StatelessWidget {
   const _Logo();
 
   @override
-  State<_Logo> createState() => _LogoState();
-}
-
-class _LogoState extends State<_Logo> {
-  final Map<Brightness, Future<String?>> _logoFutures = {};
-
-  Future<String?> _logoFutureFor(Brightness brightness) {
-    return _logoFutures.putIfAbsent(
-      brightness,
-      () => _resolveLogoAsset(brightness),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: _logoFutureFor(Theme.of(context).brightness),
-      builder: (BuildContext context, AsyncSnapshot<String?> snapshot) {
-        final asset = snapshot.data;
-        if (asset != null) {
-          final image = Image.asset(
-            asset,
-            fit: BoxFit.contain,
-            errorBuilder: (ctx, error, stackTrace) {
-              return Container();
-            },
-          );
-          return Container(
-            constraints: BoxConstraints(maxWidth: 300, maxHeight: 60),
-            child: image,
-          ).marginOnly(left: 12, right: 12, top: 12);
-        }
-        return const Offstage();
-      },
+    final ink = Theme.of(context).textTheme.headlineSmall?.color;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 300, maxHeight: 60),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          loadIcon(34),
+          const SizedBox(width: 10),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(
+              'NexDesk',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w700,
+                height: 1.15,
+                letterSpacing: 0.2,
+                color: ink,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -4247,7 +4259,7 @@ void earlyAssert() {
 void checkUpdate() {
   if (!isWeb) {
     // Upstream only wires the update listener for builds that identify as
-    // RustDesk. DeskYar resolves updates from its own release feed, so the
+    // RustDesk. NexDesk resolves updates from its own release feed, so the
     // event has to be registered regardless of the custom-client flag.
     platformFFI.registerEventHandler(
         kCheckSoftwareUpdateFinish, kCheckSoftwareUpdateFinish,

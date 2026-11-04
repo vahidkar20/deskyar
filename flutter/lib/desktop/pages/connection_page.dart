@@ -68,7 +68,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               .marginStart(em),
         );
 
-    // Upstream nags "set up your own server" here. DeskYar replaces it with a
+    // Upstream nags "set up your own server" here. NexDesk replaces it with a
     // permanent attribution link, shown unconditionally so it reads as branding
     // rather than as a status warning.
     setupServerWidget() => Flexible(
@@ -294,7 +294,7 @@ class _ConnectionPageState extends State<ConnectionPage>
       children: [
         // Portable-only prompt: one click promotes this run into a real
         // installation. Renders nothing once installed or dismissed.
-        const DeskYarInstallBanner(),
+        const NexDeskInstallBanner(),
         Expanded(
             child: Column(
           children: [
@@ -391,8 +391,8 @@ class _ConnectionPageState extends State<ConnectionPage>
             begin: AlignmentDirectional.topStart,
             end: AlignmentDirectional.bottomEnd,
             colors: isDark
-                ? [const Color(0xFF0D2A33), const Color(0xFF103B45)]
-                : [const Color(0xFFF5FCFB), const Color(0xFFE6F5F2)],
+                ? [const Color(0xFF082016), const Color(0xFF0D3522)]
+                : [const Color(0xFFF5FCF7), const Color(0xFFE6F6EA)],
           ),
           border: Border.all(
             color: MyTheme.accent.withOpacity(isDark ? 0.35 : 0.28),

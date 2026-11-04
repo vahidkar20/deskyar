@@ -890,7 +890,7 @@ class _FileManagerViewState extends State<FileManagerView> {
                           final x = e.globalPosition.dx;
                           final y = e.globalPosition.dy;
                           uploadButtonTapPosition =
-                              RelativeRect.fromLTRB(x, y, x, y);
+                              menuPositionForTap(context, Offset(x, y));
                         },
                         onTap: () async {
                           final value = await showMenu<bool>(
@@ -1038,7 +1038,7 @@ class _FileManagerViewState extends State<FileManagerView> {
       onPointerDown: (e) {
         final x = e.position.dx;
         final y = e.position.dy;
-        menuPos = RelativeRect.fromLTRB(x, y, x, y);
+        menuPos = menuPositionForTap(context, Offset(x, y));
       },
       child: MenuButton(
         tooltip: translate('More'),
@@ -1610,7 +1610,7 @@ class _FileManagerViewState extends State<FileManagerView> {
                     }
                     mod_menu.showMenu(
                         context: context,
-                        position: RelativeRect.fromLTRB(x, y, x, y),
+                        position: menuPositionForTap(context, Offset(x, y)),
                         elevation: 4,
                         items: menuItems
                             .map((e) => e.build(

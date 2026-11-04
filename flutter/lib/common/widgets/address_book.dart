@@ -307,7 +307,7 @@ class _AddressBookState extends State<AddressBook> {
             onPointerDown: (e) {
               final x = e.position.dx;
               final y = e.position.dy;
-              menuPos = RelativeRect.fromLTRB(x, y, x, y);
+              menuPos = menuPositionForTap(context, Offset(x, y));
             },
             onPointerUp: (_) => _showMenu(menuPos),
             child: build_more(context, invert: true)),
@@ -770,7 +770,7 @@ class AddressBookTag extends StatelessWidget {
     void setPosition(TapDownDetails e) {
       final x = e.globalPosition.dx;
       final y = e.globalPosition.dy;
-      pos = RelativeRect.fromLTRB(x, y, x, y);
+      pos = menuPositionForTap(context, Offset(x, y));
     }
 
     const double radius = 8;

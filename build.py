@@ -982,7 +982,7 @@ def build_flutter_windows(version, features, skip_portable_pack):
     os.chdir('libs/portable')
     system2('pip3 install -r requirements.txt')
     system2(
-        f'python3 ./generate.py -f ../../{flutter_build_dir_2} -o . -e ../../{flutter_build_dir_2}/DeskYar.exe')
+        f'python3 ./generate.py -f ../../{flutter_build_dir_2} -o . -e ../../{flutter_build_dir_2}/NexDesk.exe')
     os.chdir('../..')
     if os.path.exists('./rustdesk_portable.exe'):
         os.replace('./target/release/rustdesk-portable-packer.exe',
@@ -992,9 +992,9 @@ def build_flutter_windows(version, features, skip_portable_pack):
                   './rustdesk_portable.exe')
     print(
         f'output location: {os.path.abspath(os.curdir)}/rustdesk_portable.exe')
-    os.rename('./rustdesk_portable.exe', f'./DeskYar-{version}.exe')
+    os.rename('./rustdesk_portable.exe', f'./NexDesk-{version}.exe')
     print(
-        f'output location: {os.path.abspath(os.curdir)}/DeskYar-{version}.exe')
+        f'output location: {os.path.abspath(os.curdir)}/NexDesk-{version}.exe')
 
 
 def main():

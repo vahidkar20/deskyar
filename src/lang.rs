@@ -181,7 +181,7 @@ pub fn translate(name: String) -> String {
     translate_locale(name, &locale)
 }
 
-/// The language chosen in Settings, with DeskYar's Persian default applied.
+/// The language chosen in Settings, with NexDesk's Persian default applied.
 ///
 /// An unset value - and the "Default" entry in the language picker, which
 /// stores the literal `default` - both mean "no explicit choice", and this

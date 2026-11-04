@@ -34,7 +34,7 @@ class DesktopHomePage extends StatefulWidget {
   State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
 
-const borderColor = Color(0xFF2F65BA);
+const borderColor = Color(0xFF16A34A);
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -114,7 +114,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       ),
       // Live ad slot, sized to the pane. The creative is fetched from
       // ad.yar.one at runtime - see widgets/banner_slot.dart.
-      const DeskyarBannerSlot(),
+      const NexDeskBannerSlot(),
     ];
     if (isIncomingOnly) {
       children.addAll([
@@ -504,7 +504,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildHelpCards(String updateUrl) {
-    // DeskYar publishes its own releases, so the upstream guards
+    // NexDesk publishes its own releases, so the upstream guards
     // (`!isCustomClient()` and "only on the official server") would suppress
     // this card permanently. `updateUrl` already points at our release page.
     if (updateUrl.isNotEmpty && !isCardClosed) {
@@ -703,8 +703,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 begin: AlignmentDirectional.centerStart,
                 end: AlignmentDirectional.centerEnd,
                 colors: [
-                  Color(0xFF0F2B38),
-                  Color(0xFF0B6F66),
+                  Color(0xFF0B2A18),
+                  Color(0xFF15803D),
                 ],
               ),
                   borderRadius: BorderRadius.circular(MyTheme.radiusLg)),
@@ -1140,11 +1140,11 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                           e.name,
                           style: TextStyle(
                               color: checked
-                                  ? const Color(0xFF0A9471)
+                                  ? const Color(0xFF15803D)
                                   : Color.fromARGB(255, 198, 86, 157)),
                         ),
                         backgroundColor: checked
-                            ? const Color(0xFFD0F7ED)
+                            ? const Color(0xFFDCFCE7)
                             : Color.fromARGB(255, 247, 205, 232));
                   }).toList(),
                 ))

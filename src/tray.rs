@@ -51,8 +51,13 @@ fn make_tray() -> hbb_common::ResultType<()> {
     }
 
     let (icon_rgba, icon_width, icon_height) = {
-        let image = load_icon_from_asset()
-            .unwrap_or(image::load_from_memory(icon).context("Failed to open icon path")?)
+        // The embedded multi-size .ico comes first: Windows picks the frame that
+        // matches the notification area's DPI (16-24px) straight from it, while
+        // the flutter asset is a single 256px bitmap that the shell has to
+        // squash. Fall back to the asset when the container cannot be decoded.
+        let image = image::load_from_memory(icon)
+            .or_else(|e| load_icon_from_asset().ok_or(e))
+            .context("Failed to open icon path")?
             .into_rgba8();
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();

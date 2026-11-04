@@ -5,11 +5,11 @@ import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Local option key remembering that the user waved the banner away.
-const kOptionInstallBannerDismissed = 'deskyar-install-banner-dismissed';
+const kOptionInstallBannerDismissed = 'nexdesk-install-banner-dismissed';
 
 enum _Phase { idle, running, done, failed }
 
-/// Call-to-action that promotes a portable DeskYar run into a real Windows
+/// Call-to-action that promotes a portable NexDesk run into a real Windows
 /// installation.
 ///
 /// Upstream only reaches the installer through the `--install` command line
@@ -19,15 +19,15 @@ enum _Phase { idle, running, done, failed }
 ///
 /// Installing moves the binary to `%ProgramFiles%`, registers an uninstaller,
 /// creates start-menu / desktop shortcuts and enables the background service,
-/// so DeskYar keeps accepting incoming connections after a reboot.
-class DeskYarInstallBanner extends StatefulWidget {
-  const DeskYarInstallBanner({Key? key}) : super(key: key);
+/// so NexDesk keeps accepting incoming connections after a reboot.
+class NexDeskInstallBanner extends StatefulWidget {
+  const NexDeskInstallBanner({Key? key}) : super(key: key);
 
   @override
-  State<DeskYarInstallBanner> createState() => _DeskYarInstallBannerState();
+  State<NexDeskInstallBanner> createState() => _NexDeskInstallBannerState();
 }
 
-class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
+class _NexDeskInstallBannerState extends State<NexDeskInstallBanner> {
   _Phase _phase = _Phase.idle;
   bool _eligible = false;
   String _error = '';
@@ -118,8 +118,8 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
               children: [
                 Text(
                   _t(
-                    'دسک‌یار را روی این کامپیوتر نصب کنید',
-                    'Install DeskYar on this computer',
+                    'نکس دسک را روی این کامپیوتر نصب کنید',
+                    'Install NexDesk on this computer',
                   ),
                   style: TextStyle(
                     fontSize: 14,
@@ -130,9 +130,9 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
                 const SizedBox(height: 5),
                 Text(
                   _t(
-                    'نسخه‌ای که اجرا کرده‌اید موقت است. با نصب، دسک‌یار در Program Files قرار می‌گیرد، '
+                    'نسخه‌ای که اجرا کرده‌اید موقت است. با نصب، نکس دسک در Program Files قرار می‌گیرد، '
                         'میان‌بر می‌سازد و سرویس پس‌زمینه را فعال می‌کند تا پس از ری‌استارت هم در دسترس باشد.',
-                    'You are running the portable build. Installing moves DeskYar to '
+                    'You are running the portable build. Installing moves NexDesk to '
                         'Program Files, adds shortcuts and enables the background '
                         'service so it stays reachable after a reboot.',
                   ),
@@ -235,7 +235,7 @@ class _DeskYarInstallBannerState extends State<DeskYarInstallBanner> {
             ElevatedButton.icon(
               onPressed: _install,
               icon: const Icon(Icons.download_rounded, size: 17),
-              label: Text(_t('نصب برنامه', 'Install DeskYar')),
+              label: Text(_t('نصب برنامه', 'Install NexDesk')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,

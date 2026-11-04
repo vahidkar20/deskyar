@@ -299,7 +299,7 @@ class _PeerTabPageState extends State<PeerTabPage>
         onLongPressDown: (e) {
           final x = e.globalPosition.dx;
           final y = e.globalPosition.dy;
-          mobileTabContextMenuPos = RelativeRect.fromLTRB(x, y, x, y);
+          mobileTabContextMenuPos = menuPositionForTap(context, Offset(x, y));
         },
         onLongPressUp: () {
           mobileShowTabVisibilityMenu();
@@ -833,7 +833,6 @@ class _PeerViewDropdownState extends State<PeerViewDropdown> {
               ))));
     }
 
-    var menuPos = RelativeRect.fromLTRB(0, 0, 0, 0);
     return _hoverAction(
         context: context,
         toolTip: translate('Change view'),
@@ -845,14 +844,11 @@ class _PeerViewDropdownState extends State<PeerViewDropdown> {
                   : Icons.view_agenda_rounded,
           size: 18,
         ),
-        onTapDown: (details) {
-          final x = details.globalPosition.dx;
-          final y = details.globalPosition.dy;
-          menuPos = RelativeRect.fromLTRB(x, y, x, y);
-        },
+        // Anchored to this control, not to the pointer: the menu belongs under
+        // the button in both LTR and RTL (see menuPositionUnder).
         onTap: () => showMenu(
               context: context,
-              position: menuPos,
+              position: menuPositionUnder(context),
               items: items,
               elevation: 8,
             ));
@@ -913,7 +909,6 @@ class _PeerSortDropdownState extends State<PeerSortDropdown> {
               ))));
     }
 
-    var menuPos = RelativeRect.fromLTRB(0, 0, 0, 0);
     return _hoverAction(
       context: context,
       toolTip: translate('Sort by'),
@@ -921,14 +916,9 @@ class _PeerSortDropdownState extends State<PeerSortDropdown> {
         Icons.sort_rounded,
         size: 18,
       ),
-      onTapDown: (details) {
-        final x = details.globalPosition.dx;
-        final y = details.globalPosition.dy;
-        menuPos = RelativeRect.fromLTRB(x, y, x, y);
-      },
       onTap: () => showMenu(
         context: context,
-        position: menuPos,
+        position: menuPositionUnder(context),
         items: items,
         elevation: 8,
       ),

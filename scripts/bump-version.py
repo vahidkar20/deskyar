@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Set the DeskYar version everywhere the build reads it.
+Set the NexDesk version everywhere the build reads it.
 
 `build.py` takes the version from Cargo.toml, and the compiled-in `crate::VERSION`
 (used by the updater's "is this newer?" comparison) comes from the same place.

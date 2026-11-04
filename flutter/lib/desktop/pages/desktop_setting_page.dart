@@ -2379,14 +2379,14 @@ class __PrinterState extends State<_Printer> {
 
     Widget tipOsNotSupported() {
       return Align(
-        alignment: Alignment.topLeft,
+        alignment: AlignmentDirectional.topStart,
         child: Text(translate('printer-os-requirement-tip')),
       ).marginStart(_kCardLeftMargin);
     }
 
     Widget tipClientNotInstalled() {
       return Align(
-        alignment: Alignment.topLeft,
+        alignment: AlignmentDirectional.topStart,
         child:
             Text(translate('printer-requires-installed-{$appName}-client-tip')),
       ).marginStart(_kCardLeftMargin);
@@ -2407,7 +2407,7 @@ class __PrinterState extends State<_Printer> {
           () => failedMsg.value.isNotEmpty
               ? Offstage()
               : Align(
-                  alignment: Alignment.topLeft,
+                  alignment: AlignmentDirectional.topStart,
                   child: Text(translate('printer-{$appName}-not-installed-tip'))
                       .marginOnly(bottom: 10.0),
                 ),
@@ -2416,7 +2416,7 @@ class __PrinterState extends State<_Printer> {
           () => failedMsg.value.isEmpty
               ? Offstage()
               : Align(
-                  alignment: Alignment.topLeft,
+                  alignment: AlignmentDirectional.topStart,
                   child: Text(failedMsg.value,
                           style: DefaultTextStyle.of(context)
                               .style
@@ -2432,7 +2432,7 @@ class __PrinterState extends State<_Printer> {
 
     Widget tipReady() {
       return Align(
-        alignment: Alignment.topLeft,
+        alignment: AlignmentDirectional.topStart,
         child: Text(translate('printer-{$appName}-ready-tip')),
       ).marginStart(_kCardLeftMargin);
     }
@@ -2699,7 +2699,7 @@ class _AboutState extends State<_About> {
                   gradient: const LinearGradient(
                     begin: AlignmentDirectional.topStart,
                     end: AlignmentDirectional.bottomEnd,
-                    colors: [Color(0xFF0F2B38), Color(0xFF0B6F66)],
+                    colors: [Color(0xFF0B2A18), Color(0xFF15803D)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -2715,7 +2715,7 @@ class _AboutState extends State<_About> {
                               size: 17, color: Colors.white.withOpacity(.8)),
                           const SizedBox(width: 7),
                           Text(
-                            translate('deskyar_about_title'),
+                            translate('nexdesk_about_title'),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -2725,7 +2725,7 @@ class _AboutState extends State<_About> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        translate('deskyar_about_body'),
+                        translate('nexdesk_about_body'),
                         style: TextStyle(
                             color: Colors.white.withOpacity(.84),
                             fontSize: 12,
@@ -2733,7 +2733,7 @@ class _AboutState extends State<_About> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        translate('deskyar_about_holding'),
+                        translate('nexdesk_about_holding'),
                         style: TextStyle(
                             color: Colors.white.withOpacity(.84),
                             fontSize: 12,
@@ -2749,7 +2749,7 @@ class _AboutState extends State<_About> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          translate('deskyar_copyright'),
+                          translate('nexdesk_copyright'),
                           style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -3100,7 +3100,7 @@ class _WaylandCardState extends State<WaylandCard> {
         () => _clearShortcutsInhibitorFailedMsg.value.isEmpty
             ? Offstage()
             : Align(
-                alignment: Alignment.topLeft,
+                alignment: AlignmentDirectional.topStart,
                 child: Text(_clearShortcutsInhibitorFailedMsg.value,
                         style: DefaultTextStyle.of(context)
                             .style
