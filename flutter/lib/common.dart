@@ -410,6 +410,10 @@ class MyTheme {
     TextStyle style(double size, FontWeight weight, double height,
             [Color? color]) =>
         TextStyle(
+          // Without an explicit family every text style falls back to Roboto,
+          // which is what made button labels ("Connect", "Later", "Install")
+          // render in a thin, non-Vazir face while body text looked right.
+          fontFamily: kNexDeskFontFamily,
           fontSize: size,
           fontWeight: weight,
           height: height,
