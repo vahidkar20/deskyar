@@ -79,7 +79,46 @@ class HomePageState extends State<HomePage> {
             title: appTitle(),
             actions: _pages.elementAt(_selectedIndex).appBarActions,
           ),
-          bottomNavigationBar: BottomNavigationBar(
+          bottomNavigationBar: _buildNavigationBar(context),
+          body: _pages.elementAt(_selectedIndex),
+        ));
+  }
+
+  /// The bottom navigation as a floating pill.
+  ///
+  /// The stock bar is edge-to-edge and sits on its own opaque strip, which
+  /// visually cuts the page in two. A pill that floats 16px off each edge and
+  /// 12px off the bottom keeps the content continuous behind it, and the
+  /// rounded shape is the one place where a phone UI can look unmistakably
+  /// current without costing a single extra paint.
+  ///
+  /// The `navigationBarKey` stays on the `BottomNavigationBar` itself: the chat
+  /// overlay and the clients page both cast that widget to read `currentIndex`
+  /// or to fire `onTap`.
+  Widget _buildNavigationBar(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final radius = BorderRadius.circular(MyTheme.radiusPill);
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: radius,
+          border: Border.all(color: MyTheme.hairline(brightness)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(brightness == Brightness.dark
+                  ? 0.45
+                  : 0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: BottomNavigationBar(
             key: navigationBarKey,
             items: _pages
                 .map((page) =>
@@ -87,8 +126,24 @@ class HomePageState extends State<HomePage> {
                 .toList(),
             currentIndex: _selectedIndex,
             type: BottomNavigationBarType.fixed,
-            selectedItemColor: MyTheme.accent, //
-            unselectedItemColor: MyTheme.darkGray,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedItemColor: MyTheme.accent,
+            unselectedItemColor: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.color
+                ?.withOpacity(0.45),
+            selectedFontSize: 11,
+            unselectedFontSize: 11,
+            selectedLabelStyle: const TextStyle(
+              fontFamily: kNexDeskFontFamily,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontFamily: kNexDeskFontFamily,
+              fontWeight: FontWeight.w500,
+            ),
             onTap: (index) => setState(() {
               // close chat overlay when go chat page
               if (_selectedIndex != index) {
@@ -102,8 +157,9 @@ class HomePageState extends State<HomePage> {
               }
             }),
           ),
-          body: _pages.elementAt(_selectedIndex),
-        ));
+        ),
+      ),
+    );
   }
 
   Widget appTitle() {

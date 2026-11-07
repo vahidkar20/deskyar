@@ -157,7 +157,10 @@ class _ConnectionPageState extends State<ConnectionPage> {
         child: Ink(
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.all(Radius.circular(13)),
+            borderRadius: BorderRadius.circular(MyTheme.radiusLg),
+            border: Border.all(
+              color: MyTheme.hairline(Theme.of(context).brightness),
+            ),
           ),
           child: Row(
             children: <Widget>[
@@ -342,13 +345,30 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         },
                         icon: Icon(Icons.clear, color: MyTheme.darkGray)),
                   )),
-              SizedBox(
-                width: 60,
-                height: 60,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_forward,
-                      color: MyTheme.darkGray, size: 45),
-                  onPressed: onConnect,
+              // A filled circular action instead of a grey arrow glyph: the
+              // connect affordance is the one control on this screen that has
+              // to look pressable at a glance.
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8, start: 4),
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Material(
+                    color: MyTheme.button,
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: onConnect,
+                      child: Icon(
+                        // Mirrored for RTL: a forward arrow still points the
+                        // way the reader moves.
+                        directionalIcon(context, Icons.arrow_forward_rounded,
+                            Icons.arrow_back_rounded),
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

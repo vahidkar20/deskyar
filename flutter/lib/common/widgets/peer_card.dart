@@ -47,9 +47,11 @@ class _PeerCard extends StatefulWidget {
 class _PeerCardState extends State<_PeerCard>
     with AutomaticKeepAliveClientMixin {
   var _menuPos = RelativeRect.fill;
-  final double _cardRadius = 16;
-  final double _tileRadius = 5;
-  final double _borderWidth = 2;
+  final double _cardRadius = 18;
+  final double _tileRadius = MyTheme.radiusSm;
+  // One hairline instead of a 2px frame: at this radius a heavy outline reads
+  // as a browser focus ring rather than as a card edge.
+  final double _borderWidth = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +107,7 @@ class _PeerCardState extends State<_PeerCard>
       onEnter: (evt) {
         deco.value = BoxDecoration(
           border: Border.all(
-              color: Theme.of(context).colorScheme.primary,
+              color: MyTheme.accent.withOpacity(0.55),
               width: _borderWidth),
           borderRadius: BorderRadius.circular(
             peerCardUiType.value == PeerUiType.grid ? _cardRadius : _tileRadius,
@@ -171,7 +173,7 @@ class _PeerCardState extends State<_PeerCard>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.background,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadiusDirectional.only(
                 topEnd: Radius.circular(_tileRadius),
                 bottomEnd: Radius.circular(_tileRadius),
@@ -295,9 +297,19 @@ class _PeerCardState extends State<_PeerCard>
         ? peer.hostname
         : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
     final child = Card(
-      color: Colors.transparent,
+      // The card owns a surface instead of being transparent: the tinted
+      // header is drawn at 50% alpha, and over a transparent card that alpha
+      // lands on the page background, which made the artwork darker than the
+      // footer it is supposed to sit above.
+      color: Theme.of(context).cardColor,
       elevation: 0,
       margin: EdgeInsets.zero,
+      // Match the clip below rather than the global card shape, and leave the
+      // outline to `foregroundDecoration` (which animates on hover). Two
+      // borders at two radii would read as a double edge.
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_cardRadius),
+      ),
       // to-do: memory leak here, more investigation needed.
       // Continious rebuilds of `Obx()` will cause memory leak here.
       // The simple demo does not have this issue.
@@ -368,7 +380,7 @@ class _PeerCardState extends State<_PeerCard>
                   ),
                 ),
                 Container(
-                  color: Theme.of(context).colorScheme.background,
+                  color: Theme.of(context).cardColor,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

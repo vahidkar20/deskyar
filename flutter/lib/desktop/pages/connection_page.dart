@@ -391,28 +391,31 @@ class _ConnectionPageState extends State<ConnectionPage>
       width: 320 + 20 * 2,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(MyTheme.radiusXl),
           // A brand-tinted panel rather than a flat bordered box: the connect
           // field is the one thing every user looks at first, and it should
           // read as the focal point of the page. The tint stays light enough
           // that the theme's own text colours remain readable, so nothing
           // inside has to be re-coloured for light vs dark.
+          // A card that sits just above the canvas, tinted green at the
+          // leading corner. The gradient is what separates it from the page -
+          // not a shadow, which is invisible on a near-black background.
           gradient: LinearGradient(
             begin: AlignmentDirectional.topStart,
             end: AlignmentDirectional.bottomEnd,
             colors: isDark
-                ? [const Color(0xFF082016), const Color(0xFF0D3522)]
-                : [const Color(0xFFF5FCF7), const Color(0xFFE6F6EA)],
+                ? [const Color(0xFF12211A), const Color(0xFF0A1610)]
+                : [const Color(0xFFF7FCF9), const Color(0xFFE9F6ED)],
           ),
           border: Border.all(
-            color: MyTheme.accent.withOpacity(isDark ? 0.35 : 0.28),
+            color: MyTheme.accent.withOpacity(isDark ? 0.20 : 0.22),
           ),
           boxShadow: [
             BoxShadow(
               color: (isDark ? Colors.black : MyTheme.accent)
-                  .withOpacity(isDark ? 0.30 : 0.09),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
+                  .withOpacity(isDark ? 0.45 : 0.10),
+              blurRadius: 28,
+              offset: const Offset(0, 10),
             ),
           ]),
       child: Ink(
@@ -635,9 +638,14 @@ class _ConnectionPageState extends State<ConnectionPage>
                               Colors.white.withOpacity(0.55),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius:
+                                BorderRadius.circular(MyTheme.radiusMd),
                           ),
+                          // `styleFrom(textStyle:)` replaces the button's
+                          // DefaultTextStyle, so the family has to be named
+                          // again or the label falls back to Roboto.
                           textStyle: const TextStyle(
+                            fontFamily: kNexDeskFontFamily,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -690,9 +698,10 @@ class _ConnectionPageState extends State<ConnectionPage>
                           ? MyTheme.accent.withOpacity(0.14)
                           : Colors.transparent,
                       border: Border.all(
-                        color: MyTheme.accent.withOpacity(open ? 0.75 : 0.45),
+                        color: MyTheme.accent.withOpacity(open ? 0.7 : 0.28),
                       ),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius:
+                          BorderRadius.circular(MyTheme.radiusMd),
                     ),
                     child: Center(
                       child: AnimatedRotation(

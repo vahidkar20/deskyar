@@ -908,7 +908,10 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
         style: ButtonStyle(
           minimumSize: MaterialStatePropertyAll(Size(64, 32)),
           textStyle: MaterialStatePropertyAll(
-            TextStyle(fontWeight: FontWeight.normal),
+            TextStyle(
+              fontFamily: kNexDeskFontFamily,
+              fontWeight: FontWeight.normal,
+            ),
           ),
           shape: MaterialStatePropertyAll(RoundedRectangleBorder(
               borderRadius:

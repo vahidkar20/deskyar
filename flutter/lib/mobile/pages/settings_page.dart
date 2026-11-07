@@ -97,6 +97,12 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   var _hideProxy = false;
   var _hideNetwork = false;
   var _hideWebSocket = false;
+
+  /// Whether the private-network block is unfolded.
+  ///
+  /// Same rule as the desktop settings page: remember the user's choice, and
+  /// on a fresh install start unfolded when a server is already configured.
+  var _privateNetwork = false;
   var _enableTrustedDevices = false;
   var _enableTcpPunch = false;
   var _enableUdpPunch = false;
@@ -107,6 +113,15 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   var _isUsingPublicServer = false;
   var _allowAskForNoteAtEndOfConnection = false;
   var _preventSleepWhileConnected = true;
+
+  /// Unfolded when the user left it unfolded, or - first run - when the client
+  /// already points at a self-hosted server, so "where is my server set?" has
+  /// an answer on the first visit.
+  bool _initialPrivateNetworkState() {
+    final stored = bind.mainGetLocalOption(key: kOptionPrivateNetwork);
+    if (stored.isNotEmpty) return stored == 'Y';
+    return bind.mainGetOptionSync(key: 'custom-rendezvous-server').isNotEmpty;
+  }
 
   _SettingsState() {
     _enableAbr = option2bool(
@@ -135,8 +150,12 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
         bind.mainGetOptionSync(key: kOptionAllowAutoDisconnect));
     _autoDisconnectTimeout =
         bind.mainGetOptionSync(key: kOptionAutoDisconnectTimeout);
-    // Provisioned in the build; users must not repoint the client.
-    _hideServer = true;
+    // `hide-server-settings` is a build-time policy flag, not a statement
+    // about this app: when the build does not forbid it, the ID/Relay editor
+    // is reachable through the "Enable private network" switch below.
+    _hideServer =
+        bind.mainGetBuildinOption(key: kOptionHideServerSetting) == 'Y';
+    _privateNetwork = _initialPrivateNetworkState();
     _hideProxy = bind.mainGetBuildinOption(key: kOptionHideProxySetting) == 'Y';
     _hideNetwork =
         bind.mainGetBuildinOption(key: kOptionHideNetworkSetting) == 'Y';
@@ -750,6 +769,19 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
           ),
         SettingsSection(title: Text(translate("Settings")), tiles: [
           if (!disabledSettings && !_hideNetwork && !_hideServer)
+            SettingsTile.switchTile(
+              title: Text(translate('Enable private network')),
+              description: Text(translate('private-network-tip')),
+              initialValue: _privateNetwork,
+              onToggle: (v) async {
+                await bind.mainSetLocalOption(
+                    key: kOptionPrivateNetwork, value: v ? 'Y' : 'N');
+                setState(() {
+                  _privateNetwork = v;
+                });
+              },
+            ),
+          if (_privateNetwork && !disabledSettings && !_hideServer)
             SettingsTile(
                 title: Text(translate('ID/Relay Server')),
                 leading: Icon(Icons.cloud),

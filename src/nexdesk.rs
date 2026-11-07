@@ -24,8 +24,12 @@
 use serde_json::Value;
 
 /// Fallback when neither build-time nor runtime configuration is present.
-/// Replace with the real `owner/repo` before publishing.
-pub const DEFAULT_REPO: &str = "vahidkar20/nexdesk";
+///
+/// Must name the repository the releases are actually published from - the
+/// build workflows override it with `${{ github.repository }}`, so this only
+/// matters for a local build, where a stale name silently turns "check for
+/// updates" into "404 from GitHub".
+pub const DEFAULT_REPO: &str = "vahidkar20/deskyar";
 
 /// GitHub rejects API requests that do not identify a client.
 pub const USER_AGENT: &str = concat!("NexDesk/", env!("CARGO_PKG_VERSION"));

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:dynamic_layouts/dynamic_layouts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -284,10 +283,28 @@ class _PeersViewState extends State<_PeersView>
                               bottom: space / 2);
                         },
                       )
-                    : DynamicGridView.builder(
-                        gridDelegate: SliverGridDelegateWithWrapping(
-                            mainAxisSpacing: space / 2,
-                            crossAxisSpacing: space),
+                    : GridView.builder(
+                        // Flutter's own grid, not `DynamicGridView` from
+                        // `dynamic_layouts`: that render object positions each
+                        // tile at an absolute cross-axis offset and never reads
+                        // `textDirection`, so in the Persian UI the cards piled
+                        // up against the physical left edge of the pane while
+                        // everything around them was laid out right-to-left.
+                        // `SliverGridDelegateWithMaxCrossAxisExtent` reverses
+                        // the cross axis for RTL, which puts the first card at
+                        // the reading edge.
+                        padding: EdgeInsets.zero,
+                        primary: false,
+                        gridDelegate:
+                            SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 220,
+                          mainAxisExtent:
+                              peerCardUiType.value == PeerUiType.grid
+                                  ? 140.0
+                                  : 42.0,
+                          mainAxisSpacing: space / 2,
+                          crossAxisSpacing: space,
+                        ),
                         itemCount: peers.length,
                         itemBuilder: (BuildContext context, int index) {
                           return buildOnePeer(peers[index], false);

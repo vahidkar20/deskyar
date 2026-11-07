@@ -29,6 +29,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Enable TCP tunneling", "را فعال کنید TCP تانل"),
         ("IP Whitelisting", "های مجاز IP لیست"),
         ("ID/Relay Server", "ID/Relay سرور"),
+        ("Enable private network", "فعال‌سازی شبکه شخصی"),
+        ("private-network-tip", "با فعال کردن این بخش می‌توانید این دستگاه را به سرور ID/Relay اختصاصی خودتان وصل کنید؛ شناسه، رله، API و کلید سرور را از همین‌جا وارد کنید."),
         ("Import server config", "تنظیم سرور با فایل"),
         ("Export Server Config", "ایجاد فایل تظیمات از سرور فعلی"),
         ("Import server configuration successfully", "تنظیمات سرور با فایل کانفیگ با موفقیت انجام شد"),

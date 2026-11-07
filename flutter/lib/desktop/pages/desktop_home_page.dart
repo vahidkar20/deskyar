@@ -139,7 +139,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         // square banner (240 + 2x12 margins = 264). The incoming-only size is
         // measured after layout, so this is only a starting point.
         width: isIncomingOnly ? 300.0 : 264.0,
-        color: Theme.of(context).colorScheme.background,
+        // The sidebar is one tone above the canvas: on a near-black UI the
+        // only way to show two panes without drawing a heavy rule is a small
+        // value step between them.
+        color: Theme.of(context).cardColor,
         child: Stack(
           children: [
             Column(
@@ -203,9 +206,30 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
+  /// The surface shared by the ID and password boards.
+  ///
+  /// A soft gradient rather than a flat tint: at 6-10% opacity a flat fill
+  /// bands visibly on some panels, while a two-stop gradient reads as light
+  /// falling across the card and costs one paint.
+  BoxDecoration _boardDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: AlignmentDirectional.topStart,
+        end: AlignmentDirectional.bottomEnd,
+        colors: isDark
+            ? [const Color(0xFF13281C), const Color(0xFF0C1710)]
+            : [const Color(0xFFE9F8EE), const Color(0xFFF6FBF7)],
+      ),
+      borderRadius: BorderRadius.circular(MyTheme.radiusLg),
+      border: Border.all(
+        color: MyTheme.accent.withOpacity(isDark ? 0.18 : 0.16),
+      ),
+    );
+  }
+
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final labelColor = Theme.of(context)
         .textTheme
         .titleLarge
@@ -224,15 +248,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       // above it. The two cards used to be 5px different in width, which read
       // as a rendering mistake rather than as a design choice.
       margin: const EdgeInsets.only(left: 16, right: 16),
-      padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
-      decoration: BoxDecoration(
-        // A tinted card instead of a bare row with a 2px rule: the ID is the
-        // one piece of text a user has to read out loud to someone else, so it
-        // should look like the primary datum on the pane rather than body text.
-        color: MyTheme.accent.withOpacity(isDark ? 0.10 : 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MyTheme.accent.withOpacity(0.22)),
-      ),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 8, 8),
+      // A card instead of a bare row with a 2px rule: the ID is the one piece
+      // of text a user has to read out loud to someone else, so it should look
+      // like the primary datum on the pane rather than body text.
+      decoration: _boardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -344,7 +364,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     RxBool refreshHover = false.obs;
     RxBool editHover = false.obs;
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
 
@@ -361,12 +380,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       // Same tinted card as the ID board above, so the two read as a pair
       // rather than as one card followed by a loose row with an accent rule.
       margin: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),
-      padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
-      decoration: BoxDecoration(
-        color: MyTheme.accent.withOpacity(isDark ? 0.10 : 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MyTheme.accent.withOpacity(0.22)),
-      ),
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 8, 8),
+      decoration: _boardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

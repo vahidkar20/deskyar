@@ -1447,29 +1447,33 @@ class TabbarTheme extends ThemeExtension<TabbarTheme> {
       required this.closeHoverColor,
       required this.selectedTabBackgroundColor});
 
+  // Tabs follow the same two-tone surface language as the cards: the active
+  // tab is a raised pill, everything else is muted ink. The previous palette
+  // carried two blues (#A2CBF1 / #1E4162) that belonged to no other part of the
+  // product.
   static const light = TabbarTheme(
       selectedTabIconColor: MyTheme.accent,
-      unSelectedTabIconColor: Color.fromARGB(255, 162, 203, 241),
-      selectedTextColor: Colors.black,
-      unSelectedTextColor: Color.fromARGB(255, 112, 112, 112),
-      selectedIconColor: Color.fromARGB(255, 26, 26, 26),
-      unSelectedIconColor: Color.fromARGB(255, 96, 96, 96),
-      dividerColor: Color.fromARGB(255, 238, 238, 238),
-      hoverColor: Colors.white54,
-      closeHoverColor: Colors.white,
-      selectedTabBackgroundColor: Colors.white54);
+      unSelectedTabIconColor: Color(0xFF8A9A8F),
+      selectedTextColor: MyTheme.inkLight,
+      unSelectedTextColor: Color(0xFF6B7C71),
+      selectedIconColor: MyTheme.inkLight,
+      unSelectedIconColor: Color(0xFF6B7C71),
+      dividerColor: Color(0xFFE3EAE5),
+      hoverColor: Color(0x0D0D2618),
+      closeHoverColor: Color(0x140D2618),
+      selectedTabBackgroundColor: Colors.white);
 
   static const dark = TabbarTheme(
       selectedTabIconColor: MyTheme.accent,
-      unSelectedTabIconColor: Color.fromARGB(255, 30, 65, 98),
-      selectedTextColor: Colors.white,
-      unSelectedTextColor: Color.fromARGB(255, 192, 192, 192),
-      selectedIconColor: Color.fromARGB(255, 192, 192, 192),
-      unSelectedIconColor: Color.fromARGB(255, 255, 255, 255),
-      dividerColor: Color.fromARGB(255, 64, 64, 64),
-      hoverColor: Colors.black26,
-      closeHoverColor: Colors.black,
-      selectedTabBackgroundColor: Colors.black26);
+      unSelectedTabIconColor: Color(0xFF6E7F74),
+      selectedTextColor: MyTheme.inkDark,
+      unSelectedTextColor: Color(0xFF8FA095),
+      selectedIconColor: MyTheme.inkDark,
+      unSelectedIconColor: Color(0xFF8FA095),
+      dividerColor: Color(0x14FFFFFF),
+      hoverColor: Color(0x0DFFFFFF),
+      closeHoverColor: Color(0x1AFFFFFF),
+      selectedTabBackgroundColor: Color(0xFF141B16));
 
   @override
   ThemeExtension<TabbarTheme> copyWith({

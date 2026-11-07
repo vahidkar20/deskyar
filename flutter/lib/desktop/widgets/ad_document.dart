@@ -2,9 +2,14 @@
 //
 // The slot has to show "whatever is on the page". The page is served as
 // `text/html`, so an image decoder can never read it, and the creative may be
-// anything from a single linked logo (what ad.yar.one serves today) to a
-// headline + paragraph + button. This file turns the markup into a handful of
-// layout blocks that Flutter can paint natively.
+// anything from a single linked logo to a headline + paragraph + button. This
+// file turns the markup into a handful of layout blocks that Flutter can paint
+// natively.
+//
+// The markup handed in here has already had its ad scripts resolved by
+// `common/widgets/ad_creative.dart`: ad.yar.one ships a shell whose only
+// content is a script that `document.write`s the creative, so parsing the raw
+// response yields an empty document.
 //
 // ## Scope
 //

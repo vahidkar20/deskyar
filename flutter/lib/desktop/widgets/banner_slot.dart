@@ -4,8 +4,10 @@
 // runtime and paints whatever it finds:
 //
 //   * `Content-Type: image/*`  -> the response is the creative.
-//   * `Content-Type: text/html` -> the markup is parsed into layout blocks by
-//     ad_document.dart (headline, paragraph, image, link, button, ...).
+//   * `Content-Type: text/html` -> any `<script src>` the page pulls in is
+//     resolved first (ad networks hand the creative over through
+//     `document.write`), then the resulting markup is parsed into layout
+//     blocks by ad_document.dart (headline, paragraph, image, link, button).
 //
 // ## Why not `Image.network(pageUrl)`
 //
@@ -36,6 +38,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/widgets/ad_creative.dart';
 import 'package:flutter_hbb/desktop/widgets/ad_document.dart';
 import 'package:http/http.dart' as http;
 
@@ -132,12 +135,21 @@ class _NexDeskBannerSlotState extends State<NexDeskBannerSlot>
 
       final contentType =
           (response.headers['content-type'] ?? '').toLowerCase();
-      var document = contentType.startsWith('image/')
-          ? imageDocument(base)
-          : parseAdDocument(
-              utf8.decode(response.bodyBytes, allowMalformed: true),
-              base,
-            );
+      AdDocument document;
+      if (contentType.startsWith('image/')) {
+        document = imageDocument(base);
+      } else {
+        // ad.yar.one serves a shell whose only content is a script that
+        // `document.write`s the creative. Without this step the parser sees an
+        // empty body and the slot falls through to its placeholder - which is
+        // exactly what it did before.
+        final markup = await inlineAdScripts(
+          utf8.decode(response.bodyBytes, allowMalformed: true),
+          base,
+        );
+        if (!mounted || seq != _requestSeq) return;
+        document = parseAdDocument(markup, base);
+      }
 
       // Version the image URLs so a creative replaced in place is not served
       // from Flutter's in-memory image cache for the rest of the session.

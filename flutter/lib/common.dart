@@ -249,11 +249,11 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
 class MyTheme {
   MyTheme._();
 
-  static const Color grayBg = Color(0xFFF1F8F3);
+  static const Color grayBg = Color(0xFFF4F7F5);
   static const Color accent = Color(0xFF22C55E);
   static const Color accent50 = Color(0x7722C55E);
   static const Color accent80 = Color(0xAA22C55E);
-  static const Color canvasColor = Color(0xFF08120C);
+  static const Color canvasColor = Color(0xFF080B09);
   static const Color border = Color(0xFFCCCCCC);
   static const Color idColor = Color(0xFF4ADE80);
   static const Color darkGray = Color.fromARGB(255, 148, 148, 148);
@@ -261,6 +261,52 @@ class MyTheme {
   static const Color dark = Colors.black87;
   static const Color button = Color(0xFF16A34A);
   static const Color hoverBorder = Color(0xFF999999);
+
+  // ---------------------------------------------------------------------
+  // Surfaces
+  //
+  // Two levels only: the canvas everything sits on, and the surface a card or
+  // a dialog is cut from. Depth comes from a hairline border and (in light
+  // mode) one soft shadow, not from a stack of elevations - that is what keeps
+  // the 2026 look flat and calm instead of heavy, and it costs nothing to
+  // paint.
+  // ---------------------------------------------------------------------
+
+  /// Page background in dark mode: near-black with a trace of green, so the
+  /// accent reads as light rather than as paint.
+  static const Color canvasDark = Color(0xFF080B09);
+
+  /// Card / dialog / bar surface in dark mode.
+  static const Color surfaceDark = Color(0xFF0F1411);
+
+  /// One step above [surfaceDark]: menus, hovered rows, floating bars.
+  static const Color raisedDark = Color(0xFF141B16);
+
+  /// Page background in light mode.
+  static const Color canvasLight = Color(0xFFF4F7F5);
+
+  /// Card / dialog / bar surface in light mode.
+  static const Color surfaceLight = Color(0xFFFFFFFF);
+
+  /// Hairline that outlines a surface. Never a full-opacity line: the border is
+  /// there to separate two close tones, not to draw a box.
+  static Color hairline(Brightness b) => b == Brightness.dark
+      ? Colors.white.withOpacity(0.075)
+      : const Color(0xFF0D2618).withOpacity(0.09);
+
+  static Color surface(Brightness b) =>
+      b == Brightness.dark ? surfaceDark : surfaceLight;
+
+  static Color canvas(Brightness b) =>
+      b == Brightness.dark ? canvasDark : canvasLight;
+
+  /// The accent as a two-stop gradient. Used by the primary call to action and
+  /// the brand lockup; a flat fill of the same green looks like a 2019 button.
+  static const LinearGradient accentGradient = LinearGradient(
+    begin: AlignmentDirectional.topStart,
+    end: AlignmentDirectional.bottomEnd,
+    colors: [Color(0xFF34D97B), Color(0xFF15A34A)],
+  );
 
   // ListTile
   static const ListTileThemeData listTileTheme = ListTileThemeData(
@@ -339,13 +385,15 @@ class MyTheme {
 
   static ScrollbarThemeData scrollbarTheme = ScrollbarThemeData(
     thickness: MaterialStateProperty.all(6),
+    // Barely-there scrollbars: a visible grey track is the fastest way to make
+    // a modern surface look like a 2015 desktop app.
     thumbColor: MaterialStateProperty.resolveWith<Color?>((states) {
       if (states.contains(MaterialState.dragged)) {
-        return Colors.grey[900];
+        return const Color(0x550D2618);
       } else if (states.contains(MaterialState.hovered)) {
-        return Colors.grey[700];
+        return const Color(0x3D0D2618);
       } else {
-        return Colors.grey[500];
+        return const Color(0x240D2618);
       }
     }),
     crossAxisMargin: 4,
@@ -354,11 +402,11 @@ class MyTheme {
   static ScrollbarThemeData scrollbarThemeDark = scrollbarTheme.copyWith(
     thumbColor: MaterialStateProperty.resolveWith<Color?>((states) {
       if (states.contains(MaterialState.dragged)) {
-        return Colors.grey[100];
+        return const Color(0x66FFFFFF);
       } else if (states.contains(MaterialState.hovered)) {
-        return Colors.grey[300];
+        return const Color(0x45FFFFFF);
       } else {
-        return Colors.grey[500];
+        return const Color(0x2EFFFFFF);
       }
     }),
   );
@@ -383,13 +431,20 @@ class MyTheme {
   static const double space24 = 24;
   static const double space32 = 32;
 
-  static const double radiusSm = 8;
-  static const double radiusMd = 10;
-  static const double radiusLg = 14;
-  static const double radiusXl = 18;
+  static const double radiusSm = 10;
+  static const double radiusMd = 12;
+  static const double radiusLg = 16;
+  static const double radiusXl = 20;
+
+  /// Fully rounded, for pills and chips.
+  static const double radiusPill = 999;
 
   /// Height of a standard control: button, text field, dropdown.
-  static const double controlHeight = 40;
+  ///
+  /// 44 rather than 40: the extra 4px is what makes a button feel tappable on
+  /// a phone and deliberate on a desktop, and it is still well inside the
+  /// 48dp accessibility target once the padding is counted.
+  static const double controlHeight = 44;
 
   /// Ink colours. Titles use [ink], secondary copy uses [muted].
   static const Color inkLight = Color(0xFF16261C);
@@ -442,16 +497,26 @@ class MyTheme {
     return ElevatedButton.styleFrom(
       minimumSize: const Size(0, controlHeight),
       padding: const EdgeInsets.symmetric(horizontal: space20),
+      // Flat on purpose: the border and the accent carry the affordance, a
+      // drop shadow on every button is what makes an interface look older than
+      // it is.
       elevation: 0,
       backgroundColor: button,
       foregroundColor: Colors.white,
-      disabledBackgroundColor: button.withOpacity(0.32),
-      disabledForegroundColor: Colors.white.withOpacity(0.55),
+      disabledBackgroundColor: button.withOpacity(0.28),
+      disabledForegroundColor: Colors.white.withOpacity(0.5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusMd),
       ),
+      // The family has to be repeated here: `styleFrom(textStyle:)` replaces
+      // the button's DefaultTextStyle outright, so a TextStyle without a
+      // fontFamily renders the label in the platform default (Roboto) while
+      // the rest of the UI is Vazirmatn.
       textStyle: const TextStyle(
-          fontSize: 14, fontWeight: FontWeight.w600, height: 1.2),
+          fontFamily: kNexDeskFontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          height: 1.2),
     );
   }
 
@@ -461,14 +526,17 @@ class MyTheme {
       minimumSize: const Size(0, controlHeight),
       padding: const EdgeInsets.symmetric(horizontal: space20),
       foregroundColor: ink(brightness),
-      side: BorderSide(
-        color: isDark ? const Color(0xFF2A6040) : const Color(0xFFD3E2D7),
-      ),
+      side: BorderSide(color: hairline(brightness)),
+      backgroundColor:
+          isDark ? Colors.white.withOpacity(0.03) : Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusMd),
       ),
       textStyle: const TextStyle(
-          fontSize: 14, fontWeight: FontWeight.w500, height: 1.2),
+          fontFamily: kNexDeskFontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          height: 1.2),
     );
   }
 
@@ -482,14 +550,17 @@ class MyTheme {
         borderRadius: BorderRadius.circular(radiusSm),
       ),
       textStyle: const TextStyle(
-          fontSize: 13.5, fontWeight: FontWeight.w500, height: 1.2),
+          fontFamily: kNexDeskFontFamily,
+          fontSize: 13.5,
+          fontWeight: FontWeight.w500,
+          height: 1.2),
     );
   }
 
   static InputDecorationTheme inputThemeFor(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final fill = isDark ? const Color(0xFF0E2317) : const Color(0xFFF1F8F3);
-    final line = isDark ? const Color(0xFF205034) : const Color(0xFFD5E4DA);
+    final fill = isDark ? const Color(0xFF0C110E) : const Color(0xFFF1F5F2);
+    final line = hairline(brightness);
     OutlineInputBorder border(Color color, [double width = 1]) =>
         OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
@@ -507,10 +578,15 @@ class MyTheme {
       errorBorder: border(const Color(0xFFE05A6B)),
       focusedErrorBorder: border(const Color(0xFFE05A6B), 1.6),
       hintStyle: TextStyle(
-          fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
+          fontFamily: kNexDeskFontFamily,
+          fontSize: 13,
+          color: isDark ? Colors.white38 : Colors.black38),
       labelStyle: TextStyle(
-          fontSize: 13, color: isDark ? Colors.white60 : Colors.black54),
-      errorStyle: const TextStyle(fontSize: 11.5, height: 1.3),
+          fontFamily: kNexDeskFontFamily,
+          fontSize: 13,
+          color: isDark ? Colors.white60 : Colors.black54),
+      errorStyle: const TextStyle(
+          fontFamily: kNexDeskFontFamily, fontSize: 11.5, height: 1.3),
     );
   }
 
@@ -519,7 +595,10 @@ class MyTheme {
       waitDuration: const Duration(milliseconds: 500),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       textStyle: const TextStyle(
-          fontSize: 12, height: 1.4, color: Colors.white),
+          fontFamily: kNexDeskFontFamily,
+          fontSize: 12,
+          height: 1.4,
+          color: Colors.white),
       decoration: BoxDecoration(
         color: brightness == Brightness.dark
             ? const Color(0xFF1D333D)
@@ -548,7 +627,11 @@ class MyTheme {
           color: isDark ? const Color(0xFF205034) : const Color(0xFFD5E4DA)),
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSm)),
-      labelStyle: TextStyle(fontSize: 12, height: 1.2, color: ink(brightness)),
+      labelStyle: TextStyle(
+          fontFamily: kNexDeskFontFamily,
+          fontSize: 12,
+          height: 1.2,
+          color: ink(brightness)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     );
   }
@@ -558,11 +641,17 @@ class MyTheme {
     useMaterial3: false,
     fontFamily: kNexDeskFontFamily,
     brightness: Brightness.light,
-    hoverColor: Color.fromARGB(255, 224, 238, 227),
-    scaffoldBackgroundColor: Colors.white,
-    dialogBackgroundColor: Colors.white,
-    appBarTheme: AppBarTheme(
+    hoverColor: const Color(0xFF0D2618).withOpacity(0.045),
+    scaffoldBackgroundColor: canvasLight,
+    dialogBackgroundColor: surfaceLight,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: canvasLight,
+      foregroundColor: inkLight,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      centerTitle: true,
     ),
     iconTheme: IconThemeData(color: ink(Brightness.light)),
     textSelectionTheme: TextSelectionThemeData(
@@ -576,16 +665,18 @@ class MyTheme {
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Color(0xFFE4EEE7)),
+        borderRadius: BorderRadius.circular(radiusXl),
+        side: BorderSide(color: hairline(Brightness.light)),
       ),
       titleTextStyle: TextStyle(
+        fontFamily: kNexDeskFontFamily,
         fontSize: 18,
         fontWeight: FontWeight.w600,
         height: 1.4,
         color: inkLight,
       ),
       contentTextStyle: TextStyle(
+        fontFamily: kNexDeskFontFamily,
         fontSize: 13.5,
         height: 1.6,
         color: inkLight,
@@ -596,7 +687,7 @@ class MyTheme {
     textTheme: textThemeFor(Brightness.light),
     dividerTheme: dividerThemeFor(Brightness.light),
     chipTheme: chipThemeFor(Brightness.light),
-    cardColor: grayBg,
+    cardColor: surfaceLight,
     hintColor: Color(0xFFAAAAAA),
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
@@ -624,7 +715,11 @@ class MyTheme {
         style:
             MenuStyle(backgroundColor: MaterialStatePropertyAll(Colors.white))),
     colorScheme: ColorScheme.light(
-        primary: Color(0xFF22C55E), secondary: accent, background: grayBg),
+      primary: accent,
+      secondary: accent,
+      background: canvasLight,
+      surface: surfaceLight,
+    ),
     popupMenuTheme: PopupMenuThemeData(
         color: Colors.white,
         elevation: 8,
@@ -645,11 +740,17 @@ class MyTheme {
     useMaterial3: false,
     fontFamily: kNexDeskFontFamily,
     brightness: Brightness.dark,
-    hoverColor: Color.fromARGB(255, 22, 52, 34),
-    scaffoldBackgroundColor: Color(0xFF07130D),
-    dialogBackgroundColor: Color(0xFF07130D),
-    appBarTheme: AppBarTheme(
+    hoverColor: Colors.white.withOpacity(0.045),
+    scaffoldBackgroundColor: canvasDark,
+    dialogBackgroundColor: surfaceDark,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: canvasDark,
+      foregroundColor: inkDark,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      centerTitle: true,
     ),
     iconTheme: IconThemeData(color: ink(Brightness.dark)),
     textSelectionTheme: TextSelectionThemeData(
@@ -663,16 +764,18 @@ class MyTheme {
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Color(0xFF1C4529)),
+        borderRadius: BorderRadius.circular(radiusXl),
+        side: BorderSide(color: hairline(Brightness.dark)),
       ),
       titleTextStyle: TextStyle(
+        fontFamily: kNexDeskFontFamily,
         fontSize: 18,
         fontWeight: FontWeight.w600,
         height: 1.4,
         color: inkDark,
       ),
       contentTextStyle: TextStyle(
+        fontFamily: kNexDeskFontFamily,
         fontSize: 13.5,
         height: 1.6,
         color: inkDark,
@@ -683,7 +786,7 @@ class MyTheme {
     textTheme: textThemeFor(Brightness.dark),
     dividerTheme: dividerThemeFor(Brightness.dark),
     chipTheme: chipThemeFor(Brightness.dark),
-    cardColor: Color(0xFF0E2317),
+    cardColor: surfaceDark,
     visualDensity: VisualDensity.adaptivePlatformDensity,
     tabBarTheme: const TabBarTheme(
       labelColor: Colors.white70,
@@ -710,9 +813,10 @@ class MyTheme {
         style: MenuStyle(
             backgroundColor: MaterialStatePropertyAll(Color(0xFF0E2317)))),
     colorScheme: ColorScheme.dark(
-      primary: Color(0xFF22C55E),
+      primary: accent,
       secondary: accent,
-      background: Color(0xFF0E2317),
+      background: canvasDark,
+      surface: surfaceDark,
     ),
     popupMenuTheme: PopupMenuThemeData(
         color: const Color(0xFF0E2317),

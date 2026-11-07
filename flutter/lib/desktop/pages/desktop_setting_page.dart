@@ -39,7 +39,8 @@ const double _kContentHSubMargin = _kContentHMargin + 32;
 const double _kCheckBoxLeftMargin = 12;
 const double _kRadioLeftMargin = 12;
 const double _kListViewBottomMargin = 16;
-const double _kTitleFontSize = 20;
+/// Page title of the settings screen (the card headers use 16/w600).
+const double _kTitleFontSize = 22;
 const double _kContentFontSize = 14;
 const Color _accentColor = MyTheme.accent;
 const String _kSettingPageControllerTag = 'settingPageController';
@@ -314,7 +315,8 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
       style: const TextStyle(
         color: _accentColor,
         fontSize: _kTitleFontSize,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
       ),
     );
     return Row(
@@ -1753,7 +1755,30 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
   bool get wantKeepAlive => true;
   bool locked = !isWeb && bind.mainIsInstalled();
 
+  /// Whether the private-network section is unfolded.
+  ///
+  /// Stored in a *local* option rather than a server option: it describes this
+  /// installation's settings page, not the machine's identity, and it must not
+  /// be pushed to a peer or synced to an address book.
+  late bool privateNetworkOpen = _initialPrivateNetworkState();
+
   final scrollController = ScrollController();
+
+  /// Unfolded when the user left it unfolded, or - first run - when the client
+  /// already points at a self-hosted server. A machine that was provisioned in
+  /// the build starts with the editor visible, so "where is my server set?"
+  /// has an answer on the first visit instead of hiding behind a collapsed
+  /// header nobody would think to open.
+  bool _initialPrivateNetworkState() {
+    final stored = bind.mainGetLocalOption(key: kOptionPrivateNetwork);
+    if (stored.isNotEmpty) return stored == 'Y';
+    return bind.mainGetOptionSync(key: 'custom-rendezvous-server').isNotEmpty;
+  }
+
+  void _setPrivateNetwork(bool open) {
+    setState(() => privateNetworkOpen = open);
+    bind.mainSetLocalOption(key: kOptionPrivateNetwork, value: open ? 'Y' : 'N');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1773,11 +1798,10 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
   }
 
   Widget network(BuildContext context) {
-    // The rendezvous/relay address and its public key are provisioned in the
-    // build. Exposing the editor would let a user point the client at another
-    // server, which this product does not support and which silently breaks
-    // the connection.
-    final hideServer = true;
+    // A build can still forbid the editor outright; the default is to offer it
+    // behind the private-network switch.
+    final hideServer =
+        bind.mainGetBuildinOption(key: kOptionHideServerSetting) == 'Y';
     final hideProxy =
         isWeb || bind.mainGetBuildinOption(key: kOptionHideProxySetting) == 'Y';
     final hideWebSocket = isWeb ||
@@ -1864,81 +1888,153 @@ class _NetworkState extends State<_Network> with AutomaticKeepAliveClientMixin {
     final outgoingOnly = bind.isOutgoingOnly();
 
     final divider = const Divider(height: 1, indent: 16, endIndent: 16);
+
+    // Build the rows into a list and join them with dividers, instead of
+    // sprinkling `if (a && b) divider` between them. With the private-network
+    // section able to appear and disappear, that arithmetic is exactly the
+    // kind of thing that ends up drawing two rules in a row or none at all.
+    final rows = <Widget>[];
+    void add(Widget row) {
+      if (rows.isNotEmpty) rows.add(divider);
+      rows.add(row);
+    }
+
+    if (!hideServer) add(_privateNetworkHeader());
+    if (privateNetworkOpen && !hideServer) {
+      add(listTile(
+        icon: Icons.dns_outlined,
+        title: 'ID/Relay Server',
+        onTap: () => showServerSettings(gFFI.dialogManager, setState),
+      ));
+    }
+    if (!hideProxy) {
+      add(listTile(
+        icon: Icons.network_ping_outlined,
+        title: 'Socks5/Http(s) Proxy',
+        onTap: changeSocks5Proxy,
+      ));
+    }
+    if (!hideWebSocket) {
+      add(switchWidget(
+          Icons.web_asset_outlined,
+          'Use WebSocket',
+          '${translate('websocket_tip')}\n\n${translate('server-oss-not-support-tip')}',
+          kOptionAllowWebSocket));
+    }
+    if (!isWeb) {
+      // This group owns its leading rule instead of going through `add()`:
+      // when the client uses the public server the whole group collapses to an
+      // Offstage, and a rule added by `add()` would be left dangling at the
+      // bottom of the card.
+      rows.add(futureBuilder(
+        future: bind.mainIsUsingPublicServer(),
+        hasData: (isUsingPublicServer) {
+          if (isUsingPublicServer) {
+            return Offstage();
+          }
+          return Column(
+            children: [
+              if (rows.isNotEmpty) divider,
+              switchWidget(
+                  Icons.no_encryption_outlined,
+                  'Allow insecure TLS fallback',
+                  'allow-insecure-tls-fallback-tip',
+                  kOptionAllowInsecureTLSFallback),
+              if (!outgoingOnly) divider,
+              if (!outgoingOnly)
+                listTile(
+                  icon: Icons.lan_outlined,
+                  title: 'Disable UDP',
+                  showTooltip: true,
+                  tooltipMessage:
+                      '${translate('disable-udp-tip')}\n\n${translate('server-oss-not-support-tip')}',
+                  trailing: Switch(
+                    value: bind.mainGetOptionSync(key: kOptionDisableUdp) == 'Y',
+                    onChanged: locked || isOptionFixed(kOptionDisableUdp)
+                        ? null
+                        : (value) async {
+                            await bind.mainSetOption(
+                                key: kOptionDisableUdp,
+                                value: value ? 'Y' : 'N');
+                            setState(() {});
+                          },
+                  ),
+                ),
+            ],
+          );
+        },
+      ));
+    }
+
     return _Card(
       title: 'Network',
       children: [
         Container(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!hideServer)
-                listTile(
-                  icon: Icons.dns_outlined,
-                  title: 'ID/Relay Server',
-                  onTap: () => showServerSettings(gFFI.dialogManager, setState),
-                ),
-              if (!hideProxy && !hideServer) divider,
-              if (!hideProxy)
-                listTile(
-                  icon: Icons.network_ping_outlined,
-                  title: 'Socks5/Http(s) Proxy',
-                  onTap: changeSocks5Proxy,
-                ),
-              if (!hideWebSocket && (!hideServer || !hideProxy)) divider,
-              if (!hideWebSocket)
-                switchWidget(
-                    Icons.web_asset_outlined,
-                    'Use WebSocket',
-                    '${translate('websocket_tip')}\n\n${translate('server-oss-not-support-tip')}',
-                    kOptionAllowWebSocket),
-              if (!isWeb)
-                futureBuilder(
-                  future: bind.mainIsUsingPublicServer(),
-                  hasData: (isUsingPublicServer) {
-                    if (isUsingPublicServer) {
-                      return Offstage();
-                    } else {
-                      return Column(
-                        children: [
-                          if (!hideServer || !hideProxy || !hideWebSocket)
-                            divider,
-                          switchWidget(
-                              Icons.no_encryption_outlined,
-                              'Allow insecure TLS fallback',
-                              'allow-insecure-tls-fallback-tip',
-                              kOptionAllowInsecureTLSFallback),
-                          if (!outgoingOnly) divider,
-                          if (!outgoingOnly)
-                            listTile(
-                              icon: Icons.lan_outlined,
-                              title: 'Disable UDP',
-                              showTooltip: true,
-                              tooltipMessage:
-                                  '${translate('disable-udp-tip')}\n\n${translate('server-oss-not-support-tip')}',
-                              trailing: Switch(
-                                value: bind.mainGetOptionSync(
-                                        key: kOptionDisableUdp) ==
-                                    'Y',
-                                onChanged:
-                                    locked || isOptionFixed(kOptionDisableUdp)
-                                        ? null
-                                        : (value) async {
-                                            await bind.mainSetOption(
-                                                key: kOptionDisableUdp,
-                                                value: value ? 'Y' : 'N');
-                                            setState(() {});
-                                          },
-                              ),
-                            ),
-                        ],
-                      );
-                    }
-                  },
-                ),
-            ],
+            children: rows,
           ),
         ),
       ],
+    );
+  }
+
+  /// The collapsed header that owns the ID/Relay editor.
+  ///
+  /// The address is provisioned in the build, so the editor used to be hidden
+  /// outright - which left a user with no way to see, let alone correct, the
+  /// server their client talks to. Folding it behind an explicit switch keeps
+  /// it out of the way of the majority who never touch it, while making it
+  /// reachable for the ones who do.
+  Widget _privateNetworkHeader() {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    return InkWell(
+      onTap: locked ? null : () => _setPrivateNetwork(!privateNetworkOpen),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 12, 10),
+        child: Row(
+          children: [
+            Icon(
+              privateNetworkOpen ? Icons.lan_rounded : Icons.lan_outlined,
+              color: _accentColor,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    translate('Enable private network'),
+                    style: TextStyle(
+                      fontSize: _kContentFontSize,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    translate('private-network-tip'),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.45,
+                      color: textColor?.withOpacity(0.62),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedRotation(
+              turns: privateNetworkOpen ? 0.5 : 0,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: _accentColor,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -2699,29 +2795,32 @@ class _AboutState extends State<_About> {
               const SizedBox(height: 14),
               // Manual entry point for the updater: the automatic check runs in
               // the background, but a user who is told "there is a new version"
-              // needs a place to ask for it.
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(
-                  onPressed: () async {
-                    nexDeskUpdate.checkNow();
-                    await Future.delayed(const Duration(seconds: 3));
-                    final state = nexDeskUpdate.state.value;
-                    if (state != null && state.hasUpdate) {
-                      showNexDeskUpdateDialog();
-                    } else {
-                      showToast(isRtlLocale
-                          ? 'نسخه جدیدی موجود نیست'
-                          : 'No new version is available');
-                    }
-                  },
-                  icon: const Icon(Icons.system_update_alt_rounded, size: 16),
-                  label: Text(
-                    isRtlLocale ? 'بررسی به‌روزرسانی' : 'Check for updates',
-                    style: const TextStyle(fontSize: 12.5),
+              // needs a place to ask for it. Windows only - the updater is
+              // compiled out everywhere else, and offering the button there
+              // would answer "no new version" to every press.
+              if (isWindows)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      nexDeskUpdate.checkNow();
+                      await Future.delayed(const Duration(seconds: 3));
+                      final state = nexDeskUpdate.state.value;
+                      if (state != null && state.hasUpdate) {
+                        showNexDeskUpdateDialog();
+                      } else {
+                        showToast(isRtlLocale
+                            ? 'نسخه جدیدی موجود نیست'
+                            : 'No new version is available');
+                      }
+                    },
+                    icon: const Icon(Icons.system_update_alt_rounded, size: 16),
+                    label: Text(
+                      isRtlLocale ? 'بررسی به‌روزرسانی' : 'Check for updates',
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
                   ),
                 ),
-              ),
               aboutLink(translate('Privacy Statement'), 'https://nexdesk.ir'),
               aboutLink(translate('Website'), 'https://nexdesk.ir'),
               Container(
@@ -2860,8 +2959,23 @@ Widget _Card(
       Flexible(
         child: SizedBox(
           width: _kCardFixedWidth,
-          child: Card(
-            child: Column(
+          // A Builder rather than a `context` parameter: `_Card` is called from
+          // a dozen build methods and the only thing it needs a context for is
+          // the two theme colours below.
+          child: Builder(builder: (context) {
+            final brightness = Theme.of(context).brightness;
+            return Card(
+              // Flat surface + hairline instead of Material's elevation. The
+              // card is the same tone family as the page, so a shadow would
+              // only add noise on a near-black canvas.
+              elevation: 0,
+              color: MyTheme.surface(brightness),
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(MyTheme.radiusLg),
+                side: BorderSide(color: MyTheme.hairline(brightness)),
+              ),
+              child: Column(
               children: [
                 Row(
                   children: [
@@ -2869,8 +2983,13 @@ Widget _Card(
                         child: Text(
                       translate(title),
                       textAlign: TextAlign.start,
+                      // 16/w600 rather than 20/w400: a section header is a
+                      // label, not a heading, and at 20px the settings page
+                      // reads as a stack of titles with no body.
                       style: const TextStyle(
-                        fontSize: _kTitleFontSize,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.1,
                       ),
                     )),
                     ...?title_suffix
@@ -2878,9 +2997,10 @@ Widget _Card(
                 ).marginOnly(top: 10, bottom: 10).marginStart(_kContentHMargin),
                 ...children
                     .map((e) => e.marginOnly(top: 4).marginEnd(_kContentHMargin)),
-              ],
-            ).marginOnly(bottom: 10),
-          ).marginOnly(top: 15).marginStart(_kCardLeftMargin),
+                ],
+              ).marginOnly(bottom: 10),
+            ).marginOnly(top: 15).marginStart(_kCardLeftMargin);
+          }),
         ),
       ),
     ],

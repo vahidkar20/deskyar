@@ -71,7 +71,10 @@ class _InstallPageBodyState extends State<_InstallPageBody>
 
   // todo move to theme.
   final buttonStyle = OutlinedButton.styleFrom(
-    textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+    textStyle: TextStyle(
+        fontFamily: kNexDeskFontFamily,
+        fontSize: 14,
+        fontWeight: FontWeight.normal),
     padding: EdgeInsets.symmetric(vertical: 15, horizontal: 12),
   );
 

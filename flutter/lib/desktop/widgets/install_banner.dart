@@ -99,10 +99,10 @@ class _NexDeskInstallBannerState extends State<NexDeskInstallBanner> {
         gradient: LinearGradient(
           begin: AlignmentDirectional.centerStart,
           end: AlignmentDirectional.centerEnd,
-          colors: [accent.withOpacity(0.16), accent.withOpacity(0.03)],
+          colors: [accent.withOpacity(0.14), accent.withOpacity(0.02)],
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withOpacity(0.38)),
+        borderRadius: BorderRadius.circular(MyTheme.radiusLg),
+        border: Border.all(color: accent.withOpacity(0.22)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

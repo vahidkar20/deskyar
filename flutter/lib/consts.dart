@@ -197,6 +197,13 @@ const String kOptionAllowInsecureTLSFallback = "allow-insecure-tls-fallback";
 const String kOptionDisableUdp = "disable-udp";
 const String kOptionEnableFlutterHttpOnRust = "enable-flutter-http-on-rust";
 
+/// Whether the Network settings page shows the ID/Relay editor.
+///
+/// A *local* option: it is a property of this installation's settings page,
+/// not of the device's identity, so it must not travel to a peer or sync into
+/// an address book.
+const String kOptionPrivateNetwork = "nexdesk-private-network";
+
 // builtin options
 const String kOptionHideServerSetting = "hide-server-settings";
 const String kOptionHideProxySetting = "hide-proxy-settings";

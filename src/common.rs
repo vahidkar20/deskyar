@@ -1018,6 +1018,14 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 }
 
 pub fn check_software_update() {
+    // NexDesk updates Windows only. The signed manifest in
+    // `nexdesk_update.rs` describes a Windows installer, and the GitHub release
+    // this legacy path looks at carries the .exe - so on Android the check can
+    // only ever answer "there is a newer Windows build", which is noise: the
+    // Play/Bazaar build is updated by the store, not by this client.
+    if !cfg!(target_os = "windows") {
+        return;
+    }
     // Upstream refuses to look for updates in any rebranded build, which is why
     // a custom client normally stays on the version it shipped with forever.
     // NexDesk publishes its own releases, so only bail out when no feed is
