@@ -135,8 +135,7 @@ class NexDeskUpdateController extends GetxController {
     await refresh();
   }
 
-  void _onEvent(dynamic event) {
-    if (event is! Map) return;
+  Future<void> _onEvent(Map<String, dynamic> event) async {
     final payload = event['state'];
     if (payload is Map) {
       _apply(Map<String, dynamic>.from(payload));

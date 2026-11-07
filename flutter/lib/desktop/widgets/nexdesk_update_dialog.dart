@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/models/nexdesk_update_model.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,8 +27,7 @@ void showNexDeskUpdateDialog({bool forceMandatory = false, int attempt = 0}) {
   final tag = 'nexdesk-update-${current.latest}';
 
   gFFI.dialogManager.show((setState, close, context) {
-    return Obx(() {
-      final state = nexDeskUpdate.state.value ?? current;
+    {
       return CustomAlertDialog(
         title: Row(
           children: [
@@ -47,13 +47,21 @@ void showNexDeskUpdateDialog({bool forceMandatory = false, int attempt = 0}) {
             ),
           ],
         ),
-        content: _UpdateBody(state: state, mandatory: mandatory),
-        actions: _buildActions(context, close, state, mandatory),
+        content: Obx(() => _UpdateBody(
+            state: nexDeskUpdate.state.value ?? current,
+            mandatory: mandatory)),
+        actions: [
+          Obx(() => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: _buildActions(context, close,
+                    nexDeskUpdate.state.value ?? current, mandatory),
+              )),
+        ],
         // Esc must not close a mandatory prompt.
         onCancel: mandatory ? () {} : close,
-        onSubmit: state.canInstall ? () => nexDeskUpdate.install() : null,
+        onSubmit: current.canInstall ? () => nexDeskUpdate.install() : null,
       );
-    });
+    }
   }, tag: tag).catchError((Object _) {
     // The overlay is not mounted during the first frames of startup; retry a
     // few times instead of dropping the prompt.
