@@ -96,6 +96,14 @@ fn main() {
     println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_CHANNEL");
     println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_PUBKEY");
     println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_HOSTS");
+    // The rendezvous server and its public key are also read with
+    // `option_env!` (src/nexdesk_server.rs). Cargo fingerprints a crate by the
+    // environment variables the build script declared, so without these two
+    // lines a release built on a cached runner keeps the *previous* server -
+    // the Windows exe and the Android .so would silently disagree about where
+    // the network lives.
+    println!("cargo:rerun-if-env-changed=NEXDESK_SERVER");
+    println!("cargo:rerun-if-env-changed=NEXDESK_SERVER_KEY");
     hbb_common::gen_version();
     install_android_deps();
     #[cfg(all(windows, feature = "inline"))]

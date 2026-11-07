@@ -51,6 +51,15 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
     } else {
         crate::read_custom_client(custom_client_config);
     }
+    // Apply the rendezvous server that was baked into this build.
+    //
+    // `core_main` does this for the desktop, but that function is compiled out
+    // on Android and iOS - so a mobile build ignored NEXDESK_SERVER completely
+    // and fell back to RustDesk's public infrastructure. On a network that
+    // blocks it, the client never registers, never receives an ID, and cannot
+    // connect to anything. This is the single call that made the Android build
+    // unusable; it is idempotent, so running it after core_main is harmless.
+    crate::nexdesk_server::ensure_server_defaults();
     #[cfg(target_os = "android")]
     {
         // flexi_logger can't work when android_logger initialized.

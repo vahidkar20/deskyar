@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#FF0071FF</color>
+    <!-- Notification accent. Was RustDesk blue (#0071FF); now the NexDesk green
+         the rest of the app uses, so a notification from this client is not
+         mistaken for the upstream one. -->
+    <color name="primary">#FF16A34A</color>
 </resources>

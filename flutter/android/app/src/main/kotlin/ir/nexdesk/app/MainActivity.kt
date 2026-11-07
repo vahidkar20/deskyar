@@ -1,4 +1,4 @@
-package com.carriez.flutter_hbb
+package ir.nexdesk.app
 
 /**
  * Handle events from flutter

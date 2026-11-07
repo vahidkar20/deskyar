@@ -46,7 +46,7 @@ env:
   VCPKG_CMAKE_VERSION: "4.3.0"
   ARMV7_VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836" # 2025.01.13, got "/opt/artifacts/vcpkg/vcpkg: No such file or directory" with latest version
   # Keep in sync with Cargo.toml: it names the APK/RPM/deb artifacts.
-  VERSION: "1.5.3"
+  VERSION: "1.5.4"
   NDK_VERSION: "r28c"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
@@ -1202,7 +1202,26 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          # Self-hosted rendezvous (hbbs) server, baked into the .so through
+          # `option_env!` in src/nexdesk_server.rs - exactly as the Windows
+          # workflow does for the exe. Without these the APK points at
+          # RustDesk's public infrastructure, which is unreachable from Iran:
+          # the client never registers, never receives an ID, and cannot
+          # connect to anything. Set the repository variables
+          # NEXDESK_SERVER / NEXDESK_SERVER_KEY (or the legacy DESKYAR_* names).
+          NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER || vars.DESKYAR_SERVER }}
+          NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY || vars.DESKYAR_SERVER_KEY }}
         run: |
+          if [ -z "${NEXDESK_SERVER:-}" ]; then
+            echo "::warning::NEXDESK_SERVER is empty - this APK will use RustDesk's public servers and will not work for Iranian users. Set the repository variable NEXDESK_SERVER."
+          else
+            echo "rendezvous server: $NEXDESK_SERVER"
+          fi
+          if [ -z "${NEXDESK_SERVER_KEY:-}" ]; then
+            echo "::warning::NEXDESK_SERVER_KEY is empty - the server's signatures cannot be verified. Set it to the base64 contents of data/id_ed25519.pub on the server."
+          else
+            echo "server public key: ${#NEXDESK_SERVER_KEY} characters"
+          fi
           rustup target add ${{ matrix.job.target }}
           cargo install cargo-ndk --version ${{ env.CARGO_NDK_VERSION }} --locked
           case ${{ matrix.job.target }} in
