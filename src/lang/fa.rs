@@ -565,7 +565,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("2FA code must be 6 digits.", "کد احراز هویت دو مرحله ای باید 6 رقم باشد"),
         ("Multiple Windows sessions found", "چندین جلسه پیدا شد"),
         ("Please select the session you want to connect to", "لطفاً جلسه ای را که می خواهید به آن متصل شوید انتخاب کنید"),
-        ("powered_by_me", "قدرت گرفته از یار اول"),
+        ("powered_by_me", "Connect Anywhere · NexDesk"),
         ("nexdesk_about_title", "نکس دسک"),
         ("nexdesk_about_body", "نکس دسک نرم‌افزار دسترسی از راه دور است: اتصال رمزنگاری‌شده، انتقال فایل و اشتراک کلیپ‌بورد. همه‌ی ارتباط‌ها از سرور اختصاصی نکس دسک و با کلید امن آن انجام می‌شود و از هیچ سرویس واسطی عبور نمی‌کند."),
         ("Clipboard does not contain an ID", "متن کپی‌شده شناسه معتبری نیست"),

@@ -523,8 +523,14 @@ pub fn verify_signatures(m: &Manifest, payload: &str) -> ResultType<()> {
         let Ok(sig_bytes) = <[u8; 64]>::try_from(raw_sig.as_slice()) else {
             continue;
         };
-        let public_key = sign::PublicKey(*raw_key);
-        let signature = sign::Signature(sig_bytes);
+        // sodiumoxide keeps the tuple fields private: construct through the
+        // checked constructors instead of `Signature(bytes)`.
+        let Ok(public_key) = sign::PublicKey::from_bytes(raw_key) else {
+            continue;
+        };
+        let Ok(signature) = sign::Signature::from_bytes(&sig_bytes) else {
+            continue;
+        };
         if sign::verify_detached(&signature, payload.as_bytes(), &public_key) {
             return Ok(());
         }
