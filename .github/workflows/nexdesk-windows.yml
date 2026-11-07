@@ -65,6 +65,13 @@ env:
   # in RustDesk's public servers.
   NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER || vars.DESKYAR_SERVER }}
   NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY || vars.DESKYAR_SERVER_KEY }}
+  # Signed update feed. The manifest lives on our own site; the Ed25519 public
+  # key baked into the binary is what makes an update trustworthy. Public keys
+  # are not secret, so they belong in Variables, not Secrets.
+  #   NEXDESK_UPDATE_PUBKEY = "2026-11:<64 hex chars>"
+  NEXDESK_UPDATE_MANIFEST_URL: https://nexdesk.ir/updates/windows.json
+  NEXDESK_UPDATE_CHANNEL: stable
+  NEXDESK_UPDATE_PUBKEY: ${{ vars.NEXDESK_UPDATE_PUBKEY }}
 
 jobs:
   # The Dart <-> Rust bridge is generated, not committed, so it has to be
@@ -289,6 +296,20 @@ jobs:
             echo "::warning::NEXDESK_SERVER_KEY is empty - the server's signatures cannot be verified. Set it to the base64 contents of data/id_ed25519.pub on the server."
           else
             echo "server public key: ${#NEXDESK_SERVER_KEY} characters"
+          fi
+
+      - name: Verify the update signing key
+        shell: bash
+        run: |
+          # A release without a baked key can never update itself: the client
+          # deliberately refuses to run an unsigned update path. Fail here
+          # instead of shipping a build that is stuck forever.
+          if [[ "${GITHUB_REF}" == refs/tags/* && -z "${NEXDESK_UPDATE_PUBKEY:-}" ]]; then
+            echo "::error::NEXDESK_UPDATE_PUBKEY is empty - a tagged release must bake in the update public key"
+            exit 1
+          fi
+          if [[ -z "${NEXDESK_UPDATE_PUBKEY:-}" ]]; then
+            echo "::warning::NEXDESK_UPDATE_PUBKEY is empty - this build has auto-update disabled"
           fi
 
       - name: Build NexDesk

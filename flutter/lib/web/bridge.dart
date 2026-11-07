@@ -1536,6 +1536,32 @@ class RustdeskImpl {
     throw UnimplementedError("mainIsInstalled");
   }
 
+  // NexDesk auto-update is a desktop-only feature; the web build never
+  // installs anything. The Dart callers guard these with try/catch.
+  void nexdeskUpdateStart({dynamic hint}) {
+    throw UnimplementedError("nexdeskUpdateStart");
+  }
+
+  String nexdeskUpdateState({dynamic hint}) {
+    throw UnimplementedError("nexdeskUpdateState");
+  }
+
+  void nexdeskUpdateCheck({dynamic hint}) {
+    throw UnimplementedError("nexdeskUpdateCheck");
+  }
+
+  void nexdeskUpdateInstall({dynamic hint}) {
+    throw UnimplementedError("nexdeskUpdateInstall");
+  }
+
+  bool nexdeskUpdatePostpone({dynamic hint}) {
+    throw UnimplementedError("nexdeskUpdatePostpone");
+  }
+
+  void nexdeskUpdateCancel({dynamic hint}) {
+    throw UnimplementedError("nexdeskUpdateCancel");
+  }
+
   void mainInitInputSource({dynamic hint}) {
     throw UnimplementedError("mainIsInstalled");
   }

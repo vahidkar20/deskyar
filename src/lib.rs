@@ -61,6 +61,7 @@ mod updater;
 /// Release feed for the NexDesk build. See the module docs for why upstream's
 /// update check cannot be reused verbatim.
 mod nexdesk;
+pub mod nexdesk_update;
 
 /// Self-hosted server configuration. See the module docs for why the server
 /// has to be baked into the build rather than typed in at runtime.

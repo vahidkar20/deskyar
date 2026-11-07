@@ -2863,6 +2863,13 @@ impl Connection {
             if !self.check_login_scope(&lr).await {
                 return false;
             }
+            // A mandatory update is pending: refuse new logins from builds
+            // below the published floor. An already-authorized connection
+            // never reaches this branch, so live sessions keep running.
+            if crate::nexdesk_update::login_blocked() {
+                self.send_login_error("Update required").await;
+                return false;
+            }
             self.awaiting_2fa = false;
             self.handle_login_request_without_validation(&lr).await;
             if self.authorized {

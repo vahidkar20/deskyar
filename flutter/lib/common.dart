@@ -39,6 +39,7 @@ import 'desktop/pages/file_manager_page.dart' as desktop_file_manager;
 import 'desktop/pages/view_camera_page.dart' as desktop_view_camera;
 import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
 import 'models/model.dart';
+import 'models/nexdesk_update_model.dart';
 import 'models/platform_model.dart';
 
 import 'package:flutter_hbb/native/win32.dart'
@@ -2522,6 +2523,10 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
   if (type != null && id != null) {
     switch (type) {
       case UriLinkType.remoteDesktop:
+        if (nexDeskUpdate.blocksNewConnections) {
+          nexDeskUpdate.onBlockedConnection?.call();
+          break;
+        }
         Future.delayed(Duration.zero, () {
           rustDeskWinManager.newRemoteDesktop(id!,
               password: password,
@@ -2759,6 +2764,12 @@ connect(BuildContext context, String id,
     String? connToken,
     bool? isSharedPassword}) async {
   if (id == '') return;
+  // A mandatory update is pending: new sessions are refused. A session that is
+  // already running never reaches this function, so it is left alone.
+  if (nexDeskUpdate.blocksNewConnections) {
+    nexDeskUpdate.onBlockedConnection?.call();
+    return;
+  }
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
       if (Get.isRegistered<IDTextEditingController>()) {

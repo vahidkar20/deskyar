@@ -670,6 +670,9 @@ pub async fn start_server(is_server: bool, no_server: bool) {
     });
 
     if is_server {
+        // The server process never runs the updater, so it has to restore the
+        // version floor a previous GUI run persisted.
+        crate::nexdesk_update::load_login_gate();
         crate::common::set_server_running(true);
         std::thread::spawn(move || {
             if let Err(err) = crate::ipc::start("") {

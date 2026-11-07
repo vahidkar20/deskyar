@@ -6,6 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/models/nexdesk_update_model.dart';
+import 'package:flutter_hbb/desktop/widgets/nexdesk_update_dialog.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/common/widgets/audio_input.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
@@ -2695,6 +2697,31 @@ class _AboutState extends State<_About> {
                 ),
               ],
               const SizedBox(height: 14),
+              // Manual entry point for the updater: the automatic check runs in
+              // the background, but a user who is told "there is a new version"
+              // needs a place to ask for it.
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    nexDeskUpdate.checkNow();
+                    await Future.delayed(const Duration(seconds: 3));
+                    final state = nexDeskUpdate.state.value;
+                    if (state != null && state.hasUpdate) {
+                      showNexDeskUpdateDialog();
+                    } else {
+                      showToast(isRtlLocale
+                          ? 'نسخه جدیدی موجود نیست'
+                          : 'No new version is available');
+                    }
+                  },
+                  icon: const Icon(Icons.system_update_alt_rounded, size: 16),
+                  label: Text(
+                    isRtlLocale ? 'بررسی به‌روزرسانی' : 'Check for updates',
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                ),
+              ),
               aboutLink(translate('Privacy Statement'), 'https://nexdesk.ir'),
               aboutLink(translate('Website'), 'https://nexdesk.ir'),
               Container(

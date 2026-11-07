@@ -269,6 +269,47 @@ fn execute(path: PathBuf, args: Vec<String>, _ui: bool) {
     }
 }
 
+/// Wait for a running instance to exit before extracting over it.
+///
+/// The in-app updater starts the new packer while the old app is still
+/// running; extraction targets the same directory, so writing immediately
+/// would fail on locked files. `--wait-exe <image>` makes the packer wait for
+/// that image to disappear (the updater kills it right after spawning us).
+#[cfg(windows)]
+fn wait_for_running_image(args: &mut Vec<String>) {
+    let Some(pos) = args.iter().position(|arg| arg == "--wait-exe") else {
+        return;
+    };
+    let image = if pos + 1 < args.len() {
+        args[pos + 1].clone()
+    } else {
+        String::new()
+    };
+    let end = std::cmp::min(pos + 2, args.len());
+    args.drain(pos..end);
+    args.retain(|arg| arg != "--from-update");
+    if image.is_empty() {
+        return;
+    }
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    while std::time::Instant::now() < deadline {
+        let running = std::process::Command::new("tasklist")
+            .args(["/FI", &format!("IMAGENAME eq {image}"), "/NH"])
+            .output()
+            .map(|out| {
+                String::from_utf8_lossy(&out.stdout)
+                    .to_lowercase()
+                    .contains(&image.to_lowercase())
+            })
+            .unwrap_or(false);
+        if !running {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+    eprintln!("timed out waiting for {image} to exit");
+}
+
 fn main() -> Result<(), String> {
     let mut args = Vec::new();
     let mut arg_exe = Default::default();
@@ -281,6 +322,8 @@ fn main() -> Result<(), String> {
         }
         i += 1;
     }
+    #[cfg(windows)]
+    wait_for_running_image(&mut args);
     let click_setup = args.is_empty() && arg_exe.to_lowercase().ends_with("install.exe");
     #[cfg(windows)]
     let quick_support = args.is_empty() && win::is_quick_support_exe(&arg_exe);

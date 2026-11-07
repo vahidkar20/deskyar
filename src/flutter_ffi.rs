@@ -1137,6 +1137,42 @@ pub fn main_get_version() -> String {
     get_version()
 }
 
+// ---------------------------------------------------------------------------
+// NexDesk auto-update
+//
+// The legacy `download-new-version` / `update-me` string keys stay untouched
+// for the macOS path. These functions carry the whole NexDesk flow: a typed
+// state snapshot instead of a stringly protocol, and results for actions that
+// can fail.
+// ---------------------------------------------------------------------------
+
+pub fn nexdesk_update_start() {
+    crate::nexdesk_update::start();
+}
+
+/// Polled by the UI. Returns a JSON snapshot of `UpdateState`.
+pub fn nexdesk_update_state() -> SyncReturn<String> {
+    SyncReturn(crate::nexdesk_update::state_json())
+}
+
+pub fn nexdesk_update_check() {
+    std::thread::spawn(|| {
+        let _ = crate::nexdesk_update::check_now(true);
+    });
+}
+
+pub fn nexdesk_update_install() {
+    crate::nexdesk_update::install();
+}
+
+pub fn nexdesk_update_postpone() -> SyncReturn<bool> {
+    SyncReturn(crate::nexdesk_update::postpone())
+}
+
+pub fn nexdesk_update_cancel() {
+    crate::nexdesk_update::cancel();
+}
+
 pub fn main_get_fav() -> Vec<String> {
     get_fav()
 }

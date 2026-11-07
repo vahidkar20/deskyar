@@ -16,7 +16,9 @@ import 'package:flutter_hbb/desktop/screen/desktop_port_forward_screen.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_remote_screen.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_terminal_screen.dart';
 import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
+import 'package:flutter_hbb/models/nexdesk_update_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/desktop/widgets/nexdesk_update_dialog.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
@@ -134,6 +136,12 @@ void runMainApp(bool startService) async {
   // register uni links
   await initEnv(kAppTypeMain);
   checkUpdate();
+  // NexDesk auto-update: Rust polls the signed manifest and pushes state
+  // changes; the dialog is opened once per version (mandatory ones immediately).
+  nexDeskUpdate.onAvailable = () => showNexDeskUpdateDialog();
+  nexDeskUpdate.onBlockedConnection = () =>
+      showNexDeskUpdateDialog(forceMandatory: true);
+  nexDeskUpdate.start();
   // trigger connection status updater
   await bind.mainCheckConnectStatus();
   if (startService) {

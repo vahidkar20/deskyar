@@ -90,6 +90,12 @@ fn main() {
     // Without this directive cargo caches the old value across rebuilds when
     // only the environment changed.
     println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_REPO");
+    // Same trap for the updater's baked configuration: a changed manifest URL,
+    // channel or signing key must force a rebuild of `src/nexdesk_update.rs`.
+    println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_MANIFEST_URL");
+    println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_CHANNEL");
+    println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_PUBKEY");
+    println!("cargo:rerun-if-env-changed=NEXDESK_UPDATE_HOSTS");
     hbb_common::gen_version();
     install_android_deps();
     #[cfg(all(windows, feature = "inline"))]
