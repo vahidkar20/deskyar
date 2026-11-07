@@ -525,9 +525,7 @@ pub fn verify_signatures(m: &Manifest, payload: &str) -> ResultType<()> {
         };
         // sodiumoxide keeps the tuple fields private: construct through the
         // checked constructors instead of `Signature(bytes)`.
-        let Ok(public_key) = sign::PublicKey::from_bytes(raw_key) else {
-            continue;
-        };
+        let public_key = sign::PublicKey(*raw_key);
         let Ok(signature) = sign::Signature::from_bytes(&sig_bytes) else {
             continue;
         };
