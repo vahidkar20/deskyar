@@ -167,16 +167,24 @@ jobs:
           # The matrix carries the ABI folder directly, so no case statement is
           # needed to translate a Rust target into an Android ABI.
           ANDROID_TARGET=${{ matrix.abi }}
-          if ! ./flutter/build_android_deps.sh "${ANDROID_TARGET}"; then
-            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
-              echo "$_1:"
-              echo "======"
-              cat "$_1"
-              echo "======"
-              echo ""
-            done
-            exit 1
-          fi
+          # vcpkg pulls CMake and the port sources from the GitHub CDN on first
+          # use; a 504 there aborted the whole ABI. Retrying resumes from the
+          # `downloads` cache and skips ports that already built.
+          for attempt in 1 2 3; do
+            if ./flutter/build_android_deps.sh "${ANDROID_TARGET}"; then
+              exit 0
+            fi
+            echo "::warning::vcpkg install failed (attempt ${attempt}/3), retrying in 30s"
+            sleep 30
+          done
+          find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+            echo "$_1:"
+            echo "======"
+            cat "$_1"
+            echo "======"
+            echo ""
+          done
+          exit 1
         shell: bash
 
       - name: Restore bridge files

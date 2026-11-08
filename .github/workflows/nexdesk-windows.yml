@@ -146,7 +146,19 @@ jobs:
           name: bridge-artifact
           path: ./
 
+      # The installer is fetched from the llvm-project release CDN, which
+      # intermittently answers 504. The action itself retries twice with a
+      # short backoff and then gives up, so a second attempt is the only way
+      # to ride out a longer blip without failing the whole job.
       - name: Install LLVM / Clang
+        id: llvm
+        continue-on-error: true
+        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
+        with:
+          version: ${{ env.LLVM_VERSION }}
+
+      - name: Install LLVM / Clang (retry)
+        if: steps.llvm.outcome == 'failure'
         uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
         with:
           version: ${{ env.LLVM_VERSION }}
@@ -290,13 +302,22 @@ jobs:
         env:
           VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
         run: |
-          if ! "$VCPKG_ROOT/vcpkg" install --triplet x64-windows-static \
-               --x-install-root="$VCPKG_ROOT/installed"; then
-            find "$VCPKG_ROOT" -name "*.log" | while read -r f; do
-              echo "=== $f ==="; cat "$f"; echo
-            done
-            exit 1
-          fi
+          # vcpkg downloads CMake, ninja and the port sources on first use, and
+          # any of those can hit a transient 5xx from the GitHub CDN. Retrying
+          # the whole install is safe: it resumes from `downloads/` and skips
+          # whatever already succeeded.
+          for attempt in 1 2 3; do
+            if "$VCPKG_ROOT/vcpkg" install --triplet x64-windows-static \
+                 --x-install-root="$VCPKG_ROOT/installed"; then
+              exit 0
+            fi
+            echo "::warning::vcpkg install failed (attempt ${attempt}/3), retrying in 30s"
+            sleep 30
+          done
+          find "$VCPKG_ROOT" -name "*.log" | while read -r f; do
+            echo "=== $f ==="; cat "$f"; echo
+          done
+          exit 1
 
       - name: Report baked-in server
         shell: bash
