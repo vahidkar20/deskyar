@@ -296,23 +296,14 @@ jobs:
         with:
           prefix-key: windows-2022
 
+      # See the Android workflow: `run-vcpkg` fetches `vcpkg.exe` from the
+      # release CDN during bootstrap, so the tool is built from its source
+      # archive here instead. Same binary, no dependency on that host.
       - name: Set up vcpkg
-        id: vcpkg
-        continue-on-error: true
-        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
-        with:
-          vcpkgDirectory: C:\vcpkg
-          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
-          doNotCache: false
-
-      # Same 504 exposure as on Linux, for the cache restore/save round trip.
-      - name: Set up vcpkg (retry)
-        if: steps.vcpkg.outcome == 'failure'
-        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
-        with:
-          vcpkgDirectory: C:\vcpkg
-          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
-          doNotCache: false
+        env:
+          VCPKG_ROOT: C:/vcpkg
+          VCPKG_COMMIT_ID: ${{ env.VCPKG_COMMIT_ID }}
+        run: bash tools/setup-vcpkg.sh
 
       # vcpkg's own binary cache ("x-gha") is unreliable on the current GitHub
       # cache backend, so every run rebuilt ffmpeg/aom/libyuv from source - 16

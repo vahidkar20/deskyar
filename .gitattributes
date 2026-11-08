@@ -1,1 +1,5 @@
 * text=auto
+
+# Shell helpers must keep LF endings: a CRLF checkout makes bash fail
+# with `set: command not found` on the Windows runner.
+tools/*.sh text eol=lf
