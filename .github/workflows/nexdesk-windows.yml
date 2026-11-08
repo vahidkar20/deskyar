@@ -403,6 +403,35 @@ jobs:
           echo "::warning::aom will use the runner's Perl from $src"
           "$dest/perl/bin/perl.exe" -v | head -2
 
+      # vcpkg's NinjaProvider searches PATH for `ninja` and accepts anything
+      # >= 1.12.1; the runner image ships 1.13.2 but does not put it on PATH,
+      # so vcpkg fell through to downloading ninja-win.zip from the release
+      # CDN. Pointing PATH at the copy that is already on disk removes another
+      # download from the critical path.
+      - name: Put the runner's Ninja on PATH
+        shell: bash
+        run: |
+          found=""
+          if command -v ninja >/dev/null 2>&1; then
+            found="$(command -v ninja)"
+          fi
+          if [ -z "$found" ]; then
+            for candidate in \
+              "/c/ProgramData/chocolatey/bin/ninja.exe" \
+              "/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" \
+              "/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" \
+              "/c/Program Files/Microsoft Visual Studio/2022/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"; do
+              if [ -x "$candidate" ]; then found="$candidate"; break; fi
+            done
+          fi
+          if [ -z "$found" ]; then
+            echo "::warning::no ninja on the runner - vcpkg will download one"
+            exit 0
+          fi
+          dir="$(dirname "$found")"
+          cygpath -w "$dir" >> "$GITHUB_PATH"
+          echo "::warning::ninja $("$found" --version) at $found"
+
       - name: Install vcpkg dependencies
         shell: bash
         env:
