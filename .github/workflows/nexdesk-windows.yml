@@ -267,6 +267,24 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
 
+      # vcpkg's own binary cache ("x-gha") is unreliable on the current GitHub
+      # cache backend, so every run rebuilt ffmpeg/aom/libyuv from source - 16
+      # minutes on Windows and ~9 minutes per Android ABI. Caching the installed
+      # tree instead makes `vcpkg install` a no-op when nothing changed: it reads
+      # `installed/vcpkg/status`, sees the same triplet at the same commit and
+      # returns immediately.
+      #
+      # The key is pinned to the vcpkg commit and the manifest hash, so a change
+      # to either invalidates the cache rather than mixing ABI-incompatible
+      # packages into a build.
+      - name: Cache the vcpkg install tree
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
+        with:
+          path: C:/vcpkg/installed
+          key: vcpkg-${{ runner.os }}-x64-windows-static-${{ env.VCPKG_COMMIT_ID }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-x64-windows-static-${{ env.VCPKG_COMMIT_ID }}-
+
       - name: Install vcpkg dependencies
         shell: bash
         env:

@@ -151,6 +151,17 @@ jobs:
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           doNotCache: false
 
+      # See the Windows workflow: vcpkg's x-gha binary cache no longer hits, so
+      # the installed tree is cached directly. Each ABI has its own triplet and
+      # therefore its own cache entry.
+      - name: Cache the vcpkg install tree
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
+        with:
+          path: /opt/artifacts/vcpkg/installed
+          key: vcpkg-${{ runner.os }}-${{ matrix.abi }}-${{ env.VCPKG_COMMIT_ID }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ matrix.abi }}-${{ env.VCPKG_COMMIT_ID }}-
+
       - name: Install vcpkg dependencies
         run: |
           # The matrix carries the ABI folder directly, so no case statement is
