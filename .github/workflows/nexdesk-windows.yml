@@ -200,6 +200,8 @@ jobs:
       
       - name: Swap in the RustDesk Flutter engine
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = "Stop"
 
@@ -215,15 +217,33 @@ jobs:
           $zipPath = Join-Path $PWD "windows-x64-release.zip"
           $extractPath = Join-Path $PWD "windows-x64-release"
 
-          # This asset lives on the same release CDN as everything else that
-          # has been answering 504, and it is the one dependency with no
-          # alternative source: the custom engine is what gives Flutter the
-          # multi-window support the session windows rely on. Retry for a few
-          # minutes before giving up.
-          $engineUrl = "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip"
+          # `github.com/rustdesk/engine/releases/download/...` is unreachable
+          # from the runners - it answers 504 or hangs for minutes - while the
+          # REST API asset endpoint, and the storage host it redirects to, are
+          # both healthy. Same bytes: the API reports 63,301,215 of them, which
+          # is exactly what this archive weighs.
+          $ghHeaders = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept        = "application/vnd.github+json"
+          }
+          $engineRelease = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/rustdesk/engine/releases/tags/main" `
+            -Headers $ghHeaders
+          $engineAsset = $engineRelease.assets |
+            Where-Object { $_.name -eq "windows-x64-release.zip" } |
+            Select-Object -First 1
+          if (-not $engineAsset) {
+            throw "windows-x64-release.zip is missing from the rustdesk/engine 'main' release."
+          }
+          Write-Host "engine asset $($engineAsset.id), $($engineAsset.size) bytes"
+
           for ($attempt = 1; $attempt -le 6; $attempt++) {
             try {
-              Invoke-WebRequest -Uri $engineUrl -OutFile $zipPath -UseBasicParsing
+              Invoke-WebRequest `
+                -Uri "https://api.github.com/repos/rustdesk/engine/releases/assets/$($engineAsset.id)" `
+                -Headers @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = "application/octet-stream" } `
+                -OutFile $zipPath `
+                -UseBasicParsing
               if ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 1MB)) {
                 Write-Host "engine downloaded on attempt $attempt"
                 break
@@ -231,7 +251,7 @@ jobs:
             } catch {
               Write-Host "::warning::engine download failed (attempt $attempt/6): $($_.Exception.Message)"
             }
-            Start-Sleep -Seconds 30
+            Start-Sleep -Seconds 20
           }
 
           if (-not (Test-Path $zipPath)) {

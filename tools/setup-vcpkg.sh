@@ -54,7 +54,27 @@ if [ "$(git -C "$VCPKG_ROOT" rev-parse HEAD 2>/dev/null || echo none)" != "$VCPK
 fi
 
 # ---------------------------------------------------------------------------
-# 2. The tool binary, built from source when it is missing.
+# 2. Route `vcpkg_from_github` archive downloads through codeload.
+#
+# `github.com/<org>/<repo>/archive/<ref>.tar.gz` answers 504 or hangs on the
+# build runners, while `codeload.github.com` - the host that actually serves
+# those archives - is healthy. The bytes are identical (each portfile still
+# verifies its own SHA512 after download); only the URL shape differs:
+#
+#   github.com/<o>/<r>/archive/<ref>.tar.gz -> codeload.github.com/<o>/<r>/tar.gz/<ref>
+# ---------------------------------------------------------------------------
+vfg="$VCPKG_ROOT/scripts/cmake/vcpkg_from_github.cmake"
+if [ -f "$vfg" ]; then
+  sed -i 's|"${github_host}/${org_name}/${repo_name}/archive/${ref_to_use}.tar.gz"|"https://codeload.github.com/${org_name}/${repo_name}/tar.gz/${ref_to_use}"|' "$vfg"
+  if grep -q codeload.github.com "$vfg"; then
+    log "archive downloads routed through codeload.github.com"
+  else
+    log "WARNING: could not rewrite vcpkg_from_github (upstream layout changed)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3. The tool binary, built from source when it is missing.
 # ---------------------------------------------------------------------------
 if [ -f "$BIN" ]; then
   log "vcpkg binary already present at $BIN"
@@ -90,7 +110,7 @@ fi
 "$BIN" version
 
 # ---------------------------------------------------------------------------
-# 3. Hand the paths to the following steps.
+# 4. Hand the paths to the following steps.
 # ---------------------------------------------------------------------------
 if [ -n "${GITHUB_ENV:-}" ]; then
   {
