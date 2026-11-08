@@ -54,22 +54,60 @@ if [ "$(git -C "$VCPKG_ROOT" rev-parse HEAD 2>/dev/null || echo none)" != "$VCPK
 fi
 
 # ---------------------------------------------------------------------------
-# 2. Route `vcpkg_from_github` archive downloads through codeload.
+# 2. Route every GitHub archive download through codeload.
 #
-# `github.com/<org>/<repo>/archive/<ref>.tar.gz` answers 504 or hangs on the
-# build runners, while `codeload.github.com` - the host that actually serves
-# those archives - is healthy. The bytes are identical (each portfile still
-# verifies its own SHA512 after download); only the URL shape differs:
+# `github.com/<org>/<repo>/archive/<ref>` answers 504 or hangs for minutes on
+# the build runners, while `codeload.github.com` - the host that actually
+# serves those archives - is healthy. It is not only ports that use it:
+# `vcpkg_find_acquire_program(MESON)` fetches meson's source from the same
+# path, which is how the build died after the ports were already fixed.
 #
-#   github.com/<o>/<r>/archive/<ref>.tar.gz -> codeload.github.com/<o>/<r>/tar.gz/<ref>
+# So the rewrite goes into `z_vcpkg_download_distfile`, the single function
+# every download funnels through, rather than into `vcpkg_from_github`. Each
+# portfile still verifies its own SHA512 afterwards, so a wrong byte anywhere
+# fails loudly instead of silently producing a broken build.
 # ---------------------------------------------------------------------------
-vfg="$VCPKG_ROOT/scripts/cmake/vcpkg_from_github.cmake"
-if [ -f "$vfg" ]; then
-  sed -i 's|"${github_host}/${org_name}/${repo_name}/archive/${ref_to_use}.tar.gz"|"https://codeload.github.com/${org_name}/${repo_name}/tar.gz/${ref_to_use}"|' "$vfg"
-  if grep -q codeload.github.com "$vfg"; then
-    log "archive downloads routed through codeload.github.com"
+vdd="$VCPKG_ROOT/scripts/cmake/vcpkg_download_distfile.cmake"
+if [ -f "$vdd" ] && ! grep -q codeload.github.com "$vdd"; then
+  py=""
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      py="$candidate"
+      break
+    fi
+  done
+  if [ -n "$py" ]; then
+    "$py" - "$vdd" <<'PY'
+import sys
+import pathlib
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+anchor = "    foreach(url IN LISTS arg_URLS)"
+if anchor not in text:
+    print("vcpkg_download_distfile: anchor not found")
+    raise SystemExit(1)
+inject = """    foreach(url IN LISTS arg_URLS)
+        # NexDesk: github.com/<owner>/<repo>/archive/<ref> is unreachable from
+        # CI, while codeload.github.com serves the very same archive.
+        string(REGEX REPLACE
+            "^https://github\\\\.com/([^/]+)/([^/]+)/archive/(.*)\\\\.tar\\\\.gz$"
+            "https://codeload.github.com/\\\\1/\\\\2/tar.gz/\\\\3"
+            url "${url}")
+        string(REGEX REPLACE
+            "^https://github\\\\.com/([^/]+)/([^/]+)/archive/(.*)\\\\.zip$"
+            "https://codeload.github.com/\\\\1/\\\\2/zip/\\\\3"
+            url "${url}")"""
+path.write_text(text.replace(anchor, inject, 1), encoding="utf-8")
+print("vcpkg_download_distfile: archives routed through codeload")
+PY
+    if grep -q codeload.github.com "$vdd"; then
+      log "archive downloads routed through codeload.github.com"
+    else
+      log "WARNING: could not rewrite vcpkg_download_distfile"
+    fi
   else
-    log "WARNING: could not rewrite vcpkg_from_github (upstream layout changed)"
+    log "WARNING: no python on PATH, cannot rewrite vcpkg download URLs"
   fi
 fi
 

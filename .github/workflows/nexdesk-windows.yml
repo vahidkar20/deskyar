@@ -365,6 +365,17 @@ jobs:
       # PATH (version-checked, and the image ships 5.32.1 which is too old),
       # then the download. Mirroring the image's Perl into the first location
       # therefore satisfies vcpkg without any network access at all.
+      # `vcpkg install` resumes from `downloads/`, so anything a failed run
+      # managed to fetch is not fetched again. Without this, every retry starts
+      # from zero and one flaky URL is enough to fail the whole job forever.
+      - name: Cache the vcpkg downloads
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3
+        with:
+          path: C:/vcpkg/downloads
+          key: vcpkg-downloads-${{ runner.os }}-${{ env.VCPKG_COMMIT_ID }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-downloads-${{ runner.os }}-${{ env.VCPKG_COMMIT_ID }}-
+
       - name: Provide a Perl for aom
         shell: bash
         run: |
