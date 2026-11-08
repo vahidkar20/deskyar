@@ -162,6 +162,21 @@ jobs:
           restore-keys: |
             vcpkg-${{ runner.os }}-${{ matrix.abi }}-${{ env.VCPKG_COMMIT_ID }}-
 
+      # vcpkg downloads a CMake 4.4 toolchain from the GitHub release CDN on
+      # first use. PyPI serves the same binary from a different host, so
+      # installing it first means vcpkg finds a suitable `cmake` on PATH and
+      # skips that download - which is what failed with 504 and killed the
+      # x86_64 job.
+      - name: Install CMake from PyPI
+        run: |
+          python3 -m pip install --user --break-system-packages cmake \
+            || python3 -m pip install --user cmake
+          # `export` only lives for this step; vcpkg runs in the next one, so
+          # the directory has to go into GITHUB_PATH.
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          cmake --version
+
       - name: Install vcpkg dependencies
         run: |
           # The matrix carries the ABI folder directly, so no case statement is

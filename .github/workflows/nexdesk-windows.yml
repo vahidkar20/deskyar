@@ -157,11 +157,35 @@ jobs:
         with:
           version: ${{ env.LLVM_VERSION }}
 
-      - name: Install LLVM / Clang (retry)
+      # The action downloads the installer from the llvm-project *release*
+      # CDN, which is the one endpoint that kept answering 504. The windows
+      # runner image already ships LLVM under Program Files, and bindgen only
+      # needs libclang, so falling back to it costs nothing and removes the
+      # dependency on that CDN entirely.
+      - name: Fall back to the runner's LLVM
         if: steps.llvm.outcome == 'failure'
-        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
-        with:
-          version: ${{ env.LLVM_VERSION }}
+        shell: bash
+        run: |
+          for root in "/c/Program Files/LLVM" "/c/Program Files (x86)/LLVM"; do
+            if [ -f "$root/bin/libclang.dll" ]; then
+              echo "LIBCLANG_PATH=$root/bin" >> "$GITHUB_ENV"
+              echo "$root/bin" >> "$GITHUB_PATH"
+              echo "::warning::using the runner's preinstalled LLVM at $root"
+              "$root/bin/clang.exe" --version || true
+              exit 0
+            fi
+          done
+          echo "::error::no LLVM available - neither the action nor the runner copy"
+          exit 1
+
+      # vcpkg fetches a CMake 4.4 toolchain from the same release CDN. PyPI
+      # serves the same binary from a different host, so installing it here
+      # means vcpkg finds a suitable `cmake` on PATH and skips its download.
+      - name: Install CMake from PyPI
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --no-input cmake
+          cmake --version
 
       - name: Install Flutter
         id: flutter
