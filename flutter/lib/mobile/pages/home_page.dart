@@ -100,7 +100,11 @@ class HomePageState extends State<HomePage> {
     final radius = BorderRadius.circular(MyTheme.radiusPill);
     return SafeArea(
       top: false,
-      minimum: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
+      // `minimum` is a plain `EdgeInsets`, not `EdgeInsetsDirectional` - the
+      // two types are unrelated in Flutter's hierarchy, so the directional
+      // variant is a compile error here. Left and right are equal, so the
+      // direction-agnostic form is also the correct one for RTL.
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
