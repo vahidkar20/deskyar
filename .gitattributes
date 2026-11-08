@@ -3,3 +3,8 @@
 # Shell helpers must keep LF endings: a CRLF checkout makes bash fail
 # with `set: command not found` on the Windows runner.
 tools/*.sh text eol=lf
+
+# Patch files must keep LF endings: they are applied with `git apply`
+# against sources that use LF, and a CRLF checkout makes every hunk fail.
+*.patch text eol=lf
+*.diff text eol=lf
