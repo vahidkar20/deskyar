@@ -25,9 +25,9 @@ on:
         description: "Attach the APK to a GitHub Release (tag refs only)"
         type: boolean
         default: false
-  push:
-    tags:
-      - "v*"
+  # Deliberately not triggered by tag pushes: the release is created by
+  # `publish-release.yml` from artifacts that already exist, and a `push: tags`
+  # trigger would start a second, pointless rebuild of both platforms.
 
 permissions:
   contents: write

@@ -1,0 +1,105 @@
+name: Publish NexDesk release
+
+# Assembles a release from artifacts that already exist, without rebuilding
+# anything and without moving a byte through a developer machine.
+#
+# `actions/download-artifact` can pull an artifact from *another* run when it
+# is given `run-id` and a token, so the files travel from the artifact store
+# straight to the release asset store inside GitHub.
+#
+# This is why `nexdesk-windows.yml` and `nexdesk-android.yml` no longer
+# trigger on tag pushes: creating the tag here would otherwise start a second
+# build of both platforms, which is exactly the waste this workflow exists to
+# avoid.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v1.5.5"
+        required: true
+      windows_run:
+        description: "Run id that produced NexDesk-windows-x64"
+        required: true
+      android_run:
+        description: "Run id that produced NexDesk-android-universal"
+        required: true
+      title:
+        description: "Release title"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    name: attach artifacts to the release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download the Windows artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: NexDesk-windows-x64
+          run-id: ${{ inputs.windows_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: staging/win
+
+      - name: Download the Android artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: NexDesk-android-universal
+          run-id: ${{ inputs.android_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: staging/android
+
+      - name: Collect and checksum
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          find staging -type f \( -name '*.exe' -o -name '*.apk' \) -exec cp {} out/ \;
+          ls -lh out
+          ( cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt )
+
+      - name: Compose the release body
+        run: |
+          set -euo pipefail
+          {
+            echo "## NexDesk ${INPUTS_TAG#v}"
+            echo
+            echo "نسخه‌ی ویندوز و اندروید. هر دو باینری با سرور \`rd.nexdesk.ir\` و همان کلید عمومی کامپایل شده‌اند،"
+            echo "پس اتصال در هر چهار حالت کار می‌کند: اندروید ↔ ویندوز، اندروید ↔ اندروید، ویندوز ↔ ویندوز و ویندوز ↔ اندروید."
+            echo
+            echo "| فایل | پلتفرم |"
+            echo "|---|---|"
+            for f in out/*.exe; do echo "| \`$(basename "$f")\` | ویندوز ۶۴ بیتی (پرتابل) |"; done
+            for f in out/*.apk; do echo "| \`$(basename "$f")\` | اندروید (arm64 + armv7 + x86_64) |"; done
+            echo
+            echo "### بررسی سالم بودن دانلود"
+            echo
+            echo '```'
+            cat out/SHA256SUMS.txt
+            echo '```'
+            echo
+            echo "### نکته‌ی نصب"
+            echo
+            echo "شناسه‌ی برنامه \`ir.nexdesk.app\` است. اگر نسخه‌ی قبلی را نصب دارید، این نسخه کنار آن نصب می‌شود"
+            echo "و شناسه‌ی دستگاه از نو ساخته می‌شود."
+          } > release-body.md
+          cat release-body.md
+        env:
+          INPUTS_TAG: ${{ inputs.tag }}
+
+      - name: Publish
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.title || inputs.tag }}
+          body_path: release-body.md
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: |
+            out/*.exe
+            out/*.apk
