@@ -323,6 +323,40 @@ jobs:
           restore-keys: |
             vcpkg-${{ runner.os }}-x64-windows-static-${{ env.VCPKG_COMMIT_ID }}-
 
+      # aom's portfile calls vcpkg_find_acquire_program(PERL), and vcpkg pins
+      # Strawberry Perl 5.42.2.1 - which it fetches from the same release CDN
+      # that is answering 504. The lookup order in vcpkg_find_acquire_program
+      # is: `$DOWNLOADS/tools/perl/<version>/perl/bin` (no version check), then
+      # PATH (version-checked, and the image ships 5.32.1 which is too old),
+      # then the download. Mirroring the image's Perl into the first location
+      # therefore satisfies vcpkg without any network access at all.
+      - name: Provide a Perl for aom
+        shell: bash
+        run: |
+          dest="$VCPKG_ROOT/downloads/tools/perl/5.42.2.1"
+          if [ -x "$dest/perl/bin/perl.exe" ]; then
+            echo "already provided"
+            exit 0
+          fi
+          src=""
+          if command -v perl >/dev/null 2>&1; then
+            # <root>/perl/bin/perl.exe -> <root>
+            src="$(dirname "$(dirname "$(dirname "$(command -v perl)")")")"
+          elif [ -d /c/Strawberry ]; then
+            src=/c/Strawberry
+          fi
+          if [ -z "$src" ] || [ ! -x "$src/perl/bin/perl.exe" ]; then
+            echo "::warning::no system Perl found - vcpkg will try to download one"
+            exit 0
+          fi
+          mkdir -p "$dest"
+          # `perl` finds its lib relative to the executable and its DLLs under
+          # `c/bin`, so both trees have to come along.
+          cp -r "$src/perl" "$dest/"
+          [ -d "$src/c" ] && cp -r "$src/c" "$dest/" || true
+          echo "::warning::aom will use the runner's Perl from $src"
+          "$dest/perl/bin/perl.exe" -v | head -2
+
       - name: Install vcpkg dependencies
         shell: bash
         env:
