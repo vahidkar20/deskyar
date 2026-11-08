@@ -27,7 +27,13 @@ def configureKotlinJvmTarget = { Project project, String kotlinJvmTarget ->
 allprojects {
     repositories {
         google()
-        jcenter()
+        // `jcenter()` has been shut down since 2021. Worse, its endpoint now
+        // answers with a redirect to github.com/JetBrains/kotlin/releases/...,
+        // so any artifact Gradle fails to find elsewhere is retried against
+        // the GitHub release CDN - which is how a dead repository ended up
+        // breaking the build with a 504 while fetching kotlin-compiler-
+        // embeddable. Everything it used to host lives on Maven Central.
+        mavenCentral()
         maven { url 'https://jitpack.io' }
     }
 }
