@@ -215,9 +215,24 @@ jobs:
           $zipPath = Join-Path $PWD "windows-x64-release.zip"
           $extractPath = Join-Path $PWD "windows-x64-release"
 
-          Invoke-WebRequest `
-            -Uri "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip" `
-            -OutFile $zipPath
+          # This asset lives on the same release CDN as everything else that
+          # has been answering 504, and it is the one dependency with no
+          # alternative source: the custom engine is what gives Flutter the
+          # multi-window support the session windows rely on. Retry for a few
+          # minutes before giving up.
+          $engineUrl = "https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip"
+          for ($attempt = 1; $attempt -le 6; $attempt++) {
+            try {
+              Invoke-WebRequest -Uri $engineUrl -OutFile $zipPath -UseBasicParsing
+              if ((Test-Path $zipPath) -and ((Get-Item $zipPath).Length -gt 1MB)) {
+                Write-Host "engine downloaded on attempt $attempt"
+                break
+              }
+            } catch {
+              Write-Host "::warning::engine download failed (attempt $attempt/6): $($_.Exception.Message)"
+            }
+            Start-Sleep -Seconds 30
+          }
 
           if (-not (Test-Path $zipPath)) {
             throw "RustDesk engine ZIP was not downloaded."
