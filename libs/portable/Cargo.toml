@@ -26,11 +26,15 @@ windows = { version = "0.61", features = [
 native-windows-gui = {version = "1.0", default-features = false, features = ["animation-timer", "image-decoder"]}
 
 [package.metadata.winres]
-LegalCopyright = "Copyright © 2026 Purslane Tech Pte. Ltd. All rights reserved."
-ProductName = "RustDesk"
-OriginalFilename = "rustdesk.exe"
-FileDescription = "RustDesk Remote Desktop"
-#ProductVersion = ""
+# This is the executable users actually double-click, so its VersionInfo is the
+# one Windows shows in file properties and in the UAC prompt. It still carried
+# the upstream name, which made a NexDesk download look like someone else's
+# binary.
+LegalCopyright = "Copyright © 2026 NexDesk. Based on RustDesk (AGPL-3.0)."
+CompanyName = "NexDesk"
+ProductName = "NexDesk"
+OriginalFilename = "NexDesk.exe"
+FileDescription = "NexDesk Remote Desktop"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
 winres = "0.1"
