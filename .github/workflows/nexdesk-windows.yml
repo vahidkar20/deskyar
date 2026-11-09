@@ -408,29 +408,41 @@ jobs:
       # so vcpkg fell through to downloading ninja-win.zip from the release
       # CDN. Pointing PATH at the copy that is already on disk removes another
       # download from the critical path.
-      - name: Put the runner's Ninja on PATH
+      # vcpkg resolves tools through its own cache *before* PATH:
+      #   downloads/tools/ninja-<version>-windows/ninja.exe
+      # Putting the runner's binary there is checked first and needs no
+      # version discovery. PATH lookup alone was not enough - the Chocolatey
+      # copy on PATH was not accepted and vcpkg still reported "A suitable
+      # version of ninja was not found (required v1.13.2)" and went on to
+      # download, which the broken release CDN refused.
+      - name: Provide Ninja for vcpkg
         shell: bash
         run: |
+          dest="$VCPKG_ROOT/downloads/tools/ninja-1.13.2-windows"
+          if [ -x "$dest/ninja.exe" ]; then
+            echo "already staged"
+            exit 0
+          fi
           found=""
-          if command -v ninja >/dev/null 2>&1; then
+          for candidate in \
+            "/c/ProgramData/chocolatey/lib/ninja/tools/ninja.exe" \
+            "/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" \
+            "/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" \
+            "/c/Program Files/Microsoft Visual Studio/2022/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"; do
+            if [ -x "$candidate" ]; then found="$candidate"; break; fi
+          done
+          if [ -z "$found" ] && command -v ninja >/dev/null 2>&1; then
             found="$(command -v ninja)"
           fi
           if [ -z "$found" ]; then
-            for candidate in \
-              "/c/ProgramData/chocolatey/bin/ninja.exe" \
-              "/c/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" \
-              "/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" \
-              "/c/Program Files/Microsoft Visual Studio/2022/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"; do
-              if [ -x "$candidate" ]; then found="$candidate"; break; fi
-            done
-          fi
-          if [ -z "$found" ]; then
-            echo "::warning::no ninja on the runner - vcpkg will download one"
+            echo "::warning::no ninja on the runner - vcpkg will try to download one"
             exit 0
           fi
-          dir="$(dirname "$found")"
-          cygpath -w "$dir" >> "$GITHUB_PATH"
-          echo "::warning::ninja $("$found" --version) at $found"
+          mkdir -p "$dest"
+          cp "$found" "$dest/ninja.exe"
+          echo "::warning::ninja $("$dest/ninja.exe" --version) staged at $dest"
+          # Keep PATH as well, for any tool that looks it up by name.
+          cygpath -w "$(dirname "$found")" >> "$GITHUB_PATH"
 
       - name: Install vcpkg dependencies
         shell: bash
