@@ -648,6 +648,12 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
       onPressed: () => ffi.canvasModel.fitToScreen(),
     ));
     v.add(TTextMenu(
+      child: Text(translate(
+          ffi.canvasModel.fitLocked ? 'Unlock view' : 'Lock view')),
+      onPressed: () =>
+          ffi.canvasModel.setFitLocked(!ffi.canvasModel.fitLocked),
+    ));
+    v.add(TTextMenu(
       child: Text(translate('Rotate screen')),
       onPressed: () => toggleSessionOrientation(context),
     ));

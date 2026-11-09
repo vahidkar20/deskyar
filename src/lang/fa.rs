@@ -278,8 +278,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Do you accept?", "آیا می پذیرید؟"),
         ("Open System Setting", "باز کردن تنظیمات سیستم"),
         ("How to get Android input permission?", "چگونه مجوز ورود به سیستم اندروید را دریافت کنیم؟"),
-        ("android_input_permission_tip1", "استفاده کند \"Accessibility\" اجازه دهید از ویژگی RustDesk شما را از طریق ماوس یا صفحه ی لمسی کنترل کند، باید به Android برای اینکه یک دستگاه از راه دور بتواند دستگاه"),
-        ("android_input_permission_tip2", "را پیدا کنید و فعال نمایید \"RustDesk Input\" بشوید ، سپس گزینه \"Installed Services\" وارد قسمت \"Accessibility\" در صفحه تنظیمات "),
+        ("android_input_permission_tip1", "برای اینکه این دستگاه از راه دور کنترل شود، در تنظیمات اندروید به بخش «دسترس‌پذیری» (Accessibility) بروید و سرویس «NexDesk Input» را روشن کنید."),
+        ("android_input_permission_tip2", "اگر گزینه‌ی «NexDesk Input» خاکستری و غیرفعال است، اندروید ۱۳ و بالاتر آن را برای برنامه‌های نصب‌شده از بیرون فروشگاه محدود کرده است. به «تنظیمات → برنامه‌ها → NexDesk» بروید، از منوی سه‌نقطه‌ی گوشه‌ی بالا «Allow restricted settings» را بزنید و بعد دوباره دسترس‌پذیری را روشن کنید."),
         ("android_new_connection_tip", "درخواست جدیدی برای مدیریت دستگاه فعلی شما دریافت شده است."),
         ("android_service_will_start_tip", "فعال کردن ضبط صفحه به طور خودکار سرویس را راه اندازی می کند و به دستگاه های دیگر امکان می دهد درخواست اتصال به آن دستگاه را داشته باشند."),
         ("android_stop_service_tip", "با بستن سرویس، تمام اتصالات برقرار شده به طور خودکار بسته می شود"),
@@ -796,6 +796,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Fit to screen", "تناسب با صفحه"),
         ("Rotate screen", "چرخش صفحه"),
         ("Remote input is off", "ورودی از راه دور خاموش است"),
-        ("Tap to allow the accessibility service, otherwise this device can only be viewed.", "برای کنترل این دستگاه، سرویس دسترس‌پذیری را فعال کنید؛ در غیر این صورت فقط قابل مشاهده است.")
+        ("Tap to allow the accessibility service, otherwise this device can only be viewed.", "برای کنترل این دستگاه، سرویس دسترس‌پذیری را فعال کنید؛ در غیر این صورت فقط قابل مشاهده است."),
+        ("Lock view", "قفل نمایش"),
+        ("Unlock view", "باز کردن قفل نمایش")
     ].iter().cloned().collect();
 }

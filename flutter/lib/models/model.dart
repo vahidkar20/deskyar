@@ -2238,6 +2238,9 @@ class CanvasModel with ChangeNotifier {
   // image scale
   double _scale = 1.0;
   bool _locked = false;
+  // Pins the view to the fitted scale on mobile so the remote image can never
+  // be panned or zoomed out of the viewport. See `setFitLocked`.
+  bool _fitLocked = false;
   double _devicePixelRatio = 1.0;
   Size _size = Size.zero;
   // the tabbar over the image
@@ -2287,6 +2290,7 @@ class CanvasModel with ChangeNotifier {
   double get y => _y;
   double get scale => _scale;
   bool get locked => _locked;
+  bool get fitLocked => _fitLocked;
   double get devicePixelRatio => _devicePixelRatio;
   Size get size => _size;
   ScrollStyle get scrollStyle => _scrollStyle;
@@ -2448,7 +2452,9 @@ class CanvasModel with ChangeNotifier {
     _x = (size.width - displayWidth * _scale) / 2;
     _y = (size.height - displayHeight * _scale) / 2;
     if (isMobile) {
-      _moveToCenterCursor();
+      if (!_fitLocked) {
+        _moveToCenterCursor();
+      }
       _clampOffset();
     }
   }
@@ -2460,13 +2466,33 @@ class CanvasModel with ChangeNotifier {
   /// off screen and would stay there - the only way back was another
   /// two-finger drag in the opposite direction. The offset is now clamped to
   /// the image bounds, and the image is centred on an axis where it fits.
+  ///
+  /// When [fitLocked] is on the scale itself is pinned to the fitted value, so
+  /// the result no longer depends on the `view_style` stored for the peer
+  /// ("original" would otherwise keep a desktop-sized image at 1:1, which is
+  /// wider than any phone).
   void _clampOffset() {
     if (!isMobile) return;
+    if (_size.width <= 0 || _size.height <= 0) {
+      updateSize();
+    }
     final w = _size.width;
     final h = _size.height;
-    final dw = getDisplayWidth() * _scale;
-    final dh = getDisplayHeight() * _scale;
-    if (w <= 0 || h <= 0 || dw <= 0 || dh <= 0) return;
+    if (w <= 0 || h <= 0) return;
+    final displayW = getDisplayWidth().toDouble();
+    final displayH = getDisplayHeight().toDouble();
+    if (displayW <= 0 || displayH <= 0) return;
+    if (_fitLocked) {
+      final fit = min(w / displayW, h / displayH);
+      if (fit > 0 && (fit - _scale).abs() > 0.0001) {
+        _scale = fit;
+        if (isMobile) {
+          isMobileCanvasChanged = true;
+        }
+      }
+    }
+    final dw = displayW * _scale;
+    final dh = displayH * _scale;
     if (dw <= w) {
       _x = (w - dw) / 2;
     } else {
@@ -2480,6 +2506,19 @@ class CanvasModel with ChangeNotifier {
     } else {
       _y = _y.clamp(h - dh - adjust, -adjust).toDouble();
     }
+  }
+
+  /// Pins the view to the fitted scale and stops the canvas from moving.
+  ///
+  /// This is the mobile default for desktop peers: the remote desktop is
+  /// always fully visible, and no gesture can drag it out of the viewport.
+  void setFitLocked(bool value) {
+    if (_fitLocked == value) return;
+    _fitLocked = value;
+    if (_fitLocked) {
+      _clampOffset();
+    }
+    notifyListeners();
   }
 
   /// Fits the whole remote screen into the viewport and centres it.
@@ -2761,6 +2800,7 @@ class CanvasModel with ChangeNotifier {
   }
 
   panX(double dx) {
+    if (_fitLocked) return;
     _x += dx;
     _clampOffset();
     if (isMobile) {
@@ -2779,6 +2819,7 @@ class CanvasModel with ChangeNotifier {
   }
 
   panY(double dy) {
+    if (_fitLocked) return;
     _y += dy;
     _clampOffset();
     if (isMobile) {
@@ -2789,6 +2830,7 @@ class CanvasModel with ChangeNotifier {
 
   // mobile only
   updateScale(double v, Offset focalPoint) {
+    if (_fitLocked) return;
     if (parent.target?.imageModel.image == null) return;
     final s = _scale;
     _scale *= v;
@@ -2827,6 +2869,7 @@ class CanvasModel with ChangeNotifier {
     _y = 0;
     _scale = 1.0;
     _locked = false;
+    _fitLocked = false;
     _lastViewStyle = ViewStyle.defaultViewStyle();
     _timerMobileFocusCanvasCursor?.cancel();
     _timerMobileRestoreCanvasOffset?.cancel();

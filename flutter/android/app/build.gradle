@@ -112,6 +112,11 @@ android {
         keyPassword keystoreProperties['keyPassword']
         storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
         storePassword keystoreProperties['storePassword']
+        // The release store is PKCS#12 (generated with openssl), which is not
+        // the AGP default on every JDK. Read it from key.properties when set.
+        if (keystoreProperties['storeType']) {
+          storeType keystoreProperties['storeType']
+        }
       }
     }
 

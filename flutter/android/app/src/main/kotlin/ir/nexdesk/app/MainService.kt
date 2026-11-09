@@ -975,20 +975,16 @@ class MainService : Service() {
         } else {
             PendingIntent.getActivity(this, 222, intent, FLAG_UPDATE_CURRENT)
         }
+        val shortTip = translate("android_input_permission_tip1")
+        val longTip = shortTip + "\n\n" + translate("android_input_permission_tip2")
         val notification = NotificationCompat.Builder(this, notificationChannel)
             .setSmallIcon(R.mipmap.ic_stat_logo)
             .setOngoing(false)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentTitle(translate("Remote input is off"))
-            .setContentText(
-                translate("Tap to allow the accessibility service, otherwise this device can only be viewed.")
-            )
-            .setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    translate("Tap to allow the accessibility service, otherwise this device can only be viewed.")
-                )
-            )
+            .setContentText(shortTip)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(longTip))
             .setContentIntent(pendingIntent)
             .build()
         notificationManager.notify(getClientNotifyID(clientID) + INPUT_NOTIFY_ID_OFFSET, notification)

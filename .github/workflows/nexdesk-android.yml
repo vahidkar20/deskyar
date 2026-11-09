@@ -354,6 +354,34 @@ jobs:
           name: librustdesk.so.x86_64-linux-android
           path: ./flutter/android/app/src/main/jniLibs/x86_64
 
+      # Gradle signs the APK itself when `key.properties` exists. Doing it
+      # here instead of re-signing afterwards with apksigner avoids the
+      # keystore-type guess apksigner makes (it defaults to JKS, while the
+      # store generated for this project is PKCS#12).
+      #
+      # A stable signature is what makes an update install *over* the previous
+      # version: a debug key is regenerated on every runner, so each build was
+      # signed by a different identity and Android refused the upgrade.
+      - name: Configure release signing
+        if: env.ANDROID_SIGNING_KEY != ''
+        shell: bash
+        env:
+          ANDROID_SIGNING_KEY: ${{ secrets.ANDROID_SIGNING_KEY }}
+          ANDROID_ALIAS: ${{ secrets.ANDROID_ALIAS }}
+          ANDROID_KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ANDROID_SIGNING_KEY" | base64 -d > flutter/android/app/nexdesk-release.p12
+          cat > flutter/android/key.properties <<EOF
+          storePassword=$ANDROID_KEY_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_ALIAS
+          storeFile=nexdesk-release.p12
+          storeType=PKCS12
+          EOF
+          echo "::notice::APK will be signed with the release keystore ($ANDROID_ALIAS)"
+
       - name: Build the universal APK
         shell: bash
         env:
@@ -365,9 +393,11 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           # Gradle needs more heap than the 1g default for a release build.
           sed -i "s/org.gradle.jvmargs=-Xmx1024M/org.gradle.jvmargs=-Xmx2g/g" ./flutter/android/gradle.properties
-          # The APK is signed again below when a keystore secret exists; until
-          # then the debug config keeps `flutter build` working.
-          sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle
+          # Fall back to the debug key only when no release keystore is
+          # configured; otherwise Gradle signs with key.properties.
+          if [ ! -f ./flutter/android/key.properties ]; then
+            sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle
+          fi
           for abi in arm64-v8a armeabi-v7a x86_64; do
             mv "./flutter/android/app/src/main/jniLibs/$abi/liblibrustdesk.so" \
                "./flutter/android/app/src/main/jniLibs/$abi/librustdesk.so"
@@ -383,40 +413,17 @@ jobs:
              "signed-apk/NexDesk-${VERSION}-android-universal.apk"
           ls -lh signed-apk
 
-      - name: Setup sign tool version variable
-        shell: bash
-        run: |
-          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
-          echo "ANDROID_SIGN_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
-          echo Last build tool version is: $BUILD_TOOL_VERSION
-
-      - uses: r0adkll/sign-android-release@349ebdef58775b1e0d8099458af0816dc79b6407 # v1
-        name: Sign app APK
-        if: env.ANDROID_SIGNING_KEY != ''
-        id: sign-apk
-        with:
-          releaseDirectory: ./signed-apk
-          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
-          alias: ${{ secrets.ANDROID_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        env:
-          # env.ANDROID_SIGN_TOOL_VERSION is set by Step "Setup sign tool version variable"
-          BUILD_TOOLS_VERSION: ${{ env.ANDROID_SIGN_TOOL_VERSION }}
-
       - name: Upload the APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: NexDesk-android-universal
-          path: ${{ steps.sign-apk.outputs.signedReleaseFile || format('signed-apk/NexDesk-{0}-android-universal.apk', env.VERSION) }}
+          path: signed-apk/NexDesk-${{ env.VERSION }}-android-universal.apk
           if-no-files-found: error
 
       - name: Attach to release
         if: ${{ inputs.make_release || startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          # The signing action renames its output to `<name>-signed.apk`, so the
-          # path has to come from its output whenever it ran.
-          files: ${{ steps.sign-apk.outputs.signedReleaseFile || format('signed-apk/NexDesk-{0}-android-universal.apk', env.VERSION) }}
+          files: signed-apk/NexDesk-${{ env.VERSION }}-android-universal.apk
           name: NexDesk ${{ env.VERSION }}
           draft: true

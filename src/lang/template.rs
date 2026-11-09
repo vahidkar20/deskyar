@@ -784,6 +784,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Fit to screen", ""),
         ("Rotate screen", ""),
         ("Remote input is off", ""),
-        ("Tap to allow the accessibility service, otherwise this device can only be viewed.", "")
+        ("Tap to allow the accessibility service, otherwise this device can only be viewed.", ""),
+        ("Lock view", ""),
+        ("Unlock view", "")
     ].iter().cloned().collect();
 }

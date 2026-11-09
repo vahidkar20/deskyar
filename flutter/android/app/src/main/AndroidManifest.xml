@@ -45,10 +45,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Accessibility services are bound by the system, which runs in a
+             different UID, so the component has to be exported. Access is
+             still gated by BIND_ACCESSIBILITY_SERVICE, a signature|privileged
+             permission only the system holds. With `exported="false"` some
+             builds list the service but refuse to bind it, which leaves the
+             toggle in Settings unusable and every injected event dropped. -->
         <service
             android:name=".InputService"
             android:enabled="true"
-            android:exported="false"
+            android:exported="true"
             android:label="NexDesk Input"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>

@@ -102,6 +102,9 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+      // Start locked: the fitted view is the only sane default on a phone,
+      // and this does not depend on the first-image callback firing.
+      gFFI.canvasModel.setFitLocked(true);
       gFFI.dialogManager
           .showLoading(translate('Connecting...'), onCancel: closeConnection);
     });
@@ -126,6 +129,19 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       // screen on a phone, which reads as "the image is off screen". Fit it
       // once, as soon as the real display size is known.
       gFFI.canvasModel.fitToScreenIfNeeded();
+      if (!gFFI.ffiModel.isPeerMobile) {
+        // A desktop is landscape by nature. Pin the view to the fitted scale
+        // and rotate the session so the whole screen is usable on the phone,
+        // with no gesture able to drag it out of the viewport.
+        gFFI.canvasModel.setFitLocked(true);
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+      } else {
+        // A phone-shaped peer benefits from pinch-zoom, so let it move again.
+        gFFI.canvasModel.setFitLocked(false);
+      }
     });
     WidgetsBinding.instance.addObserver(this);
 
