@@ -678,7 +678,12 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   Widget getBodyForMobile() {
     final keyboardIsVisible = keyboardVisibilityController.isVisible;
-    return Container(
+    return LayoutBuilder(builder: (context, constraints) {
+      // The canvas has to know the box it is painted into: a rotation or a
+      // bar appearing changes it without any session event, and a stale size
+      // leaves the image outside the viewport.
+      gFFI.canvasModel.onViewportChanged(constraints.biggest);
+      return Container(
         color: MyTheme.canvasColor,
         child: Stack(children: () {
           final paints = [
@@ -736,6 +741,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
           }
           return paints;
         }()));
+    });
   }
 
   Widget getBodyForDesktopWithListener() {

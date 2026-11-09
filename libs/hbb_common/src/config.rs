@@ -1044,7 +1044,26 @@ impl Config {
     }
 
     fn get_auto_id() -> Option<String> {
-        #[cfg(any(target_os = "android", target_os = "ios"))]
+        #[cfg(target_os = "android")]
+        {
+            // The generated ID lives in app-private storage, so a reinstall
+            // handed out a new one every time. The network interface's MAC
+            // survives a reinstall and is stable for the life of the device,
+            // and the kernel exposes it under /sys without any permission on
+            // the devices where it is not masked. When it is masked (Android
+            // 10+ reports 02:00:00:00:00:00) this falls back to the old
+            // random behaviour rather than risking a shared identity.
+            if let Some(id) = Self::android_stable_id() {
+                return Some(id);
+            }
+            return Some(
+                rand::thread_rng()
+                    .gen_range(1_000_000_000..2_000_000_000)
+                    .to_string(),
+            );
+        }
+
+        #[cfg(target_os = "ios")]
         {
             return Some(
                 rand::thread_rng()
@@ -1083,6 +1102,41 @@ impl Config {
                 None
             }
         }
+    }
+
+    /// Best-effort stable seed for Android.
+    ///
+    /// The generated ID is stored in app-private storage, so a reinstall used
+    /// to hand out a new one. The network interface's MAC survives a reinstall
+    /// and is stable for the life of the device; the kernel exposes it under
+    /// /sys without any permission where it is not masked. Android 10+ reports
+    /// a placeholder (`02:00:00:00:00:00`) when it is masked, and that case
+    /// returns `None` so the caller keeps the old random behaviour rather than
+    /// handing every such device the same identity.
+    #[cfg(target_os = "android")]
+    fn android_stable_id() -> Option<String> {
+        let mut mac = String::new();
+        for iface in ["wlan0", "eth0", "wlan1", "ap0"] {
+            if let Ok(raw) = std::fs::read_to_string(format!("/sys/class/net/{}/address", iface)) {
+                let value = raw.trim().to_ascii_lowercase();
+                if value.len() == 17
+                    && value != "02:00:00:00:00:00"
+                    && value != "00:00:00:00:00:00"
+                    && value != "ff:ff:ff:ff:ff:ff"
+                {
+                    mac = value;
+                    break;
+                }
+            }
+        }
+        if mac.is_empty() {
+            return None;
+        }
+        let mut id = fnv1a32(mac.as_bytes())
+            .wrapping_add(fnv1a32(APP_NAME.read().unwrap().as_bytes()));
+        id &= 0x1FFF_FFFF;
+        log::info!("Generated stable android id {}", id);
+        Some(id.to_string())
     }
 
     /// The ID upstream would generate for this machine: the MAC hash with no

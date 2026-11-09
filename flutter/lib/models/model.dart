@@ -2241,6 +2241,8 @@ class CanvasModel with ChangeNotifier {
   // Pins the view to the fitted scale on mobile so the remote image can never
   // be panned or zoomed out of the viewport. See `setFitLocked`.
   bool _fitLocked = false;
+  Size? _lastViewport;
+  bool _viewportUpdateScheduled = false;
   double _devicePixelRatio = 1.0;
   Size _size = Size.zero;
   // the tabbar over the image
@@ -2473,6 +2475,19 @@ class CanvasModel with ChangeNotifier {
   /// wider than any phone).
   void _clampOffset() {
     if (!isMobile) return;
+    // A NaN or zero here makes `ImagePainter` bail out (`x.isNaN`) or scale the
+    // image to nothing, which reads as "connected but the screen is black".
+    if (!_scale.isFinite || _scale <= 0) {
+      _scale = 1.0;
+    }
+    if (!_x.isFinite) _x = 0;
+    if (!_y.isFinite) _y = 0;
+    // Without the peer's display geometry the fitted scale would be computed
+    // against the 720x1280 placeholder, which is far off for a desktop. Leave
+    // the canvas alone until `updateViewStyle` has a real rect.
+    if (_fitLocked && parent.target?.ffiModel.rect == null) {
+      return;
+    }
     if (_size.width <= 0 || _size.height <= 0) {
       updateSize();
     }
@@ -2484,7 +2499,7 @@ class CanvasModel with ChangeNotifier {
     if (displayW <= 0 || displayH <= 0) return;
     if (_fitLocked) {
       final fit = min(w / displayW, h / displayH);
-      if (fit > 0 && (fit - _scale).abs() > 0.0001) {
+      if (fit.isFinite && fit > 0 && (fit - _scale).abs() > 0.0001) {
         _scale = fit;
         if (isMobile) {
           isMobileCanvasChanged = true;
@@ -2498,14 +2513,42 @@ class CanvasModel with ChangeNotifier {
     } else {
       _x = _x.clamp(w - dw, 0.0).toDouble();
     }
-    // `ImagePaint` draws the image at `y + getAdjustY()`, so the vertical
-    // bound has to account for the same adjustment.
+    // `ImagePaint` draws the image at `y + getAdjustY()`, so both the centring
+    // and the bound have to work on that drawn position.
     final adjust = getAdjustY();
     if (dh <= h) {
-      _y = (h - dh) / 2;
+      _y = (h - dh) / 2 - adjust;
     } else {
       _y = _y.clamp(h - dh - adjust, -adjust).toDouble();
     }
+    if (!_x.isFinite) _x = 0;
+    if (!_y.isFinite) _y = 0;
+  }
+
+  /// Re-lays out the canvas when the box it is painted into changes size.
+  ///
+  /// `updateViewStyle()` is driven by session events, so a viewport change
+  /// that does not produce one - the forced landscape rotation, the bottom
+  /// bar appearing, the soft keyboard closing - used to leave `_size` stale.
+  /// With the view locked the image then sat outside the new viewport and no
+  /// gesture could bring it back, which looked like a blank screen.
+  void onViewportChanged(Size s) {
+    if (!isMobile) return;
+    if (s.width <= 0 || s.height <= 0) return;
+    if (!s.width.isFinite || !s.height.isFinite) return;
+    if (_lastViewport == s) return;
+    _lastViewport = s;
+    if (_viewportUpdateScheduled) return;
+    _viewportUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _viewportUpdateScheduled = false;
+      // Re-read the view style as well: the fitted scale depends on the new
+      // box, and the style may not have been applied yet at first layout.
+      await updateViewStyle(force: true);
+      updateSize();
+      _clampOffset();
+      notifyListeners();
+    });
   }
 
   /// Pins the view to the fitted scale and stops the canvas from moving.
