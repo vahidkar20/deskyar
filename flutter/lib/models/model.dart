@@ -2376,7 +2376,8 @@ class CanvasModel with ChangeNotifier {
 
   updateSize() => _size = getSize();
 
-  updateViewStyle({refreshMousePos = true, notify = true}) async {
+  updateViewStyle(
+      {refreshMousePos = true, notify = true, bool force = false}) async {
     final style = await bind.sessionGetViewStyle(sessionId: sessionId);
     if (style == null) {
       return;
@@ -2398,7 +2399,8 @@ class CanvasModel with ChangeNotifier {
     // ViewStyle fields and is not captured by the equality check. Therefore, we must
     // allow updates to proceed when style == kRemoteViewStyleCustom, even if the
     // rest of the ViewStyle fields are unchanged.
-    if (_lastViewStyle == viewStyle &&
+    if (!force &&
+        _lastViewStyle == viewStyle &&
         _devicePixelRatio == ui.window.devicePixelRatio &&
         style != kRemoteViewStyleCustom) {
       return;
@@ -2447,7 +2449,63 @@ class CanvasModel with ChangeNotifier {
     _y = (size.height - displayHeight * _scale) / 2;
     if (isMobile) {
       _moveToCenterCursor();
+      _clampOffset();
     }
+  }
+
+  /// Keeps the remote image reachable on mobile.
+  ///
+  /// Both the two-finger pan and the cursor-follow pan in mouse mode used to
+  /// move the canvas without any bound, so the image could be pushed completely
+  /// off screen and would stay there - the only way back was another
+  /// two-finger drag in the opposite direction. The offset is now clamped to
+  /// the image bounds, and the image is centred on an axis where it fits.
+  void _clampOffset() {
+    if (!isMobile) return;
+    final w = _size.width;
+    final h = _size.height;
+    final dw = getDisplayWidth() * _scale;
+    final dh = getDisplayHeight() * _scale;
+    if (w <= 0 || h <= 0 || dw <= 0 || dh <= 0) return;
+    if (dw <= w) {
+      _x = (w - dw) / 2;
+    } else {
+      _x = _x.clamp(w - dw, 0.0).toDouble();
+    }
+    // `ImagePaint` draws the image at `y + getAdjustY()`, so the vertical
+    // bound has to account for the same adjustment.
+    final adjust = getAdjustY();
+    if (dh <= h) {
+      _y = (h - dh) / 2;
+    } else {
+      _y = _y.clamp(h - dh - adjust, -adjust).toDouble();
+    }
+  }
+
+  /// Fits the whole remote screen into the viewport and centres it.
+  ///
+  /// Switching to the adaptive view style also makes the choice stick, so the
+  /// next session on this peer opens fitted instead of at 1:1.
+  Future<void> fitToScreen() async {
+    await bind.sessionSetViewStyle(
+        sessionId: sessionId, value: kRemoteViewStyleAdaptive);
+    await updateViewStyle(force: true);
+  }
+
+  /// Snaps to the fitted scale when the first frame arrives cropped.
+  ///
+  /// On a phone the remote desktop is usually wider than the viewport, so a
+  /// session that opens at the original scale shows a slice of the screen and
+  /// has to be pinched back into view. A custom scale is left alone because
+  /// the user picked it deliberately.
+  Future<void> fitToScreenIfNeeded() async {
+    if (!isMobile) return;
+    if (_lastViewStyle.style == kRemoteViewStyleCustom) return;
+    updateSize();
+    final dw = getDisplayWidth() * _scale;
+    final dh = getDisplayHeight() * _scale;
+    if (dw <= _size.width + 1 && dh <= _size.height + 1) return;
+    await fitToScreen();
   }
 
   tryUpdateScrollStyle(Duration duration, String? style) async {
@@ -2704,6 +2762,7 @@ class CanvasModel with ChangeNotifier {
 
   panX(double dx) {
     _x += dx;
+    _clampOffset();
     if (isMobile) {
       isMobileCanvasChanged = true;
     }
@@ -2721,6 +2780,7 @@ class CanvasModel with ChangeNotifier {
 
   panY(double dy) {
     _y += dy;
+    _clampOffset();
     if (isMobile) {
       isMobileCanvasChanged = true;
     }
@@ -2743,6 +2803,7 @@ class CanvasModel with ChangeNotifier {
     // (focalPoint.dy - _y_1 - adjust) / s1 + displayOriginY = (focalPoint.dy - _y_2 - adjust) / s2 + displayOriginY
     // _y_2 = focalPoint.dy - adjust - (focalPoint.dy - _y_1 - adjust) / s1 * s2
     _y = focalPoint.dy - adjust - (focalPoint.dy - _y - adjust) / s * _scale;
+    _clampOffset();
     if (isMobile) {
       isMobileCanvasChanged = true;
     }

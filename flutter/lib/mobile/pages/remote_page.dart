@@ -122,6 +122,10 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
       }
       _disableAndroidSoftKeyboard(
           isKeyboardVisible: keyboardVisibilityController.isVisible);
+      // A session that opens at 1:1 shows only a slice of a desktop-sized
+      // screen on a phone, which reads as "the image is off screen". Fit it
+      // once, as soon as the real display size is known.
+      gFFI.canvasModel.fitToScreenIfNeeded();
     });
     WidgetsBinding.instance.addObserver(this);
 
@@ -169,6 +173,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     gFFI.dialogManager.dismissAll();
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
+    // Drop any landscape lock the user asked for during the session.
+    await SystemChrome.setPreferredOrientations([]);
     WakelockManager.disable(_uniqueKey);
     await keyboardSubscription.cancel();
     removeSharedStates(widget.id);

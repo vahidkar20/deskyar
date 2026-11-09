@@ -51,6 +51,9 @@ const val DEFAULT_NOTIFY_TITLE = "RustDesk"
 const val DEFAULT_NOTIFY_TEXT = "Service is running"
 const val DEFAULT_NOTIFY_ID = 1
 const val NOTIFY_ID_OFFSET = 100
+// Kept clear of the per-client "connected" notification so the input prompt
+// does not overwrite it.
+const val INPUT_NOTIFY_ID_OFFSET = 100000
 
 const val MIME_TYPE = MediaFormat.MIMETYPE_VIDEO_VP9
 
@@ -132,6 +135,14 @@ class MainService : Service() {
                             startCapture()
                         }
                         onClientAuthorizedNotification(id, type, username, peerId)
+                        // Screen capture and input injection are separate
+                        // permissions on Android. Without the accessibility
+                        // service every pointer and key event is dropped by
+                        // `InputService.ctx?.` and the controller sees a live
+                        // picture that ignores it, so say so explicitly.
+                        if (!isFileTransfer && !InputService.isOpen) {
+                            inputPermissionNotification(id)
+                        }
                     } else {
                         loginRequestNotification(id, type, username, peerId)
                     }
@@ -951,6 +962,36 @@ class MainService : Service() {
             .setContentText("$username - $peerId")
             .build()
         notificationManager.notify(getClientNotifyID(clientID), notification)
+    }
+
+    private fun inputPermissionNotification(clientID: Int) {
+        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.getActivity(
+                this, 222, intent, FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getActivity(this, 222, intent, FLAG_UPDATE_CURRENT)
+        }
+        val notification = NotificationCompat.Builder(this, notificationChannel)
+            .setSmallIcon(R.mipmap.ic_stat_logo)
+            .setOngoing(false)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentTitle(translate("Remote input is off"))
+            .setContentText(
+                translate("Tap to allow the accessibility service, otherwise this device can only be viewed.")
+            )
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    translate("Tap to allow the accessibility service, otherwise this device can only be viewed.")
+                )
+            )
+            .setContentIntent(pendingIntent)
+            .build()
+        notificationManager.notify(getClientNotifyID(clientID) + INPUT_NOTIFY_ID_OFFSET, notification)
     }
 
     private fun voiceCallRequestNotification(

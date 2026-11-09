@@ -471,11 +471,15 @@ class ServerModel with ChangeNotifier {
         }
         break;
       case "input":
-        if (_inputOk != value) {
-          bind.mainSetOption(
-              key: kOptionEnableKeyboard,
-              value: value ? defaultOptionYes : 'N');
-        }
+        // Always write the option, not only when it differs from the cached
+        // value. `_inputOk` starts as false, so a device that boots with the
+        // accessibility service already off used to keep whatever
+        // "enable-keyboard" was stored from a previous run - the server then
+        // advertised input as available while every injected event was
+        // dropped by a null `InputService.ctx`.
+        bind.mainSetOption(
+            key: kOptionEnableKeyboard,
+            value: value ? defaultOptionYes : 'N');
         _inputOk = value;
         break;
       default:

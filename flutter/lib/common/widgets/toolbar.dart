@@ -639,7 +639,39 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
       onPressed: () => onCopyFingerprint(FingerprintState.find(id).value),
     ));
   }
+  // Mobile display helpers: a phone is usually held in portrait while the
+  // remote desktop is landscape, so fitting and rotating are the two controls
+  // that come up constantly.
+  if (!(isDesktop || isWebDesktop)) {
+    v.add(TTextMenu(
+      child: Text(translate('Fit to screen')),
+      onPressed: () => ffi.canvasModel.fitToScreen(),
+    ));
+    v.add(TTextMenu(
+      child: Text(translate('Rotate screen')),
+      onPressed: () => toggleSessionOrientation(context),
+    ));
+  }
   return v;
+}
+
+/// Switches the session between portrait and landscape.
+///
+/// `SystemChrome.setPreferredOrientations` overrides the system rotation lock,
+/// so this still works when the phone is locked to portrait - which is exactly
+/// the case where a landscape view of a desktop is wanted.
+Future<void> toggleSessionOrientation(BuildContext context) async {
+  final isLandscape =
+      MediaQuery.of(context).orientation == Orientation.landscape;
+  if (isLandscape) {
+    await SystemChrome.setPreferredOrientations(
+        [DeviceOrientation.portraitUp]);
+  } else {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
 }
 
 Future<List<TRadioMenu<String>>> toolbarViewStyle(
