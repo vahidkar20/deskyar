@@ -1297,6 +1297,12 @@ class CursorPaint extends StatelessWidget {
     final s2 = s < mins ? mins : s;
     final adjust = c.getAdjustY();
     return CustomPaint(
+      // A zero-sized CustomPaint is aligned by the Stack, and the default
+      // alignment is `topStart` - which in a right-to-left locale is the
+      // *right* edge. Every coordinate the painter uses is then shifted by a
+      // full viewport width, so the cursor landed a screen to the right of
+      // where it belongs. Filling the stack pins the origin at (0, 0).
+      size: Size.infinite,
       painter: ImagePainter(
           image: image,
           x: (m.x - hotx) * factor + c.x / s2,
