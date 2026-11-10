@@ -2243,6 +2243,10 @@ class CanvasModel with ChangeNotifier {
   bool _fitLocked = false;
   Size? _lastViewport;
   bool _viewportUpdateScheduled = false;
+  // The box `ImagePaint` actually painted into on the last build. Diagnostics
+  // only: it lets the quality monitor show "what we think" next to "what we
+  // drew", which is the difference that produced a black screen.
+  Size? paintBox;
   double _devicePixelRatio = 1.0;
   Size _size = Size.zero;
   // the tabbar over the image

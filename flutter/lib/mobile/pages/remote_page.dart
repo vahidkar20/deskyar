@@ -1174,18 +1174,84 @@ class ImagePaint extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = Provider.of<ImageModel>(context);
     final c = Provider.of<CanvasModel>(context);
-    var s = c.scale;
-    if (ffiModel.isPeerLinux) {
-      final displays = ffiModel.pi.getCurDisplays();
-      if (displays.isNotEmpty) {
-        s = s / displays[0].scale;
+    return LayoutBuilder(builder: (context, constraints) {
+      final box = constraints.biggest;
+      final hasBox = box.width > 0 &&
+          box.height > 0 &&
+          box.width.isFinite &&
+          box.height.isFinite;
+      if (hasBox) {
+        c.paintBox = box;
+        // The model caches the box so that input mapping (which reads the
+        // model) and the painting agree. Keeping the sync here means the two
+        // can never disagree for longer than one frame, whatever the async
+        // style refresh did.
+        if (box != c.size) c.onViewportChanged(box);
       }
-    }
-    final adjust = c.getAdjustY();
-    return CustomPaint(
-      painter: ImagePainter(
-          image: m.image, x: c.x / s, y: (c.y + adjust) / s, scale: s),
-    );
+      final image = m.image;
+      if (image == null) return const SizedBox.expand();
+      if (c.fitLocked && hasBox && image.width > 0 && image.height > 0) {
+        // When the view is locked the placement is derived from the box we are
+        // painting into, not from the cached model size. The cache is only an
+        // optimisation, and a stale one used to place the image outside the
+        // viewport - with pan and zoom disabled that is an unrecoverable black
+        // screen. These three lines cannot be stale: `box` is the real thing.
+        final sx = box.width / image.width;
+        final sy = box.height / image.height;
+        final s = sx < sy ? sx : sy;
+        if (s.isFinite && s > 0) {
+          final dx = (box.width - image.width * s) / 2;
+          final dy = (box.height - image.height * s) / 2;
+          return CustomPaint(
+            size: box,
+            painter: ImagePainter(
+                image: image, x: dx / s, y: dy / s, scale: s),
+          );
+        }
+      }
+      var s = c.scale;
+      if (ffiModel.isPeerLinux) {
+        final displays = ffiModel.pi.getCurDisplays();
+        if (displays.isNotEmpty) {
+          s = s / displays[0].scale;
+        }
+      }
+      final adjust = c.getAdjustY();
+      final drawnX = c.x;
+      final drawnY = c.y + adjust;
+      final drawnW = image.width * s;
+      final drawnH = image.height * s;
+      final visible = hasBox &&
+          drawnW > 0 &&
+          drawnH > 0 &&
+          drawnX + drawnW > 0 &&
+          drawnX < box.width &&
+          drawnY + drawnH > 0 &&
+          drawnY < box.height;
+      if (!visible && hasBox && image.width > 0 && image.height > 0) {
+        // Whatever produced the offset (a stale size, a saved view style, a
+        // scale left over from another session), an image that does not
+        // overlap the viewport is never what the user wants. Fall back to the
+        // fitted placement instead of showing an empty canvas.
+        final sx = box.width / image.width;
+        final sy = box.height / image.height;
+        final fs = sx < sy ? sx : sy;
+        if (fs.isFinite && fs > 0) {
+          final dx = (box.width - image.width * fs) / 2;
+          final dy = (box.height - image.height * fs) / 2;
+          return CustomPaint(
+            size: box,
+            painter: ImagePainter(
+                image: image, x: dx / fs, y: dy / fs, scale: fs),
+          );
+        }
+      }
+      return CustomPaint(
+        size: hasBox ? box : Size.zero,
+        painter: ImagePainter(
+            image: image, x: c.x / s, y: (c.y + adjust) / s, scale: s),
+      );
+    });
   }
 }
 

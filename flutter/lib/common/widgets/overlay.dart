@@ -589,8 +589,12 @@ class QualityMonitor extends StatelessWidget {
     if (c == null) return 'canvas -';
     final img = ffi?.imageModel.image;
     final imgDesc = img == null ? 'noimg' : '${img.width}x${img.height}';
+    final pb = c.paintBox;
+    final pbDesc =
+        pb == null ? '-' : '${pb.width.toInt()}x${pb.height.toInt()}';
     return 's${c.scale.toStringAsFixed(3)} @${c.x.toInt()},${c.y.toInt()} '
-        'box${c.size.width.toInt()}x${c.size.height.toInt()} img:$imgDesc';
+        'box${c.size.width.toInt()}x${c.size.height.toInt()} '
+        'paint$pbDesc img:$imgDesc';
   }
 
   @override
