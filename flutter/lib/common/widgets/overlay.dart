@@ -581,6 +581,18 @@ class QualityMonitor extends StatelessWidget {
     );
   }
 
+  /// One-line canvas state: scale, offset, viewport box and whether a decoded
+  /// frame exists at all.
+  String _canvasDebug() {
+    final ffi = qualityMonitorModel.parent.target;
+    final c = ffi?.canvasModel;
+    if (c == null) return 'canvas -';
+    final img = ffi?.imageModel.image;
+    final imgDesc = img == null ? 'noimg' : '${img.width}x${img.height}';
+    return 's${c.scale.toStringAsFixed(3)} @${c.x.toInt()},${c.y.toInt()} '
+        'box${c.size.width.toInt()}x${c.size.height.toInt()} img:$imgDesc';
+  }
+
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider.value(
       value: qualityMonitorModel,
@@ -609,6 +621,20 @@ class QualityMonitor extends StatelessWidget {
                       if (qualityMonitorModel.webrtcTransport != null)
                         _row("Transport",
                             qualityMonitorModel.webrtcTransport!),
+                      // Compact canvas state. It answers the one question a
+                      // screenshot cannot: is the frame missing (`noimg`) or
+                      // merely positioned outside the viewport (`@x,y` vs
+                      // `box`)? Shown only on mobile, and only while the
+                      // quality monitor is on.
+                      if (isMobile)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            _canvasDebug(),
+                            style: const TextStyle(
+                                fontSize: 9, color: Colors.amber),
+                          ),
+                        ),
                     ],
                   ),
                 )

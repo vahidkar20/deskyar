@@ -2380,7 +2380,15 @@ class CanvasModel with ChangeNotifier {
     return max(bottom - MediaQueryData.fromView(ui.window).padding.top, 0);
   }
 
-  updateSize() => _size = getSize();
+  updateSize() {
+    // On mobile the canvas is laid out by the `LayoutBuilder` in
+    // `getBodyForMobile`, which reports the exact box it paints into. Deriving
+    // the size here from `MediaQuery` could disagree with that box (insets,
+    // safe area), and that disagreement is what centred the image for the
+    // wrong height after the forced landscape rotation.
+    if (isMobile && _size.width > 0 && _size.height > 0) return;
+    _size = getSize();
+  }
 
   updateViewStyle(
       {refreshMousePos = true, notify = true, bool force = false}) async {
@@ -2523,29 +2531,53 @@ class CanvasModel with ChangeNotifier {
     }
     if (!_x.isFinite) _x = 0;
     if (!_y.isFinite) _y = 0;
+    // Last line of defence: never leave the image outside the viewport. A
+    // stale display size or a non-finite value used to do exactly that, and
+    // with the view locked the user had no way to recover.
+    final drawnTop = _y + adjust;
+    final intersects = _x + dw > 0 && _x < w && drawnTop + dh > 0 && drawnTop < h;
+    if (!intersects) {
+      final fit = min(w / displayW, h / displayH);
+      if (fit.isFinite && fit > 0) {
+        _scale = fit;
+      }
+      final ndw = displayW * _scale;
+      final ndh = displayH * _scale;
+      _x = (w - ndw) / 2;
+      _y = (h - ndh) / 2 - adjust;
+      isMobileCanvasChanged = true;
+    }
   }
 
   /// Re-lays out the canvas when the box it is painted into changes size.
   ///
-  /// `updateViewStyle()` is driven by session events, so a viewport change
-  /// that does not produce one - the forced landscape rotation, the bottom
-  /// bar appearing, the soft keyboard closing - used to leave `_size` stale.
-  /// With the view locked the image then sat outside the new viewport and no
-  /// gesture could bring it back, which looked like a blank screen.
+  /// The layout box is the ground truth, so it is applied **synchronously**
+  /// here: `updateViewStyle()` is an async FFI call, and when it failed or
+  /// hung during the forced rotation the canvas kept the portrait height. The
+  /// image was then centred for a 872 px tall box inside a 392 px tall one -
+  /// below the viewport - and the fit lock turned that into a screen that
+  /// could not be recovered by any gesture.
   void onViewportChanged(Size s) {
     if (!isMobile) return;
     if (s.width <= 0 || s.height <= 0) return;
     if (!s.width.isFinite || !s.height.isFinite) return;
-    if (_lastViewport == s) return;
+    final changed = _lastViewport != s;
     _lastViewport = s;
+    _size = s;
+    _clampOffset();
+    if (!changed) return;
     if (_viewportUpdateScheduled) return;
     _viewportUpdateScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _viewportUpdateScheduled = false;
-      // Re-read the view style as well: the fitted scale depends on the new
-      // box, and the style may not have been applied yet at first layout.
-      await updateViewStyle(force: true);
-      updateSize();
+      try {
+        // Only refreshes the stored style/scale; the geometry above is already
+        // correct even if this never completes.
+        await updateViewStyle(force: true);
+      } catch (_) {
+        // Keep the synchronous geometry.
+      }
+      _size = _lastViewport ?? _size;
       _clampOffset();
       notifyListeners();
     });
