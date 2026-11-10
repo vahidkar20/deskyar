@@ -132,6 +132,15 @@ pub struct Manifest {
     pub notes_en: String,
     #[serde(default)]
     pub signatures: Vec<ManifestSignature>,
+    /// The running build has been retired in the panel: update is mandatory.
+    #[serde(default)]
+    pub retired_current: bool,
+    /// Publisher's floor. Anything below it must update.
+    #[serde(default)]
+    pub minimum_version: String,
+    /// Publisher's message, shown verbatim (retirement / forced update copy).
+    #[serde(default)]
+    pub message: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -160,6 +169,8 @@ pub struct UpdateState {
     pub mandatory: bool,
     pub postponed: bool,
     pub min_supported: String,
+    pub retired_current: bool,
+    pub message: String,
     pub notes_fa: String,
     pub notes_en: String,
     pub url: String,
@@ -180,6 +191,8 @@ impl UpdateState {
             mandatory: false,
             postponed: false,
             min_supported: String::new(),
+            retired_current: false,
+            message: String::new(),
             notes_fa: String::new(),
             notes_en: String::new(),
             url: String::new(),
@@ -612,6 +625,14 @@ struct ApiEnvelope {
     update_available: bool,
     #[serde(default)]
     latest: Option<ApiLatest>,
+    #[serde(default)]
+    mandatory: bool,
+    #[serde(default)]
+    retired_current: bool,
+    #[serde(default)]
+    minimum_version: String,
+    #[serde(default)]
+    message: String,
 }
 
 #[derive(Deserialize, Default)]
@@ -692,12 +713,15 @@ fn fetch_manifest() -> ResultType<Option<Manifest>> {
         url: latest.url.trim().to_owned(),
         sha256: latest.sha256.trim().to_ascii_lowercase(),
         size: latest.size,
-        mandatory: latest.mandatory,
+        mandatory: latest.mandatory || envelope.mandatory,
         min_supported: String::new(),
         published_at: normalize_published_at(&latest.published_at),
         notes_fa: latest.notes,
         notes_en: String::new(),
         signatures: Vec::new(),
+        retired_current: envelope.retired_current,
+        minimum_version: envelope.minimum_version.trim().to_owned(),
+        message: envelope.message.trim().to_owned(),
     }))
 }
 
@@ -785,6 +809,8 @@ pub fn check_now(manual: bool) -> ResultType<()> {
             s.phase = Phase::UpToDate;
             s.latest = manifest.version.clone();
             s.mandatory = false;
+            s.retired_current = false;
+            s.message.clear();
             s.can_install = false;
             s.error.clear();
         });
@@ -792,9 +818,16 @@ pub fn check_now(manual: bool) -> ResultType<()> {
         return Ok(());
     }
 
-    let below_floor = !manifest.min_supported.is_empty()
-        && current < hbb_common::get_version_number(&manifest.min_supported);
-    let mandatory = manifest.mandatory || below_floor;
+    let floor = if manifest.minimum_version.is_empty() {
+        manifest.min_supported.clone()
+    } else {
+        manifest.minimum_version.clone()
+    };
+    let below_floor = !floor.is_empty() && current < hbb_common::get_version_number(&floor);
+    // Three independent reasons to force the update, all publisher-controlled:
+    // the release is flagged, the running build was retired, or it sits below
+    // the minimum version the panel still supports.
+    let mandatory = manifest.mandatory || below_floor || manifest.retired_current;
     let postponed = read_option(OPTION_POSTPONED_VERSION) == manifest.version;
 
     persist(OPTION_LAST_VERSION, &manifest.version);
@@ -805,7 +838,9 @@ pub fn check_now(manual: bool) -> ResultType<()> {
         s.latest = manifest.version.clone();
         s.mandatory = mandatory;
         s.postponed = postponed && !mandatory;
-        s.min_supported = manifest.min_supported.clone();
+        s.min_supported = floor.clone();
+        s.retired_current = manifest.retired_current;
+        s.message = manifest.message.clone();
         s.notes_fa = manifest.notes_fa.clone();
         s.notes_en = manifest.notes_en.clone();
         s.url = manifest.url.clone();
@@ -829,7 +864,7 @@ pub fn check_now(manual: bool) -> ResultType<()> {
 /// Background poller. Idempotent.
 pub fn start() {
     if !is_enabled() {
-        log::warn!("nexdesk update: disabled (no NEXDESK_UPDATE_PUBKEY baked into this build)");
+        log::warn!("nexdesk update: disabled on this platform");
         return;
     }
     STARTED.call_once(|| {

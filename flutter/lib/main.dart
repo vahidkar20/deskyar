@@ -19,6 +19,7 @@ import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
 import 'package:flutter_hbb/models/nexdesk_update_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/desktop/widgets/nexdesk_update_dialog.dart';
+import 'package:flutter_hbb/desktop/widgets/nexdesk_update_banner.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
@@ -138,7 +139,9 @@ void runMainApp(bool startService) async {
   checkUpdate();
   // NexDesk auto-update: Rust polls the signed manifest and pushes state
   // changes; the dialog is opened once per version (mandatory ones immediately).
-  nexDeskUpdate.onAvailable = () => showNexDeskUpdateDialog();
+  // Optional updates are surfaced by the bottom-left card
+  // (`nexdesk_update_banner.dart`), not by a modal that steals focus.
+  nexDeskUpdate.onAvailable = () {};
   nexDeskUpdate.onBlockedConnection = () =>
       showNexDeskUpdateDialog(forceMandatory: true);
   nexDeskUpdate.start();
@@ -388,7 +391,7 @@ void _runApp(
       builder: (context, child) {
         child = _keepScaleBuilder(context, child);
         child = botToastBuilder(context, child);
-        return child;
+        return NexDeskUpdateOverlay(child: child);
       },
     ),
   ));
@@ -529,12 +532,14 @@ class _AppState extends State<App> with WidgetsBindingObserver {
             BotToastNavigatorObserver(),
           ],
           builder: isAndroid
-              ? (context, child) => AccessibilityListener(
-                    child: MediaQuery(
-                      data: MediaQuery.of(context).copyWith(
-                        textScaler: TextScaler.linear(1.0),
+              ? (context, child) => NexDeskUpdateOverlay(
+                    child: AccessibilityListener(
+                      child: MediaQuery(
+                        data: MediaQuery.of(context).copyWith(
+                          textScaler: TextScaler.linear(1.0),
+                        ),
+                        child: child ?? Container(),
                       ),
-                      child: child ?? Container(),
                     ),
                   )
               : (context, child) {
@@ -545,9 +550,11 @@ class _AppState extends State<App> with WidgetsBindingObserver {
                     child = keyListenerBuilder(context, child);
                   }
                   if (isLinux) {
-                    return buildVirtualWindowFrame(context, child);
+                    return NexDeskUpdateOverlay(
+                        child: buildVirtualWindowFrame(context, child));
                   } else {
-                    return workaroundWindowBorder(context, child);
+                    return NexDeskUpdateOverlay(
+                        child: workaroundWindowBorder(context, child));
                   }
                 },
         ),

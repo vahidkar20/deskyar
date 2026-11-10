@@ -23,6 +23,8 @@ class NexDeskUpdateState {
     required this.mandatory,
     required this.postponed,
     required this.minSupported,
+    required this.retiredCurrent,
+    required this.message,
     required this.notesFa,
     required this.notesEn,
     required this.url,
@@ -39,6 +41,12 @@ class NexDeskUpdateState {
   final bool mandatory;
   final bool postponed;
   final String minSupported;
+
+  /// The panel retired the running build, so updating is not optional.
+  final bool retiredCurrent;
+
+  /// Publisher's own wording for a retirement / forced update.
+  final String message;
   final String notesFa;
   final String notesEn;
   final String url;
@@ -60,6 +68,8 @@ class NexDeskUpdateState {
       mandatory: asBool(json['mandatory']),
       postponed: asBool(json['postponed']),
       minSupported: asString(json['min_supported']),
+      retiredCurrent: asBool(json['retired_current']),
+      message: asString(json['message']),
       notesFa: asString(json['notes_fa']),
       notesEn: asString(json['notes_en']),
       url: asString(json['url']),
