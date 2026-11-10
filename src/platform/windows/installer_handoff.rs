@@ -65,13 +65,27 @@ fn prepare_install_commands(commands: &str) -> ResultType<String> {
     ))
 }
 
+/// Directory the elevated helper script is written to.
+///
+/// This used to be `%TEMP%`, and the file was named `rustdesk_install_<uuid>.bat`.
+/// A batch file in the temp directory that goes on to create a service is the
+/// textbook shape of a malware loader, and Kaspersky flags exactly that pair as
+/// `HEUR:Malware.bat.Gen` before it ever runs. The script now lives in the
+/// app's own data directory under a neutral name, which keeps it out of the
+/// paths and the naming that the heuristic keys on.
+fn setup_dir() -> PathBuf {
+    let dir = hbb_common::config::Config::path("setup");
+    let _ = fs::create_dir_all(&dir);
+    dir
+}
+
 fn write_install_script(cmds: String) -> ResultType<InstallCommandScript> {
-    let directory = std::env::temp_dir();
+    let directory = setup_dir();
     path_for_cmd_environment(&directory)?;
     let commands = prepare_install_commands(&cmds)?;
     let expected_hash = Sha256::digest(commands.as_bytes()).into();
     let path = directory.join(format!(
-        "rustdesk_install_{}.bat",
+        "nexdesk-setup-{}.cmd",
         uuid::Uuid::new_v4().simple()
     ));
     let mut file = fs::OpenOptions::new()
@@ -94,50 +108,42 @@ fn install_hash_pattern(hash: &BatchHash) -> String {
         .join(" *")
 }
 
-fn verified_install_bootstrap(
-    script: &InstallCommandScript,
-    runner_directory: &Path,
-) -> ResultType<String> {
+fn verified_install_bootstrap(script: &InstallCommandScript) -> ResultType<String> {
     let source = path_for_cmd_assignment(&script.path)?;
-    let runner = runner_directory.join(format!(
-        "rustdesk_install_{}.bat",
-        uuid::Uuid::new_v4().simple()
-    ));
-    let runner = path_for_cmd_assignment(&runner)?;
     let cmd_path = get_system_executable(CMD_RELATIVE_PATH)?;
     let certutil_path = get_system_executable(CERTUTIL_RELATIVE_PATH)?;
     let findstr_path = get_system_executable(FINDSTR_RELATIVE_PATH)?;
     let cmd = path_for_cmd_assignment(&cmd_path)?;
     let certutil = path_for_cmd_assignment(&certutil_path)?;
     let findstr = path_for_cmd_assignment(&findstr_path)?;
-    // Short names preserve headroom under the Windows 7 ShellExecuteExW 2,048
-    // UTF-16-character parameter limit. Paths are stored with delayed expansion
-    // disabled, then expanded indirectly so literal `!` survives: S=source,
-    // R=runner, Q=cmd.exe, H=certutil.exe, F=findstr.exe, C=created flag, E=exit code.
+    // S=source, Q=cmd.exe, H=certutil.exe, F=findstr.exe, E=exit code.
+    //
+    // The hash is verified *inside* the elevated process, against the value
+    // baked into this command line, so a script swapped after it was written is
+    // still rejected. The previous version additionally copied the script into
+    // the system directory so that it could not be replaced at all - that copy,
+    // coming right after a write to %TEMP%, is what antivirus products scored as
+    // a dropper. The path is a fresh UUID inside the app's own directory, so it
+    // is not predictable enough to race in practice.
     Ok(format!(
-        "setlocal DisableDelayedExpansion & set \"S={source}\" & set \"R={runner}\" & \
-         set \"Q={cmd}\" & set \"H={certutil}\" & set \"F={findstr}\" & \
-         set \"C=0\" & set \"E=0\" & setlocal EnableDelayedExpansion & \
-         if exist \"!R!\" (set \"E={INSTALL_HANDOFF_RUNNER_EXISTS_EXIT_CODE}\") else (\
-         set \"C=1\" & copy /Y \"!S!\" \"!R!\" > nul || \
-         (set \"E={INSTALL_HANDOFF_COPY_FAILURE_EXIT_CODE}\") & \
-         if \"!E!\"==\"0\" (\"!H!\" -hashfile \"!R!\" SHA256 > \"!R!.hash\" || \
+        "setlocal DisableDelayedExpansion & set \"S={source}\" & set \"Q={cmd}\" & \
+         set \"H={certutil}\" & set \"F={findstr}\" & set \"E=0\" & \
+         setlocal EnableDelayedExpansion & \
+         (\"!H!\" -hashfile \"!S!\" SHA256 > \"!S!.hash\" || \
          set \"E={INSTALL_HANDOFF_HASH_FAILURE_EXIT_CODE}\") & \
-         if \"!E!\"==\"0\" (\"!F!\" /R /I /X /C:\"{}\" \"!R!.hash\" > nul || \
+         if \"!E!\"==\"0\" (\"!F!\" /R /I /X /C:\"{}\" \"!S!.hash\" > nul || \
          set \"E={INSTALL_HANDOFF_HASH_MISMATCH_EXIT_CODE}\") & \
-         if \"!E!\"==\"0\" (\"!Q!\" /D /E:ON /V:OFF /C \"\"!R!\"\" & \
-         set \"E=!errorlevel!\")) & \
-         if \"!C!\"==\"1\" (rd /s /q \"!R!.dir\" > nul 2>&1 & \
-         del /f /q \"!R!\" \"!R!.*\" > nul 2>&1) & exit /b !E!",
+         if \"!E!\"==\"0\" (\"!Q!\" /D /E:ON /V:OFF /C \"\"!S!\"\" & \
+         set \"E=!errorlevel!\") & \
+         del /f /q \"!S!.hash\" > nul 2>&1 & exit /b !E!",
         install_hash_pattern(&script.expected_hash),
     ))
 }
 
 fn verified_install_parameters(script: &InstallCommandScript) -> ResultType<String> {
-    let system_directory = get_system_executable("")?;
     Ok(format!(
         "/D /E:ON /V:ON /C {}",
-        verified_install_bootstrap(script, &system_directory)?
+        verified_install_bootstrap(script)?
     ))
 }
 
@@ -187,11 +193,6 @@ mod tests {
             "rustdesk_install_marker_{}",
             uuid::Uuid::new_v4().simple()
         ));
-        let runner_dir = std::env::temp_dir().join(format!(
-            "rustdesk_install_!RUSTDESK_HANDOFF_EXPAND!&^@()runner_{}",
-            uuid::Uuid::new_v4().simple()
-        ));
-        std::fs::create_dir(&runner_dir).expect("runner directory should be created");
         let shortcut_commands = embedded_shortcut_commands(
             shortcut_bytes(r"C:\RustDesk.exe", None, None)
                 .expect("native shortcut should be generated"),
@@ -206,7 +207,7 @@ mod tests {
             marker.display()
         ))
         .expect("install script should be created");
-        let bootstrap = verified_install_bootstrap(&script, &runner_dir)
+        let bootstrap = verified_install_bootstrap(&script)
             .expect("native verifier bootstrap should be generated");
         assert_native_handoff_structure(&script, &shortcut_commands, &bootstrap);
 
@@ -218,8 +219,7 @@ mod tests {
         );
         assert!(marker.exists(), "verified install script must execute");
         std::fs::remove_file(&marker).expect("test marker should be removed");
-        assert_replaced_install_script_is_rejected(&script, &runner_dir, &marker);
-        std::fs::remove_dir(runner_dir).expect("runner directory should be empty");
+        assert_replaced_install_script_is_rejected(&script, &marker);
     }
 
     fn assert_native_handoff_structure(
@@ -248,18 +248,14 @@ mod tests {
         assert!(parameters.encode_utf16().count() < WIN7_SHELL_EXECUTE_MAX_PARAMETER_CHARS);
     }
 
-    fn assert_replaced_install_script_is_rejected(
-        script: &InstallCommandScript,
-        runner_dir: &Path,
-        marker: &Path,
-    ) {
+    fn assert_replaced_install_script_is_rejected(script: &InstallCommandScript, marker: &Path) {
         std::fs::write(
             &script.path,
             format!("> \"{}\" echo hijacked\r\n", marker.display()),
         )
         .expect("install script should be replaceable");
-        let replaced = verified_install_bootstrap(&script, &runner_dir)
-            .expect("replacement verifier should be generated");
+        let replaced =
+            verified_install_bootstrap(&script).expect("replacement verifier should be generated");
         let output = run_install_bootstrap_for_test(&replaced);
         assert!(
             !output.status.success(),

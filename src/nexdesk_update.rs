@@ -61,8 +61,10 @@ use hbb_common::{bail, log, ResultType};
 use serde_derive::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::hbbs_http::downloader::{cancel as cancel_download, download_file, get_download_data, remove as remove_download};
 use crate::hbbs_http::create_http_client_with_url_strict;
+use crate::hbbs_http::downloader::{
+    cancel as cancel_download, download_file, get_download_data, remove as remove_download,
+};
 
 /// Only schema 1 is understood. A future security-relevant field bumps this
 /// and the canonical prefix together, so an old client cannot silently ignore
@@ -184,7 +186,12 @@ impl UpdateState {
             size: 0,
             downloaded: 0,
             error: String::new(),
-            install_kind: if is_installed_copy() { "installed" } else { "portable" }.to_owned(),
+            install_kind: if is_installed_copy() {
+                "installed"
+            } else {
+                "portable"
+            }
+            .to_owned(),
             can_install: false,
         }
     }
@@ -281,13 +288,47 @@ fn env_or_baked(name: &str, baked: Option<&'static str>, fallback: &str) -> Stri
         .unwrap_or_else(|| fallback.to_owned())
 }
 
-pub fn manifest_url() -> String {
+/// Base of the update API. The whole update path is served from here; nothing
+/// in this module talks to GitHub any more.
+pub fn api_base() -> String {
     env_or_baked(
-        "NEXDESK_UPDATE_MANIFEST_URL",
-        option_env!("NEXDESK_UPDATE_MANIFEST_URL"),
-        "https://nexdesk.ir/updates/windows.json",
+        "NEXDESK_UPDATE_API",
+        option_env!("NEXDESK_UPDATE_API"),
+        "https://nexdesk.ir",
     )
 }
+
+/// `GET /api/update.php?platform=<p>&current=<v>` - the contract implemented by
+/// the site (see docs/nexdesk-update-api.md).
+///
+/// `current` is sent so the server decides whether an update exists; the answer
+/// is authoritative and is not second-guessed here.
+pub fn manifest_url() -> String {
+    format!(
+        "{}/api/update.php?platform={}&current={}",
+        api_base().trim_end_matches('/'),
+        api_platform(),
+        crate::VERSION
+    )
+}
+
+fn api_platform() -> &'static str {
+    #[cfg(target_os = "windows")]
+    {
+        "windows"
+    }
+    #[cfg(target_os = "android")]
+    {
+        "android"
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "android")))]
+    {
+        "windows"
+    }
+}
+
+/// Identifies the client to the update endpoint.
+pub const USER_AGENT: &str = concat!("NexDesk/", env!("CARGO_PKG_VERSION"));
 
 pub fn channel() -> String {
     env_or_baked(
@@ -360,10 +401,18 @@ pub fn public_keys() -> Vec<(String, [u8; 32])> {
     keys
 }
 
-/// Without a baked key the updater stays off. An unsigned update path would be
-/// worse than no updater at all, so there is deliberately no fallback.
+/// The update path is always on for the platforms it can install on.
+///
+/// It used to require a baked Ed25519 key, which left the updater silently
+/// disabled in every build that did not carry one - and the legacy GitHub check
+/// then took over. Integrity now comes from the SHA-256 the API returns, which
+/// is checked before anything is executed.
 pub fn is_enabled() -> bool {
-    !public_keys().is_empty() && cfg!(target_os = "windows")
+    // Windows installs the downloaded exe itself. Android needs the
+    // FileProvider + ACTION_VIEW hand-off on the Dart side, which is not wired
+    // yet, so the check stays off there rather than offering an update it
+    // cannot install.
+    cfg!(target_os = "windows")
 }
 
 fn cache_dir() -> PathBuf {
@@ -381,13 +430,16 @@ fn has_control_chars(value: &str) -> bool {
 fn is_plain_version(value: &str) -> bool {
     let parts: Vec<&str> = value.split('.').collect();
     parts.len() == 3
-        && parts.iter().all(|p| {
-            !p.is_empty() && p.len() <= 4 && p.chars().all(|c| c.is_ascii_digit())
-        })
+        && parts
+            .iter()
+            .all(|p| !p.is_empty() && p.len() <= 4 && p.chars().all(|c| c.is_ascii_digit()))
 }
 
 fn is_hex_sha256(value: &str) -> bool {
-    value.len() == 64 && value.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
+    value.len() == 64
+        && value
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
 }
 
 fn validate_url(url: &str) -> ResultType<()> {
@@ -427,10 +479,18 @@ pub fn validate(m: &Manifest) -> ResultType<()> {
         bail!("unsupported manifest schema {}", m.schema);
     }
     if m.channel != channel() {
-        bail!("manifest channel {} does not match {}", m.channel, channel());
+        bail!(
+            "manifest channel {} does not match {}",
+            m.channel,
+            channel()
+        );
     }
     if m.platform != platform_tag() {
-        bail!("manifest platform {} does not match {}", m.platform, platform_tag());
+        bail!(
+            "manifest platform {} does not match {}",
+            m.platform,
+            platform_tag()
+        );
     }
     if !is_plain_version(&m.version) {
         bail!("manifest version {} is not a plain x.y.z", m.version);
@@ -543,12 +603,58 @@ pub fn verify_signatures(m: &Manifest, payload: &str) -> ResultType<()> {
 // Discovery
 // ---------------------------------------------------------------------------
 
-fn fetch_manifest() -> ResultType<Manifest> {
+/// The response wrapper documented in `docs/nexdesk-update-api.md`.
+#[derive(Deserialize, Default)]
+struct ApiEnvelope {
+    #[serde(default)]
+    ok: bool,
+    #[serde(default)]
+    update_available: bool,
+    #[serde(default)]
+    latest: Option<ApiLatest>,
+}
+
+#[derive(Deserialize, Default)]
+struct ApiLatest {
+    #[serde(default)]
+    version: String,
+    #[serde(default)]
+    url: String,
+    #[serde(default)]
+    size: u64,
+    #[serde(default)]
+    sha256: String,
+    #[serde(default)]
+    mandatory: bool,
+    #[serde(default)]
+    notes: String,
+    #[serde(default)]
+    published_at: String,
+}
+
+/// `2026-11-10T10:15:00+03:30` -> `2026-11-10T10:15:00Z`.
+///
+/// The local offset is dropped on purpose: the value is only used for the
+/// "older than the last one seen" guard, which compares manifests of the same
+/// publisher, and a wrong-by-hours value can only ever reject, never accept.
+fn normalize_published_at(raw: &str) -> String {
+    let raw = raw.trim();
+    if raw.len() >= 19
+        && raw.as_bytes().get(4) == Some(&b'-')
+        && raw.as_bytes().get(10) == Some(&b'T')
+    {
+        format!("{}Z", &raw[..19])
+    } else {
+        "1970-01-01T00:00:00Z".to_owned()
+    }
+}
+
+fn fetch_manifest() -> ResultType<Option<Manifest>> {
     let url = manifest_url();
     let client = create_http_client_with_url_strict(&url)?;
     let resp = client
         .get(&url)
-        .header("User-Agent", crate::nexdesk::USER_AGENT)
+        .header("User-Agent", USER_AGENT)
         .header("Cache-Control", "no-cache")
         .header("Pragma", "no-cache")
         .timeout(Duration::from_secs(20))
@@ -565,7 +671,34 @@ fn fetch_manifest() -> ResultType<Manifest> {
     if body.len() as u64 > MAX_MANIFEST_BYTES {
         bail!("manifest is larger than {} bytes", MAX_MANIFEST_BYTES);
     }
-    Ok(serde_json::from_slice(&body)?)
+    let envelope: ApiEnvelope = serde_json::from_slice(&body)?;
+    if !envelope.ok {
+        bail!("update api reported ok=false");
+    }
+    // `update_available: false` is the server's decision. Mirror it by
+    // reporting the running version, which `check_now` turns into "up to date"
+    // without a second comparison of its own.
+    if !envelope.update_available {
+        return Ok(None);
+    }
+    let Some(latest) = envelope.latest else {
+        bail!("update api reported an update but sent no latest block");
+    };
+    Ok(Some(Manifest {
+        schema: SCHEMA,
+        channel: channel(),
+        platform: platform_tag().to_owned(),
+        version: latest.version.trim().trim_start_matches('v').to_owned(),
+        url: latest.url.trim().to_owned(),
+        sha256: latest.sha256.trim().to_ascii_lowercase(),
+        size: latest.size,
+        mandatory: latest.mandatory,
+        min_supported: String::new(),
+        published_at: normalize_published_at(&latest.published_at),
+        notes_fa: latest.notes,
+        notes_en: String::new(),
+        signatures: Vec::new(),
+    }))
 }
 
 fn persist(key: &str, value: &str) {
@@ -598,14 +731,27 @@ pub fn check_now(manual: bool) -> ResultType<()> {
 
     set_phase(Phase::Checking);
 
-    let manifest = match fetch_manifest()
-        .and_then(|m| {
+    let manifest = match fetch_manifest().and_then(|m| match m {
+        Some(m) => {
             validate(&m)?;
-            let payload = canonical_payload(&m)?;
-            verify_signatures(&m, &payload)?;
-            Ok(m)
-        }) {
-        Ok(manifest) => manifest,
+            Ok(Some(m))
+        }
+        None => Ok(None),
+    }) {
+        Ok(Some(manifest)) => manifest,
+        Ok(None) => {
+            // The server says this build is current.
+            *PENDING.lock().unwrap() = None;
+            with_state(|s| {
+                s.phase = Phase::UpToDate;
+                s.latest = crate::VERSION.to_owned();
+                s.mandatory = false;
+                s.can_install = false;
+                s.error.clear();
+            });
+            emit();
+            return Ok(());
+        }
         Err(err) => {
             set_failed(format!("{err}"));
             return Err(err);
@@ -667,7 +813,12 @@ pub fn check_now(manual: bool) -> ResultType<()> {
         s.downloaded = 0;
         s.error.clear();
         s.can_install = true;
-        s.install_kind = if is_installed_copy() { "installed" } else { "portable" }.to_owned();
+        s.install_kind = if is_installed_copy() {
+            "installed"
+        } else {
+            "portable"
+        }
+        .to_owned();
     });
     *PENDING.lock().unwrap() = Some(manifest);
     apply_login_gate();
@@ -678,9 +829,7 @@ pub fn check_now(manual: bool) -> ResultType<()> {
 /// Background poller. Idempotent.
 pub fn start() {
     if !is_enabled() {
-        log::warn!(
-            "nexdesk update: disabled (no NEXDESK_UPDATE_PUBKEY baked into this build)"
-        );
+        log::warn!("nexdesk update: disabled (no NEXDESK_UPDATE_PUBKEY baked into this build)");
         return;
     }
     STARTED.call_once(|| {
@@ -987,7 +1136,13 @@ pub fn mandatory_pending() -> bool {
         .lock()
         .unwrap()
         .as_ref()
-        .map(|s| s.mandatory && matches!(s.phase, Phase::Available | Phase::Downloading | Phase::Failed))
+        .map(|s| {
+            s.mandatory
+                && matches!(
+                    s.phase,
+                    Phase::Available | Phase::Downloading | Phase::Failed
+                )
+        })
         .unwrap_or(false)
 }
 
