@@ -32,9 +32,19 @@ class OnlineStatusWidget extends StatefulWidget {
 }
 
 /// State for the connection page.
-class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
+class _OnlineStatusWidgetState extends State<OnlineStatusWidget>
+    with SingleTickerProviderStateMixin {
   final _svcStopped = Get.find<RxBool>(tag: 'stop-service');
   Timer? _updateTimer;
+
+  /// Drives the "start service" pill. A stopped service is the one state that
+  /// blocks the whole application, so the control has to pull the eye instead
+  /// of sitting quietly in the status line.
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+  Worker? _pulseWorker;
 
   double get em => 14.0;
   double? get height => bind.isIncomingOnly() ? null : em * 3;
@@ -42,6 +52,19 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   @override
   void initState() {
     super.initState();
+    // Only animate while the service is actually stopped. Leaving the
+    // controller repeating would schedule a frame forever, which is a real cost
+    // on a laptop for a control the user cannot even see once it is running.
+    if (_svcStopped.value) {
+      _pulse.repeat(reverse: true);
+    }
+    _pulseWorker = ever<bool>(_svcStopped, (stopped) {
+      if (stopped) {
+        _pulse.repeat(reverse: true);
+      } else {
+        _pulse.stop();
+      }
+    });
     _updateTimer = periodic_immediate(Duration(seconds: 1), () async {
       updateStatus();
     });
@@ -50,6 +73,8 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   @override
   void dispose() {
     _updateTimer?.cancel();
+    _pulseWorker?.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
@@ -58,15 +83,43 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     final isIncomingOnly = bind.isIncomingOnly();
     startServiceWidget() => Offstage(
           offstage: !_svcStopped.value,
-          child: InkWell(
-                  onTap: () async {
-                    await start_service(true);
-                  },
-                  child: Text(translate("Start service"),
-                      style: TextStyle(
-                          decoration: TextDecoration.underline, fontSize: em)))
-              .marginStart(em),
-        );
+          child: FadeTransition(
+            // Breathing rather than blinking: a hard on/off flash reads as an
+            // error toast, while a slow fade reads as "press me".
+            opacity: Tween(begin: 0.55, end: 1.0).animate(
+                CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
+            child: Material(
+              color: kColorWarn,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () async {
+                  await start_service(true);
+                },
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.play_circle_fill_rounded,
+                          size: 15, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(
+                        translate("Start service"),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ).marginStart(em);
 
     // Upstream nags "set up your own server" here. NexDesk replaces it with a
     // permanent attribution link, shown unconditionally so it reads as branding

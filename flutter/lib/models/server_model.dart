@@ -373,6 +373,26 @@ class ServerModel with ChangeNotifier {
     return res;
   }
 
+  /// Ask for everything the service needs, once, when the app opens.
+  ///
+  /// These used to be requested lazily from the "start service" button: the
+  /// user pressed it, a system dialog appeared, the service came up without the
+  /// permission it needed, and the whole thing had to be pressed again. Asking
+  /// up front turns two round trips into one.
+  ///
+  /// Accessibility is deliberately not here - it has no runtime dialog, only a
+  /// settings page, and the server side already surfaces a notification with
+  /// the exact path when a session arrives while it is off.
+  Future<void> requestServicePermissionsOnStart() async {
+    if (!isAndroid) return;
+    try {
+      await checkRequestNotificationPermission();
+      await checkFloatingWindowPermission();
+    } catch (e) {
+      debugPrint("requestServicePermissionsOnStart failed: $e");
+    }
+  }
+
   /// Toggle the screen sharing service.
   toggleService() async {
     if (_isStart) {

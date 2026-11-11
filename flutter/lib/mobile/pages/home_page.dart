@@ -43,6 +43,15 @@ class HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     initPages();
+    // Ask for the service permissions as soon as the app opens. Requesting them
+    // from the "start service" button made the user press it twice: the first
+    // press only produced a system dialog, and the service came up without the
+    // permission it had asked for.
+    if (isAndroid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        gFFI.serverModel.requestServicePermissionsOnStart();
+      });
+    }
   }
 
   void initPages() {

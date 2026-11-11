@@ -328,25 +328,53 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildPopupMenu(BuildContext context) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     RxBool hover = false.obs;
+    // A bare "⋮" reads as a generic overflow menu, so the settings page - the
+    // second thing a new user needs after the ID - was effectively hidden. The
+    // control now carries its own label and a settings glyph, which makes it
+    // findable by reading rather than by guessing.
     return InkWell(
       onTap: DesktopTabPage.onAddSetting,
+      borderRadius: BorderRadius.circular(8),
+      onHover: (value) => hover.value = value,
       child: Tooltip(
         message: translate('Settings'),
         child: Obx(
-          () => CircleAvatar(
-            radius: 15,
-            backgroundColor: hover.value
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.background,
-            child: Icon(
-              Icons.more_vert_outlined,
-              size: 20,
-              color: hover.value ? textColor : textColor?.withOpacity(0.5),
+          () => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: (textColor ?? Colors.grey)
+                    .withOpacity(hover.value ? 0.5 : 0.25),
+              ),
+              color: hover.value
+                  ? Theme.of(context).scaffoldBackgroundColor
+                  : Colors.transparent,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.settings_outlined,
+                  size: 16,
+                  color:
+                      hover.value ? textColor : textColor?.withOpacity(0.75),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  translate('Settings'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color:
+                        hover.value ? textColor : textColor?.withOpacity(0.75),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
-      onHover: (value) => hover.value = value,
     );
   }
 
