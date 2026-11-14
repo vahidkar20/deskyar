@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          find staging -type f \( -name '*.exe' -o -name '*.apk' \) -exec cp {} out/ \;
+          find staging -type f \( -name '*.exe' -o -name '*.apk' -o -name '*.msi' \) -exec cp {} out/ \;
           ls -lh out
           ( cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt )
 
@@ -101,5 +101,6 @@ jobs:
           prerelease: false
           make_latest: true
           files: |
+            out/*.msi
             out/*.exe
             out/*.apk

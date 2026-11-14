@@ -186,8 +186,20 @@ def insert_components_between_tags(lines, index_start, app_name, dist_dir, templ
             # Don't generate Component Id and File Id like 'Component_{idx}' and 'File_{idx}'
             # because it will cause error
             # "Error WIX0130	The primary key 'xxxx' is duplicated in table 'Directory'"
+            # Stable per (product, file path), not uuid4().
+            #
+            # Windows keys an installed component by its GUID, not by its Id. A
+            # fresh GUID on every build meant a major upgrade removed and
+            # rewrote every file instead of updating it, and left registry rows
+            # pointing at components that no longer exist.
+            #
+            # This has to be fixed here rather than in
+            # replace_component_guids_in_wxs(): these auto-generated components
+            # carry no Id attribute, so that function's regex cannot match them
+            # and they kept a random GUID even after it ran.
+            component_guid = uuid.uuid5(uuid.NAMESPACE_OID, f"{app_name}:{relative}")
             to_insert_lines = f"""
-{indent}<Component Guid="{uuid.uuid4()}" {dir_attr}{condition_attr}>
+{indent}<Component Guid="{component_guid}" {dir_attr}{condition_attr}>
 {indent}{g_indent_unit}<File Source="{file_path.as_posix()}" KeyPath="yes" Checksum="yes"{disk_attr} />
 {indent}</Component>
 """
@@ -282,13 +294,16 @@ def replace_app_name_in_langs(app_name):
         with open(file_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
 
-def gen_upgrade_info():
+def gen_upgrade_info(app_name):
     def func(lines, index_start):
         indent = g_indent_unit * 3
 
         vs = g_version.split(".")
         major = vs[0]
-        upgrade_id = uuid.uuid4()
+        # Stable per product. The Id only has to be unique inside this package,
+        # but a fixed value keeps two builds of the same version byte-identical,
+        # which is what makes an MSI diff readable.
+        upgrade_id = uuid.uuid5(uuid.NAMESPACE_OID, f"{app_name}:upgrade")
         to_insert_lines = [
             f'{indent}<Upgrade Id="{upgrade_id}">\n',
             f'{indent}{g_indent_unit}<UpgradeVersion Property="OLD_VERSION_FOUND" Minimum="{major}.0.0" Maximum="{major}.99.99" IncludeMinimum="yes" IncludeMaximum="yes" OnlyDetect="no" IgnoreRemoveFailure="yes" MigrateFeatures="yes" />\n',
@@ -573,7 +588,7 @@ if __name__ == "__main__":
     if app_name != "RustDesk":
         replace_component_guids_in_wxs(app_name)
 
-    if not gen_upgrade_info():
+    if not gen_upgrade_info(app_name):
         sys.exit(-1)
 
     if not gen_custom_ARPSYSTEMCOMPONENT(args, dist_dir):

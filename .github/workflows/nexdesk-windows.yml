@@ -110,9 +110,13 @@ jobs:
           # Asset name must match `nexdesk::asset_name()` and the URL the
           # updater builds: <product>-<version>-<arch>.exe
           ARTIFACT_NAME="NexDesk-${VERSION}-x86_64.exe"
+          # The MSI is the primary download: a real installer, no self-extracting
+          # stub, and the thing Windows shows as an installed application.
+          MSI_NAME="NexDesk-${VERSION}-x64.msi"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
-          echo "building $ARTIFACT_NAME"
+          echo "MSI_NAME=$MSI_NAME" >> "$GITHUB_ENV"
+          echo "building $ARTIFACT_NAME and $MSI_NAME"
 
       - name: Check Cargo.lock matches Cargo.toml
         shell: bash
@@ -508,6 +512,29 @@ jobs:
           }
           mv .\flutter\build\windows\x64\runner\Release .\NexDesk
 
+      # The MSI is built before the optional runtime resources are fetched, so
+      # it carries only what the application needs. A driver package inside an
+      # installer is one of the louder things a scanner can find.
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          pushd .\res\msi
+          python preprocess.py -d ../../NexDesk
+          nuget restore msi.sln
+          msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
+          $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
+          if (-not $msi) {
+            Write-Error "MSI was not produced - the WiX project or preprocess.py is broken"
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path ..\..\dist | Out-Null
+          Move-Item $msi.FullName "..\..\dist\$env:MSI_NAME"
+          popd
+          Get-Item ".\dist\$env:MSI_NAME" | Format-List Name,Length
+
       # Optional runtime helpers. Missing ones degrade gracefully rather than
       # failing the build, since they are not needed for the install flow.
       - name: Fetch optional runtime resources
@@ -536,13 +563,17 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: NexDesk-windows-x64
-          path: dist/${{ env.ARTIFACT_NAME }}
+          path: |
+            dist/${{ env.ARTIFACT_NAME }}
+            dist/${{ env.MSI_NAME }}
           if-no-files-found: error
 
       - name: Attach to release
         if: ${{ inputs.make_release || startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          files: dist/${{ env.ARTIFACT_NAME }}
+          files: |
+            dist/${{ env.ARTIFACT_NAME }}
+            dist/${{ env.MSI_NAME }}
           name: NexDesk ${{ env.VERSION }}
           draft: true
