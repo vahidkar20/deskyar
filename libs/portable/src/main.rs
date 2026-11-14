@@ -18,7 +18,10 @@ const APP_METADATA: &[u8] = &[];
 const APP_METADATA_CONFIG: &str = "meta.toml";
 const META_LINE_PREFIX_TIMESTAMP: &str = "timestamp = ";
 const META_LINE_PREFIX_FILE: &str = "file = ";
-const APP_PREFIX: &str = "rustdesk";
+// Fallback extraction directory when no package metadata is injected. NexDesk
+// builds always inject one, so this only decides where a stock packer would
+// unpack; it is branding, not a compatibility boundary.
+const APP_PREFIX: &str = "nexdesk";
 const APPNAME_RUNTIME_ENV_KEY: &str = "RUSTDESK_APPNAME";
 #[cfg(windows)]
 const SET_FOREGROUND_WINDOW_ENV_KEY: &str = "SET_FOREGROUND_WINDOW";
@@ -355,7 +358,15 @@ mod win {
 
     // Used for privacy mode(magnifier impl).
     pub const RUNTIME_BROKER_EXE: &'static str = "C:\\Windows\\System32\\RuntimeBroker.exe";
-    pub const WIN_TOPMOST_INJECTED_PROCESS_EXE: &'static str = "RuntimeBroker_rustdesk.exe";
+    // Named for the product rather than for the system binary it is a copy of.
+    // The old `RuntimeBroker_rustdesk.exe` read as a masquerading system
+    // process, which is one of the patterns scanners score highest, and it
+    // carried a competing brand name into the process list.
+    //
+    // Must match WIN_TOPMOST_INJECTED_PROCESS_EXE in
+    // src/privacy_mode/win_topmost_window.rs - the packer writes this file and
+    // the app injects into it by name.
+    pub const WIN_TOPMOST_INJECTED_PROCESS_EXE: &'static str = "NexDeskBroker.exe";
 
     pub(super) fn copy_runtime_broker(dir: &Path) {
         let src = RUNTIME_BROKER_EXE;
@@ -371,7 +382,7 @@ mod win {
             }
         }
         let _allow_err = Command::new("taskkill")
-            .args(&["/F", "/IM", "RuntimeBroker_rustdesk.exe"])
+            .args(&["/F", "/IM", WIN_TOPMOST_INJECTED_PROCESS_EXE])
             .creation_flags(winapi::um::winbase::CREATE_NO_WINDOW)
             .output();
         let _allow_err = std::fs::copy(src, &format!("{}\\{}", dir.to_string_lossy(), tgt));

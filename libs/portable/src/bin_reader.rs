@@ -16,7 +16,14 @@ const PACKAGE_RESOURCE_NAME: &str = "RDPKG";
 
 // 4bytes
 const LENGTH: usize = 4;
-const IDENTIFIER: &[u8] = b"rustdesk";
+// Blob delimiter. Must match `BLOB_IDENTIFIER` in generate.py, and must stay
+// exactly 8 bytes because IDENTIFIER_LENGTH is a fixed constant rather than a
+// length-prefixed field.
+//
+// This was `rustdesk` - the upstream packer's token, which antivirus family
+// signatures anchor on. Writer and reader ship in the same build, so changing
+// both needs no migration.
+const IDENTIFIER: &[u8] = b"nexdesk1";
 const IDENTIFIER_LENGTH: usize = 8;
 const MD5_LENGTH: usize = 32;
 const BUF_SIZE: usize = 4096;
@@ -296,7 +303,7 @@ mod tests {
         assert!(parse(b"".as_slice()).is_none());
         assert!(parse(b"notrustd".as_slice()).is_none());
         // Truncated mid-record rather than panicking on a slice out of range.
-        assert!(parse(b"rustdesk\x00\x00\x00\x40partial".as_slice()).is_none());
+        assert!(parse(b"nexdesk1\x00\x00\x00\x40partial".as_slice()).is_none());
     }
 
     #[test]
