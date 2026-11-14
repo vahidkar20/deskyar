@@ -711,7 +711,7 @@ pub async fn start_server(is_server: bool, no_server: bool) {
         #[cfg(any(target_os = "macos", target_os = "linux"))]
         wait_initial_config_sync().await;
         #[cfg(target_os = "windows")]
-        crate::platform::try_kill_broker();
+        crate::platform::try_kill_privacy_host();
         #[cfg(feature = "hwcodec")]
         scrap::hwcodec::start_check_process();
         crate::RendezvousMediator::start_all().await;

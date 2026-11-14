@@ -189,8 +189,6 @@ fn setup(
         file.write_to_file(&dir);
     }
     write_meta(&dir, ts, &metadata_paths);
-    #[cfg(windows)]
-    win::copy_runtime_broker(&dir);
     #[cfg(linux)]
     reader.configure_permission(&dir);
     Some(dir.join(&reader.exe))
@@ -354,39 +352,10 @@ fn main() -> Result<(), String> {
 
 #[cfg(windows)]
 mod win {
-    use std::{fs, os::windows::process::CommandExt, path::Path, process::Command};
-
-    // Used for privacy mode(magnifier impl).
-    pub const RUNTIME_BROKER_EXE: &'static str = "C:\\Windows\\System32\\RuntimeBroker.exe";
-    // Named for the product rather than for the system binary it is a copy of.
-    // The old `RuntimeBroker_rustdesk.exe` read as a masquerading system
-    // process, which is one of the patterns scanners score highest, and it
-    // carried a competing brand name into the process list.
-    //
-    // Must match WIN_TOPMOST_INJECTED_PROCESS_EXE in
-    // src/privacy_mode/win_topmost_window.rs - the packer writes this file and
-    // the app injects into it by name.
-    pub const WIN_TOPMOST_INJECTED_PROCESS_EXE: &'static str = "NexDeskBroker.exe";
-
-    pub(super) fn copy_runtime_broker(dir: &Path) {
-        let src = RUNTIME_BROKER_EXE;
-        let tgt = WIN_TOPMOST_INJECTED_PROCESS_EXE;
-        let target_file = dir.join(tgt);
-        if target_file.exists() {
-            if let (Ok(src_file), Ok(tgt_file)) = (fs::read(src), fs::read(&target_file)) {
-                let src_md5 = format!("{:x}", md5::compute(&src_file));
-                let tgt_md5 = format!("{:x}", md5::compute(&tgt_file));
-                if src_md5 == tgt_md5 {
-                    return;
-                }
-            }
-        }
-        let _allow_err = Command::new("taskkill")
-            .args(&["/F", "/IM", WIN_TOPMOST_INJECTED_PROCESS_EXE])
-            .creation_flags(winapi::um::winbase::CREATE_NO_WINDOW)
-            .output();
-        let _allow_err = std::fs::copy(src, &format!("{}\\{}", dir.to_string_lossy(), tgt));
-    }
+    // The packer used to copy C:\Windows\System32\RuntimeBroker.exe into the
+    // payload as `NexDeskBroker.exe` so privacy mode could inject into it. The
+    // overlay host is now an ordinary file that ships inside the payload, so
+    // there is nothing to synthesise here.
 
     /// Check if the executable is a Quick Support version.
     /// Note: This function must be kept in sync with `src/core_main.rs`.

@@ -1,9 +1,7 @@
 use super::{CursorData, ResultType};
 use crate::{
-    common::PORTABLE_APPNAME_RUNTIME_ENV_KEY,
-    custom_server::*,
-    ipc,
-    privacy_mode::win_topmost_window::{self, WIN_TOPMOST_INJECTED_PROCESS_EXE},
+    common::PORTABLE_APPNAME_RUNTIME_ENV_KEY, custom_server::*, ipc,
+    privacy_mode::win_topmost_window::PRIVACY_HOST_EXE,
 };
 use base::message_proto::{DisplayInfo, Resolution, WindowsSession};
 use hbb_common::{
@@ -1404,51 +1402,6 @@ fn get_default_install_path() -> String {
     format!("{}\\{}", pf, crate::get_app_name())
 }
 
-pub fn check_update_broker_process() -> ResultType<()> {
-    let process_exe = win_topmost_window::INJECTED_PROCESS_EXE;
-    let origin_process_exe = win_topmost_window::ORIGIN_PROCESS_EXE;
-
-    let exe_file = std::env::current_exe()?;
-    let Some(cur_dir) = exe_file.parent() else {
-        bail!("Cannot get parent of current exe file");
-    };
-    let cur_exe = cur_dir.join(process_exe);
-
-    // Force update broker exe if failed to check modified time.
-    let cmds = format!(
-        "
-        chcp 65001
-        taskkill /F /IM {process_exe}
-        copy /Y \"{origin_process_exe}\" \"{cur_exe}\"
-    ",
-        cur_exe = cur_exe.to_string_lossy(),
-    );
-
-    if !std::path::Path::new(&cur_exe).exists() {
-        run_cmds(cmds, false, "update_broker")?;
-        return Ok(());
-    }
-
-    let ori_modified = fs::metadata(origin_process_exe)?.modified()?;
-    if let Ok(metadata) = fs::metadata(&cur_exe) {
-        if let Ok(cur_modified) = metadata.modified() {
-            if cur_modified == ori_modified {
-                return Ok(());
-            } else {
-                log::info!(
-                    "broker process updated, modify time from {:?} to {:?}",
-                    cur_modified,
-                    ori_modified
-                );
-            }
-        }
-    }
-
-    run_cmds(cmds, false, "update_broker")?;
-
-    Ok(())
-}
-
 fn get_install_info_with_subkey(subkey: String) -> (String, String, String, String) {
     let mut path = get_reg_of(&subkey, "InstallLocation");
     if path.is_empty() {
@@ -1477,15 +1430,11 @@ pub fn copy_raw_cmd(src_raw: &str, _raw: &str, _path: &str) -> ResultType<String
 }
 
 pub fn copy_exe_cmd(src_exe: &str, exe: &str, path: &str) -> ResultType<String> {
-    let main_exe = copy_raw_cmd(src_exe, exe, path)?;
-    Ok(format!(
-        "
-        {main_exe}
-        copy /Y \"{ORIGIN_PROCESS_EXE}\" \"{path}\\{broker_exe}\"
-        ",
-        ORIGIN_PROCESS_EXE = win_topmost_window::ORIGIN_PROCESS_EXE,
-        broker_exe = win_topmost_window::INJECTED_PROCESS_EXE,
-    ))
+    // The install used to need a second step here: the privacy-mode host was a
+    // renamed copy of C:\Windows\System32\RuntimeBroker.exe, which the installer
+    // had to recreate in the install directory. The host now ships as an
+    // ordinary file inside the payload, so copying the directory is enough.
+    copy_raw_cmd(src_exe, exe, path)
 }
 
 #[inline]
@@ -1804,7 +1753,7 @@ fn get_before_uninstall(kill_self: bool) -> String {
     reg delete HKEY_CLASSES_ROOT\\{ext} /f
     netsh advfirewall firewall delete rule name=\"{app_name} Service\"
     ",
-        broker_exe = WIN_TOPMOST_INJECTED_PROCESS_EXE,
+        broker_exe = PRIVACY_HOST_EXE,
     )
 }
 
@@ -3295,7 +3244,7 @@ pub fn uninstall_service(show_new_window: bool, _: bool) -> bool {
     taskkill /F /IM {app_name}.exe{filter}
     ",
         app_name = crate::get_app_name(),
-        broker_exe = WIN_TOPMOST_INJECTED_PROCESS_EXE,
+        broker_exe = PRIVACY_HOST_EXE,
     );
     if let Err(err) = run_cmds(cmds, false, "uninstall") {
         Config::set_option("stop-service".into(), "".into());
@@ -4009,13 +3958,10 @@ pub fn try_remove_temp_update_files() {
 }
 
 #[inline]
-pub fn try_kill_broker() {
+pub fn try_kill_privacy_host() {
     allow_err!(std::process::Command::new("cmd")
         .arg("/c")
-        .arg(&format!(
-            "taskkill /F /IM {}",
-            WIN_TOPMOST_INJECTED_PROCESS_EXE
-        ))
+        .arg(&format!("taskkill /F /IM {}", PRIVACY_HOST_EXE))
         .creation_flags(winapi::um::winbase::CREATE_NO_WINDOW)
         .spawn());
 }

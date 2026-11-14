@@ -10,33 +10,30 @@ use std::{
 use winapi::{
     shared::{
         minwindef::{BOOL, FALSE, LPARAM, TRUE},
-        ntdef::{HANDLE, NULL},
+        ntdef::NULL,
         windef::{HDC, HMONITOR, HWND, RECT},
     },
     um::{
         handleapi::CloseHandle,
-        libloaderapi::{GetModuleHandleA, GetProcAddress},
-        memoryapi::{VirtualAllocEx, WriteProcessMemory},
         processthreadsapi::{
-            CreateProcessAsUserW, QueueUserAPC, ResumeThread, TerminateProcess,
-            PROCESS_INFORMATION, STARTUPINFOW,
+            CreateProcessAsUserW, TerminateProcess, PROCESS_INFORMATION, STARTUPINFOW,
         },
-        winbase::{WTSGetActiveConsoleSessionId, CREATE_SUSPENDED, DETACHED_PROCESS},
-        winnt::{MEM_COMMIT, PAGE_READWRITE},
+        winbase::{WTSGetActiveConsoleSessionId, DETACHED_PROCESS},
         winuser::*,
     },
 };
 
 pub(super) const PRIVACY_MODE_IMPL: &str = "privacy_mode_impl_mag";
 
-pub const ORIGIN_PROCESS_EXE: &'static str = "C:\\Windows\\System32\\RuntimeBroker.exe";
-// Must match WIN_TOPMOST_INJECTED_PROCESS_EXE in
-// libs/portable/src/main.rs - the packer copies the system binary under this
-// name and this module injects into the copy.
-pub const WIN_TOPMOST_INJECTED_PROCESS_EXE: &'static str = "NexDeskBroker.exe";
-pub const INJECTED_PROCESS_EXE: &'static str = WIN_TOPMOST_INJECTED_PROCESS_EXE;
-pub(super) const PRIVACY_WINDOW_CLASS: &'static str = "RustDeskPrivacyWindowClass";
-pub(super) const PRIVACY_WINDOW_NAME: &'static str = "RustDeskPrivacyWindow";
+/// The overlay host shipped next to the application, built from
+/// `libs/privacy-host`. It creates the per-monitor windows itself, so this
+/// module never copies a system binary and never writes into another process.
+///
+/// Its window class and title must match `WINDOW_CLASS` / `WINDOW_TITLE` in
+/// `libs/privacy-host/src/main.rs`.
+pub const PRIVACY_HOST_EXE: &'static str = "NexDeskPrivacyHost.exe";
+pub(super) const PRIVACY_WINDOW_CLASS: &'static str = "NexDeskPrivacyWindowClass";
+pub(super) const PRIVACY_WINDOW_NAME: &'static str = "NexDeskPrivacyWindow";
 const PRIVACY_WINDOW_WAIT_MILLIS: u128 = 1_000;
 const PRIVACY_WINDOW_WAIT_EXTRA_MONITOR_MILLIS: u128 = 500;
 const PRIVACY_WINDOW_POLL_INTERVAL_MILLIS: u64 = 100;
@@ -44,7 +41,6 @@ const WM_RUSTDESK_SHOW_WINDOWS: u32 = WM_APP + 3;
 const WM_RUSTDESK_HIDE_WINDOWS: u32 = WM_APP + 4;
 
 struct WindowHandlers {
-    hthread: u64,
     hprocess: u64,
 }
 
@@ -58,19 +54,18 @@ impl WindowHandlers {
     fn reset(&mut self) {
         unsafe {
             if self.hprocess != 0 {
+                // The overlay host is ours to stop. It has no window of its own
+                // to close down and no state to flush, so terminating it is the
+                // whole shutdown sequence.
                 let _res = TerminateProcess(self.hprocess as _, 0);
                 CloseHandle(self.hprocess as _);
             }
             self.hprocess = 0;
-            if self.hthread != 0 {
-                CloseHandle(self.hthread as _);
-            }
-            self.hthread = 0;
         }
     }
 
     fn is_default(&self) -> bool {
-        self.hthread == 0 && self.hprocess == 0
+        self.hprocess == 0
     }
 }
 
@@ -102,7 +97,10 @@ impl PrivacyMode for PrivacyModeImpl {
 
         let exe_file = std::env::current_exe()?;
         if let Some(cur_dir) = exe_file.parent() {
-            if !cur_dir.join("WindowInjection.dll").exists() {
+            if !cur_dir.join(PRIVACY_HOST_EXE).exists() {
+                // Privacy mode is optional. Without the overlay host there is
+                // nothing to blank the local screen with, so report the mode as
+                // unavailable instead of failing the connection.
                 return Ok(false);
             }
         } else {
@@ -114,7 +112,7 @@ impl PrivacyMode for PrivacyModeImpl {
 
         let should_start_broker = self.handlers.is_default();
         if should_start_broker {
-            log::info!("turn_on_privacy, broker not running, try start");
+            log::info!("turn_on_privacy, overlay host not running, try start");
             self.start()?;
             std::thread::sleep(std::time::Duration::from_millis(1_000));
         }
@@ -196,37 +194,25 @@ impl PrivacyModeImpl {
             return Ok(());
         }
 
-        log::info!("Start privacy mode window broker, check_update_broker_process");
-        if let Err(e) = crate::platform::windows::check_update_broker_process() {
-            log::warn!(
-                "Failed to check update broker process. Privacy mode may not work properly. {}",
-                e
-            );
-        }
-
         let exe_file = std::env::current_exe()?;
         let Some(cur_dir) = exe_file.parent() else {
             bail!("Cannot get parent of current exe file");
         };
 
-        let dll_file = cur_dir.join("WindowInjection.dll");
-        if !dll_file.exists() {
+        let host_file = cur_dir.join(PRIVACY_HOST_EXE);
+        if !host_file.exists() {
             bail!(
                 "Failed to find required file {}",
-                dll_file.to_string_lossy().as_ref()
+                host_file.to_string_lossy().as_ref()
             );
         }
 
         if wait_find_privacy_hwnds(PRIVACY_WINDOW_WAIT_MILLIS).is_ok() {
-            log::info!("Privacy window is ready");
+            log::info!("Privacy overlay windows are already up");
             return Ok(());
         }
 
-        // let cmdline = cur_dir.join("MiniBroker.exe").to_string_lossy().to_string();
-        let cmdline = cur_dir
-            .join(INJECTED_PROCESS_EXE)
-            .to_string_lossy()
-            .to_string();
+        let cmdline = host_file.to_string_lossy().to_string();
 
         unsafe {
             let cmd_utf16: Vec<u16> = cmdline.encode_utf16().chain(Some(0).into_iter()).collect();
@@ -264,6 +250,12 @@ impl PrivacyModeImpl {
                 bail!("Failed to get token of current user");
             }
 
+            // Launched with the interactive user's token so the overlays land on
+            // the desktop someone is actually looking at. This process may be a
+            // service running in session 0, where a window is never seen.
+            //
+            // No CREATE_SUSPENDED and no ResumeThread: the child is a complete
+            // program, not a host for injected code, so it can simply run.
             let create_res = CreateProcessAsUserW(
                 token,
                 NULL as _,
@@ -271,7 +263,7 @@ impl PrivacyModeImpl {
                 NULL as _,
                 NULL as _,
                 FALSE,
-                CREATE_SUSPENDED | DETACHED_PROCESS,
+                DETACHED_PROCESS,
                 NULL,
                 NULL as _,
                 &mut start_info,
@@ -280,35 +272,14 @@ impl PrivacyModeImpl {
             CloseHandle(token);
             if 0 == create_res {
                 bail!(
-                    "Failed to create privacy window process {}, error {}",
+                    "Failed to start privacy overlay host {}, error {}",
                     cmdline,
                     Error::last_os_error()
                 );
             };
 
-            if let Err(e) = inject_dll(
-                proc_info.hProcess,
-                proc_info.hThread,
-                dll_file.to_string_lossy().as_ref(),
-            ) {
-                TerminateProcess(proc_info.hProcess, 0);
-                CloseHandle(proc_info.hThread);
-                CloseHandle(proc_info.hProcess);
-                return Err(e);
-            }
-
-            if 0xffffffff == ResumeThread(proc_info.hThread) {
-                TerminateProcess(proc_info.hProcess, 0);
-                CloseHandle(proc_info.hThread);
-                CloseHandle(proc_info.hProcess);
-
-                bail!(
-                    "Failed to create privacy window process, error {}",
-                    Error::last_os_error()
-                );
-            }
-
-            self.handlers.hthread = proc_info.hThread as _;
+            // The thread handle has no use here: nothing is resumed or injected.
+            CloseHandle(proc_info.hThread);
             self.handlers.hprocess = proc_info.hProcess as _;
 
             if let Err(e) = wait_find_privacy_hwnds(PRIVACY_WINDOW_WAIT_MILLIS) {
@@ -375,50 +346,6 @@ impl Drop for PrivacyModeImpl {
             allow_err!(self.turn_off_privacy(self.conn_id, None));
         }
     }
-}
-
-unsafe fn inject_dll<'a>(hproc: HANDLE, hthread: HANDLE, dll_file: &'a str) -> ResultType<()> {
-    let dll_file_utf16: Vec<u16> = dll_file.encode_utf16().chain(Some(0).into_iter()).collect();
-
-    let buf = VirtualAllocEx(
-        hproc,
-        NULL as _,
-        dll_file_utf16.len() * 2,
-        MEM_COMMIT,
-        PAGE_READWRITE,
-    );
-    if buf.is_null() {
-        bail!("Failed VirtualAllocEx");
-    }
-
-    let mut written: usize = 0;
-    if 0 == WriteProcessMemory(
-        hproc,
-        buf,
-        dll_file_utf16.as_ptr() as _,
-        dll_file_utf16.len() * 2,
-        &mut written,
-    ) {
-        bail!("Failed WriteProcessMemory");
-    }
-
-    let kernel32_modulename = CString::new("kernel32")?;
-    let hmodule = GetModuleHandleA(kernel32_modulename.as_ptr() as _);
-    if hmodule.is_null() {
-        bail!("Failed GetModuleHandleA");
-    }
-
-    let load_librarya_name = CString::new("LoadLibraryW")?;
-    let load_librarya = GetProcAddress(hmodule, load_librarya_name.as_ptr() as _);
-    if load_librarya.is_null() {
-        bail!("Failed GetProcAddress of LoadLibraryW");
-    }
-
-    if 0 == QueueUserAPC(Some(std::mem::transmute(load_librarya)), hthread, buf as _) {
-        bail!("Failed QueueUserAPC");
-    }
-
-    Ok(())
 }
 
 fn wait_find_privacy_hwnds(msecs: u128) -> ResultType<Vec<HWND>> {

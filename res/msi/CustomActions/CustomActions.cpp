@@ -206,11 +206,17 @@ UINT __stdcall RemoveRuntimeGeneratedFiles(
     }
 
     WcaLog(LOGMSG_STANDARD, "Removing runtime-generated files from install folder: %ls", installFolder);
-    // The privacy-mode helper is a copy of the system RuntimeBroker, made at
-    // run time, so no component owns it and MSI will not remove it. Both names
-    // are listed: 1.5.11 and earlier called it RuntimeBroker_rustdesk.exe, and
-    // an upgrade path that only knew the new name would strand the old copy in
-    // Program Files.
+    // Legacy cleanup only.
+    //
+    // Up to 1.5.11 the privacy-mode helper was a copy of the system
+    // RuntimeBroker, created at run time, so no component owned it and MSI would
+    // not remove it. That copy is gone: the overlay host now ships as an
+    // ordinary payload file, owned by a component like everything else.
+    //
+    // Both legacy names are still deleted so an upgrade does not strand a copy
+    // of a system binary in Program Files. 1.5.11 and earlier called it
+    // RuntimeBroker_rustdesk.exe; the interim build renamed it to
+    // NexDeskBroker.exe. Neither name is ever created again.
     DeleteRuntimeGeneratedFile(installFolder, L"NexDeskBroker.exe");
     DeleteRuntimeGeneratedFile(installFolder, L"RuntimeBroker_rustdesk.exe");
 
