@@ -17,9 +17,23 @@
 
 extern "C" uint32_t get_session_user_info(PWSTR bufin, uint32_t nin, uint32_t id);
 
+// Diagnostic log for the XPS printing path.
+//
+// Upstream wrote this to C:\Windows\temp\test_rustdesk.log. That needs
+// administrator rights to create, so in a normal user session every call
+// silently failed, and the string itself put an upstream-branded file name in
+// a system directory inside the shipped DLL. Write it to the per-user temp
+// directory instead: same diagnostic, no elevation, no system-directory write.
 void flog(char const *fmt, ...)
 {
-    FILE *h = fopen("C:\\Windows\\temp\\test_rustdesk.log", "at");
+    wchar_t temp_dir[MAX_PATH];
+    DWORD n = GetTempPathW(MAX_PATH, temp_dir);
+    if (n == 0 || n >= MAX_PATH - 32)
+        return;
+    wchar_t path[MAX_PATH];
+    if (swprintf_s(path, MAX_PATH, L"%snexdesk-print.log", temp_dir) < 0)
+        return;
+    FILE *h = _wfopen(path, L"at");
     if (!h)
         return;
     va_list arg;

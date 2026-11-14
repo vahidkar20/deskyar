@@ -1,10 +1,13 @@
 [package]
 name = "rustdesk"
 version = "1.5.11"
-authors = ["rustdesk <info@rustdesk.com>"]
+authors = ["Yar.One Holding <info@nexdesk.ir>"]
 edition = "2021"
 build= "build.rs"
-description = "RustDesk Remote Desktop"
+description = "NexDesk remote desktop"
+license = "AGPL-3.0-only"
+repository = "https://github.com/vahidkar20/deskyar"
+homepage = "https://nexdesk.ir"
 default-run = "rustdesk"
 rust-version = "1.75"
 
@@ -257,11 +260,16 @@ webrtc-sctp = { git = "https://github.com/rustdesk-org/webrtc", rev = "49c89bd8d
 LegalCopyright = "Copyright © 2026 NexDesk. Based on RustDesk (AGPL-3.0)."
 CompanyName = "NexDesk"
 ProductName = "NexDesk"
-FileDescription = "NexDesk Remote Desktop"
-InternalName = "librustdesk"
+FileDescription = "NexDesk Remote Desktop Core"
 # This block stamps `librustdesk.dll`, which is the artifact the Flutter build
 # ships. The Sciter build (`--features inline`) reuses the same metadata for a
 # rustdesk.exe that this project no longer distributes.
+#
+# InternalName and OriginalFilename are deliberately left matching the real
+# file name. They describe the file, not the product, and a DLL that claims to
+# be `NexDesk.dll` while shipping as `librustdesk.dll` is a stronger false
+# positive signal than an inherited file name. Do not "fix" these.
+InternalName = "librustdesk"
 OriginalFilename = "librustdesk.dll"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
