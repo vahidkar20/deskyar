@@ -1025,12 +1025,6 @@ def main():
     if os.path.isfile('/usr/bin/pacman'):
         system2('git checkout src/ui/common.tis')
     version = get_version()
-    # `libs/virtual_display/dylib/build.rs` stamps its VERSIONINFO from this.
-    # That crate carries its own package version (0.1.0) which has nothing to do
-    # with the product version, and a shipped DLL reporting a different version
-    # from every other binary is both an antivirus signal and a code-signing
-    # rejection: SignPath requires identical version attributes across a build.
-    os.environ['NEXDESK_VERSION'] = version
     features = ','.join(get_features(args))
     flutter = args.flutter
     if not flutter:

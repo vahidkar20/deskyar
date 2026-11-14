@@ -33,15 +33,19 @@ LOCK = "Cargo.lock"
 
 # Workspace members whose `[package] version` is the product version, because
 # winres stamps their VERSIONINFO from it. See their Cargo.toml comments.
+# `virtual_display` is a plain rlib with no VERSIONINFO, but it is listed so a
+# version bump cannot leave it stranded at an old number in Cargo.lock.
 VERSIONED_MEMBERS = (
     "libs/portable/Cargo.toml",
     "libs/virtual_display/dylib/Cargo.toml",
+    "libs/virtual_display/Cargo.toml",
 )
 
 # The `[[package]]` names those members appear under in Cargo.lock.
 LOCKED_MEMBERS = (
     "rustdesk-portable-packer",
     "dylib_virtual_display",
+    "virtual_display",
 )
 
 
