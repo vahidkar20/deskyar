@@ -19,6 +19,8 @@ g_build_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
 # Replace the following links with your own in the custom arp properties.
 # https://learn.microsoft.com/en-us/windows/win32/msi/property-reference
+# These surface in Add/Remove Programs, so they point at the product rather than
+# at the upstream project the source is forked from.
 g_arpsystemcomponent = {
     "Comments": {
         "msi": "ARPCOMMENTS",
@@ -27,15 +29,15 @@ g_arpsystemcomponent = {
     },
     "Contact": {
         "msi": "ARPCONTACT",
-        "v": "https://github.com/rustdesk/rustdesk",
+        "v": "https://nexdesk.ir",
     },
     "HelpLink": {
         "msi": "ARPHELPLINK",
-        "v": "https://github.com/rustdesk/rustdesk/issues/",
+        "v": "https://nexdesk.ir",
     },
     "ReadMe": {
         "msi": "ARPREADME",
-        "v": "https://github.com/rustdesk/rustdesk",
+        "v": "https://nexdesk.ir",
     },
 }
 
@@ -517,7 +519,20 @@ def update_license_file(app_name):
         f.write(license_content)
 
 
-def replace_component_guids_in_wxs():
+def replace_component_guids_in_wxs(app_name):
+    """Give every <Component> a GUID that is stable across builds.
+
+    MSI identifies a component by its GUID, not by its Id. Generating a fresh
+    GUID on every build - which is what uuid4() here did - makes Windows treat
+    each release's components as entirely new ones: a major upgrade removes and
+    rewrites every file instead of updating it, and orphaned registry rows are
+    left behind pointing at components that no longer exist.
+
+    A name-based uuid5 is stable for a given (product, component Id) pair and
+    still unique per product, which is the same approach gen_upgrade_info()
+    already uses for the UpgradeCode. Namespacing on the app name keeps two
+    products built from this tree from colliding.
+    """
     langs_dir = Path(sys.argv[0]).parent.joinpath("Package")
     for file_path in langs_dir.glob("**/*.wxs"):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -525,9 +540,13 @@ def replace_component_guids_in_wxs():
 
         # <Component Id="Product.Registry.DefaultIcon" Guid="6DBF2690-0955-4C6A-940F-634DDA503F49">
         for i, line in enumerate(lines):
-            match = re.search(r'Component.+Guid="([^"]+)"', line)
+            match = re.search(r'Component[^>]*Id="([^"]+)"[^>]*Guid="([^"]+)"', line)
             if match:
-                lines[i] = re.sub(r'Guid="[^"]+"', f'Guid="{uuid.uuid4()}"', line)
+                component_id = match.group(1)
+                stable = uuid.uuid5(
+                    uuid.NAMESPACE_OID, f"{app_name}:{component_id}"
+                )
+                lines[i] = re.sub(r'Guid="[^"]+"', f'Guid="{stable}"', line)
 
         with open(file_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
@@ -552,7 +571,7 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     if app_name != "RustDesk":
-        replace_component_guids_in_wxs()
+        replace_component_guids_in_wxs(app_name)
 
     if not gen_upgrade_info():
         sys.exit(-1)
