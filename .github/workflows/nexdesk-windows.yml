@@ -1,20 +1,27 @@
 name: Build NexDesk (Windows x64)
 
-# Produces the single-file portable exe:
-#   NexDesk-1.5.0-x64.exe
+# Produces two artifacts:
+#   NexDesk-<version>-x64.msi      the installer (primary)
+#   NexDesk-<version>-x86_64.exe   single-file portable exe
 #
-# Running it extracts the payload to %LOCALAPPDATA%\nexdesk and starts the app
-# in portable mode. The home page then shows the "Install NexDesk" button,
-# which promotes the run into a real installation under Program Files.
+# The MSI installs under Program Files. The portable exe extracts the payload to
+# %LOCALAPPDATA%\nexdesk and runs from there; the home page then offers to
+# promote that run into a real installation.
+#
+# Both are Authenticode-signed when the SIGN_ENABLED repository variable is set.
+# Signing happens in two stages because the portable exe embeds a compressed
+# copy of the payload: see docs/CODE-SIGNING.md. A build with SIGN_ENABLED unset
+# still succeeds, so contributors and forks can build, but it warns loudly and
+# must not be published as a release.
 #
 # Trigger: Actions -> "Build NexDesk (Windows x64)" -> Run workflow,
-# or push a tag like v1.5.0.
+# or push a tag like v1.5.11.
 
 on:
   workflow_dispatch:
     inputs:
       make_release:
-        description: "Attach the exe to a GitHub Release"
+        description: "Attach the artifacts to a GitHub Release"
         type: boolean
         default: false
   # Deliberately not triggered by tag pushes: the release is created by
@@ -23,6 +30,8 @@ on:
 
 permissions:
   contents: write
+  # The SignPath action reads the artifact uploaded earlier in the same run.
+  actions: read
 
 # One build at a time. A Windows run costs ~120 billed minutes (the runner has
 # a 2x multiplier), so leaving two queued runs to finish after a second push
@@ -72,6 +81,20 @@ env:
   NEXDESK_UPDATE_MANIFEST_URL: https://nexdesk.ir/updates/windows.json
   NEXDESK_UPDATE_CHANNEL: stable
   NEXDESK_UPDATE_PUBKEY: ${{ vars.NEXDESK_UPDATE_PUBKEY }}
+  # Code signing. Left as a repository *variable* rather than a secret so the
+  # value is visible in the run log, and so a fork with no signing project can
+  # still build: unset means the artifacts ship unsigned, with a warning.
+  #
+  # Set in Settings -> Secrets and variables -> Actions -> Variables:
+  #   SIGN_ENABLED          = "true"
+  #   SIGNPATH_ORG_ID       = the organization GUID from SignPath
+  #   SIGNPATH_PROJECT_SLUG = nexdesk
+  #   SIGNPATH_POLICY_SLUG  = release-signing
+  # plus the SIGNPATH_API_TOKEN secret.
+  SIGN_ENABLED: ${{ vars.SIGN_ENABLED }}
+  SIGNPATH_ORG_ID: ${{ vars.SIGNPATH_ORG_ID }}
+  SIGNPATH_PROJECT_SLUG: nexdesk
+  SIGNPATH_POLICY_SLUG: release-signing
 
 jobs:
   # The Dart <-> Rust bridge is generated, not committed, so it has to be
@@ -83,7 +106,10 @@ jobs:
     name: Windows x64
     needs: [bridge]
     runs-on: windows-2022
-    timeout-minutes: 150
+    # A signing request waits for a human approver, and that wait counts against
+    # this budget. 150 minutes covered the build alone; the extra headroom is
+    # for two approvals, each of which can sit for tens of minutes.
+    timeout-minutes: 240
 
     steps:
       - name: Export cache environment for vcpkg
@@ -122,23 +148,34 @@ jobs:
           # the manifests, and it refuses *after* the Flutter engine download and
           # the vcpkg install - roughly forty minutes in, with a message that
           # points at the lock file rather than at the version bump that caused
-          # it. Bumping the version in Cargo.toml without updating Cargo.lock is
-          # the usual reason, so check that pair here, in two seconds.
-          manifest=$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')
-          locked=$(grep -A2 '^name = "rustdesk"$' Cargo.lock \
-                   | grep -m1 '^version = ' \
-                   | sed -E 's/.*"(.*)".*/\1/')
-          if [ -z "$locked" ]; then
-            echo "::error::no [[package]] name = \"rustdesk\" entry in Cargo.lock"
-            exit 1
-          fi
-          if [ "$manifest" != "$locked" ]; then
-            echo "::error::Cargo.toml says $manifest but Cargo.lock says $locked."
-            echo "Fix: change the version line of the 'rustdesk' package in Cargo.lock to $manifest,"
-            echo "or run 'cargo generate-lockfile' locally and commit the result."
-            exit 1
-          fi
-          echo "Cargo.lock is in sync ($manifest)"
+          # it. Bumping the version in a Cargo.toml without updating Cargo.lock
+          # is the usual reason, so check that pair here, in two seconds.
+          #
+          # Three crates are checked, not just the root: `libs/portable` and
+          # `libs/virtual_display/dylib` ship inside the payload and stamp their
+          # VERSIONINFO from their own package version, so a bump that missed
+          # one of them would publish a payload that disagrees with itself.
+          check() {
+            local pkg="$1" manifest="$2" want locked
+            want=$(grep -m1 '^version' "$manifest" | sed -E 's/.*"(.*)".*/\1/')
+            locked=$(grep -A2 "^name = \"$pkg\"\$" Cargo.lock \
+                     | grep -m1 '^version = ' \
+                     | sed -E 's/.*"(.*)".*/\1/')
+            if [ -z "$locked" ]; then
+              echo "::error::no [[package]] name = \"$pkg\" entry in Cargo.lock"
+              return 1
+            fi
+            if [ "$want" != "$locked" ]; then
+              echo "::error::$manifest says $want but Cargo.lock says $locked for $pkg."
+              echo "Fix: run 'python scripts/bump-version.py $want' - it updates"
+              echo "every manifest and the matching lock entries together."
+              return 1
+            fi
+            echo "$pkg: $want (in sync)"
+          }
+          check rustdesk Cargo.toml
+          check rustdesk-portable-packer libs/portable/Cargo.toml
+          check dylib_virtual_display libs/virtual_display/dylib/Cargo.toml
 
       - name: Restore generated bridge
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -520,6 +557,126 @@ jobs:
           Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe","usbmmidd_v2\deviceinstaller.exe","usbmmidd_v2\usbmmidd.bat" -ErrorAction SilentlyContinue
           mv -Force .\usbmmidd_v2 .\NexDesk
 
+      # --- Signing stage 1: the binaries that end up inside data.bin --------
+      #
+      # The packer brotli-compresses this whole folder into data.bin, and
+      # SignPath cannot traverse that container, so the inner binaries must be
+      # signed *before* packing. Signing only the outer stub would leave
+      # NexDesk.exe and librustdesk.dll unsigned, and Windows evaluates exactly
+      # those when the packer extracts them and launches the app - which is the
+      # moment users were seeing the warning.
+      #
+      # flutter_windows.dll is deliberately excluded: it is RustDesk's patched
+      # Flutter engine under a BSD licence, not our artifact, and signing it
+      # would assert something untrue about who built it.
+      - name: Stage the payload binaries
+        if: env.SIGN_ENABLED == 'true'
+        shell: bash
+        run: |
+          mkdir -p signing/inner
+          cp ./NexDesk/NexDesk.exe \
+             ./NexDesk/librustdesk.dll \
+             ./NexDesk/dylib_virtual_display.dll \
+             signing/inner/
+          ls -l signing/inner
+
+      - name: Upload the payload binaries
+        if: env.SIGN_ENABLED == 'true'
+        id: upload-inner
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nexdesk-unsigned-inner
+          path: signing/inner
+          if-no-files-found: error
+
+      - name: Sign the payload binaries
+        # Pinned to v3 rather than a commit SHA: confirm the current release SHA
+        # before the first signed build and pin it, to match the other actions
+        # in this file.
+        if: env.SIGN_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ env.SIGNPATH_ORG_ID }}
+          project-slug: ${{ env.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ env.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: nexdesk-inner
+          github-artifact-id: ${{ steps.upload-inner.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-inner
+
+      - name: Apply and verify the signed payload binaries
+        if: env.SIGN_ENABLED == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Copy-Item -Path ./signed-inner/* -Destination ./NexDesk -Recurse -Force
+
+          $kit = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Directory |
+                 Where-Object { $_.Name -match '^\d+(\.\d+)+$' } |
+                 Sort-Object { [version]$_.Name } -Descending |
+                 Select-Object -First 1
+          if (-not $kit) { throw 'no Windows SDK bin directory found - signtool is unavailable' }
+          $signtool = Join-Path $kit.FullName 'x64\signtool.exe'
+
+          foreach ($f in 'NexDesk.exe', 'librustdesk.dll', 'dylib_virtual_display.dll') {
+            $path = "./NexDesk/$f"
+            & $signtool verify /pa /v $path
+            if ($LASTEXITCODE -ne 0) { throw "$f failed signtool verify" }
+
+            $sig = Get-AuthenticodeSignature $path
+            if ($sig.Status -ne 'Valid') { throw "$f signature status is $($sig.Status), expected Valid" }
+            if ($sig.TimeStamperCertificate -eq $null) { throw "$f has no timestamp - the signature would expire with the certificate" }
+            if ($sig.SignerCertificate.Subject -notmatch 'SignPath Foundation') {
+              Write-Warning "$f is signed by '$($sig.SignerCertificate.Subject)', not SignPath Foundation"
+            }
+            Write-Host "$f -> Valid, timestamped"
+          }
+
+      # The MSI's CustomActions are native C++, and WiX v4 resolves through the
+      # .NET SDK, so MSBuild has to be on PATH. The default x86 MSBuild host is
+      # what upstream uses for the x64 MSI: the target platform comes from
+      # -p:Platform, not from the host architecture.
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+
+      # The installer. This is the artifact the signing policy treats as
+      # primary: a plain MSI is what Windows expects for an installed
+      # application, and it avoids the self-extracting-stub shape that
+      # heuristic scanners score highest.
+      #
+      # continue-on-error is deliberate and temporary. This WiX project has
+      # never been built by this workflow before, and a first-run failure in the
+      # restore or the CustomActions C++ build should not stop the portable exe
+      # from shipping. Remove it once a run is green.
+      - name: Build the MSI
+        id: msi
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pushd ./res/msi
+          python preprocess.py --arp -d ../../NexDesk --version $env:VERSION --revision-version 0
+          if ($LASTEXITCODE -ne 0) { throw 'preprocess.py failed' }
+          nuget restore msi.sln
+          msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
+          if ($LASTEXITCODE -ne 0) { throw 'msbuild failed' }
+          $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
+          if (-not $msi) { throw 'Package.msi was not produced' }
+          popd
+          New-Item -ItemType Directory -Force ./dist | Out-Null
+          Copy-Item $msi.FullName "./dist/NexDesk-$env:VERSION-x64.msi"
+          # preprocess.py rewrites res/msi in place (component GUIDs, defines).
+          # Restore it so the packer and any later step see the committed tree.
+          git checkout -- res/msi
+          Get-Item "./dist/NexDesk-$env:VERSION-x64.msi" | Format-List Name, Length
+
+      - name: Report a missing MSI
+        if: steps.msi.outcome == 'failure'
+        shell: bash
+        run: echo "::warning::the MSI build failed - this run ships the portable exe only"
+
       - name: Pack single-file portable exe
         shell: bash
         run: |
@@ -532,17 +689,137 @@ jobs:
           cp ./target/release/rustdesk-portable-packer.exe "./dist/${ARTIFACT_NAME}"
           ls -lh "./dist/${ARTIFACT_NAME}"
 
+      # --- Signing stage 2: the files users actually download ----------------
+      #
+      # By this point the payload inside the portable exe is already signed, so
+      # signing the stub and the MSI completes the chain. A signed release must
+      # carry both artifacts: shipping a signed exe next to an unsigned MSI
+      # would invite users to pick the unsigned one.
+      - name: Stage the release artifacts
+        if: env.SIGN_ENABLED == 'true'
+        shell: bash
+        run: |
+          mkdir -p signing/outer
+          cp "dist/${ARTIFACT_NAME}" signing/outer/
+          if [ ! -f "dist/NexDesk-${VERSION}-x64.msi" ]; then
+            echo "::error::the MSI is missing - a signed release must contain both artifacts"
+            exit 1
+          fi
+          cp "dist/NexDesk-${VERSION}-x64.msi" signing/outer/
+          ls -l signing/outer
+
+      - name: Upload the release artifacts
+        if: env.SIGN_ENABLED == 'true'
+        id: upload-outer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nexdesk-unsigned-outer
+          path: signing/outer
+          if-no-files-found: error
+
+      - name: Sign the release artifacts
+        if: env.SIGN_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ env.SIGNPATH_ORG_ID }}
+          project-slug: ${{ env.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ env.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: nexdesk-outer
+          github-artifact-id: ${{ steps.upload-outer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-outer
+
+      - name: Apply and verify the signed release artifacts
+        if: env.SIGN_ENABLED == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Copy-Item -Path ./signed-outer/* -Destination ./dist -Recurse -Force
+
+          $kit = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Directory |
+                 Where-Object { $_.Name -match '^\d+(\.\d+)+$' } |
+                 Sort-Object { [version]$_.Name } -Descending |
+                 Select-Object -First 1
+          if (-not $kit) { throw 'no Windows SDK bin directory found - signtool is unavailable' }
+          $signtool = Join-Path $kit.FullName 'x64\signtool.exe'
+
+          foreach ($f in $env:ARTIFACT_NAME, "NexDesk-$env:VERSION-x64.msi") {
+            $path = "./dist/$f"
+            & $signtool verify /pa /all /v $path
+            if ($LASTEXITCODE -ne 0) { throw "$f failed signtool verify" }
+
+            $sig = Get-AuthenticodeSignature $path
+            if ($sig.Status -ne 'Valid') { throw "$f signature status is $($sig.Status), expected Valid" }
+            if ($sig.TimeStamperCertificate -eq $null) { throw "$f has no timestamp - the signature would expire with the certificate" }
+            Write-Host "$f -> Valid, timestamped"
+          }
+
+          # Checksums must describe the signed bytes, not the pre-signing ones.
+          # The updater compares the downloaded file against the hash published
+          # by api/update.php, so a stale hash would fail every client update.
+          Get-ChildItem ./dist -File | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Encoding ascii ./dist/SHA256SUMS.txt
+          Get-Content ./dist/SHA256SUMS.txt
+
+      # Cheap guard against publishing a file that would be quarantined on
+      # arrival. -DisableRemediation matters: without it Defender may delete the
+      # artifact mid-scan, and the run would then fail for the wrong reason.
+      #
+      # A detection is fatal only for a signed release. While SIGN_ENABLED is
+      # unset the build is not publishable anyway, and a known false positive
+      # should not block development.
+      - name: Scan the artifacts with Defender
+        shell: pwsh
+        run: |
+          $mp = "$env:ProgramFiles\Windows Defender\MpCmdRun.exe"
+          if (-not (Test-Path $mp)) { Write-Warning 'MpCmdRun.exe not found - skipping the scan'; exit 0 }
+          $bad = @()
+          Get-ChildItem ./dist -File |
+            Where-Object { $_.Extension -in '.exe', '.msi' } |
+            ForEach-Object {
+              & $mp -Scan -ScanType 3 -File $_.FullName -DisableRemediation
+              if ($LASTEXITCODE -ne 0) {
+                $bad += $_.Name
+                Write-Warning "Defender flagged $($_.Name) (exit $LASTEXITCODE)"
+              } else {
+                Write-Host "$($_.Name): clean"
+              }
+            }
+          if ($bad.Count -gt 0) {
+            $list = $bad -join ', '
+            if ($env:SIGN_ENABLED -eq 'true') {
+              Write-Error "Defender flagged $list - submit a false positive (docs/false-positives.md) before releasing"
+              exit 1
+            }
+            Write-Warning "Defender flagged $list - not fatal because SIGN_ENABLED is unset"
+          }
+
+      - name: Warn about an unsigned build
+        if: env.SIGN_ENABLED != 'true'
+        shell: bash
+        run: |
+          echo "::warning::shipping an UNSIGNED build - set the SIGN_ENABLED repository variable to sign. Do not publish this as a release."
+
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: NexDesk-windows-x64
-          path: dist/${{ env.ARTIFACT_NAME }}
+          path: |
+            dist/${{ env.ARTIFACT_NAME }}
+            dist/*.msi
+            dist/SHA256SUMS.txt
           if-no-files-found: error
 
       - name: Attach to release
         if: ${{ inputs.make_release || startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          files: dist/${{ env.ARTIFACT_NAME }}
+          files: |
+            dist/${{ env.ARTIFACT_NAME }}
+            dist/*.msi
+            dist/SHA256SUMS.txt
           name: NexDesk ${{ env.VERSION }}
           draft: true
