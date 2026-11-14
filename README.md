@@ -1,182 +1,136 @@
-<p align="center">
-  <img src="res/logo-header.svg" alt="RustDesk - Your remote desktop"><br>
-  <a href="#raw-steps-to-build">Build</a> •
-  <a href="#how-to-build-with-docker">Docker</a> •
-  <a href="#file-structure">Structure</a> •
-  <a href="#screenshots">Screenshots</a><br>
-  [<a href="docs/README-UA.md">Українська</a>] | [<a href="docs/README-CS.md">česky</a>] | [<a href="docs/README-ZH.md">中文</a>] | [<a href="docs/README-HU.md">Magyar</a>] | [<a href="docs/README-ES.md">Español</a>] | [<a href="docs/README-FA.md">فارسی</a>] | [<a href="docs/README-FR.md">Français</a>] | [<a href="docs/README-DE.md">Deutsch</a>] | [<a href="docs/README-PL.md">Polski</a>] | [<a href="docs/README-ID.md">Indonesian</a>] | [<a href="docs/README-FI.md">Suomi</a>] | [<a href="docs/README-ML.md">മലയാളം</a>] | [<a href="docs/README-JP.md">日本語</a>] | [<a href="docs/README-NL.md">Nederlands</a>] | [<a href="docs/README-IT.md">Italiano</a>] | [<a href="docs/README-RU.md">Русский</a>] | [<a href="docs/README-PTBR.md">Português (Brasil)</a>] | [<a href="docs/README-EO.md">Esperanto</a>] | [<a href="docs/README-KR.md">한국어</a>] | [<a href="docs/README-AR.md">العربي</a>] | [<a href="docs/README-VN.md">Tiếng Việt</a>] | [<a href="docs/README-DA.md">Dansk</a>] | [<a href="docs/README-GR.md">Ελληνικά</a>] | [<a href="docs/README-TR.md">Türkçe</a>] | [<a href="docs/README-NO.md">Norsk</a>] | [<a href="docs/README-RO.md">Română</a>]<br>
-  <b>We need your help to translate this README, <a href="https://github.com/rustdesk/rustdesk/tree/master/src/lang">RustDesk UI</a> and <a href="https://github.com/rustdesk/doc.rustdesk.com">RustDesk Doc</a> to your native language</b>
-</p>
+# NexDesk
+
+**نکس دسک** — a free remote desktop client for Windows and Android, with a
+Persian-first interface and a self-hosted rendezvous server.
+
+NexDesk is a fork of [RustDesk](https://github.com/rustdesk/rustdesk), rebuilt
+and rebranded by [Yar Holding](https://nexdesk.ir). It is free of charge and
+funded by advertising shown on the home screen.
+
+- **Download:** <https://nexdesk.ir>
+- **Source:** this repository (AGPL-3.0 — see [Licence](#licence))
+- **Server:** self-hosted `hbbs` / `hbbr`, not RustDesk's public infrastructure
 
 > [!Caution]
-> **Misuse Disclaimer:** <br>
-> The developers of RustDesk do not condone or support any unethical or illegal use of this software. Misuse, such as unauthorized access, control or invasion of privacy, is strictly against our guidelines. The authors are not responsible for any misuse of the application.
+> **Misuse disclaimer.** NexDesk is a remote-support tool. Using it to access a
+> device you do not own or have not been authorised to access is illegal in most
+> jurisdictions and is contrary to this project's guidelines. Sessions started
+> through NexDesk display a visible connection indicator on the controlled
+> machine, and unattended access requires the device owner to set a permanent
+> password. The maintainers do not condone and are not responsible for misuse.
+> See [SECURITY.md](SECURITY.md) for the abuse-reporting process.
 
+## What it does
 
-Chat with us: [Discord](https://discord.gg/nDceKgxnkV) | [Twitter](https://twitter.com/rustdesk) | [Reddit](https://www.reddit.com/r/rustdesk) | [YouTube](https://www.youtube.com/@rustdesk)
+- Remote desktop control of Windows and Android devices, with hardware codec
+  and VRAM capture enabled for low-latency sessions.
+- File transfer, TCP tunnelling, and a portable mode that runs without
+  installation.
+- Privacy mode, which blanks the controlled screen while a session is active.
+- Persian (RTL) interface by default.
+- Built-in updater that polls `https://nexdesk.ir/api/update.php` and verifies
+  the downloaded installer's SHA-256 before running it.
 
-[![RustDesk Server Pro](https://img.shields.io/badge/RustDesk%20Server%20Pro-Advanced%20Features-blue)](https://rustdesk.com/pricing.html)
+NexDesk talks to its own rendezvous server. The hostname and public key are
+baked into the binary at build time from the `NEXDESK_SERVER` and
+`NEXDESK_SERVER_KEY` repository variables, so a stock build of this repository
+does **not** contact RustDesk's public servers.
 
-Yet another remote desktop solution, written in Rust. Works out of the box with no configuration required. You have full control of your data, with no concerns about security. You can use our rendezvous/relay server, [set up your own](https://rustdesk.com/server), or [write your own rendezvous/relay server](https://github.com/rustdesk/rustdesk-server-demo).
+## Free, and ad-supported
 
-![image](https://user-images.githubusercontent.com/71636191/171661982-430285f0-2e12-4b1d-9957-4a58e375304d.png)
+NexDesk costs nothing. Development is funded by a single advertising slot on the
+home screen and a dismissible banner in the mobile app.
 
-RustDesk welcomes contribution from everyone. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for help getting started.
+The ad request is anonymous: it is a plain `GET https://ad.yar.one/` carrying one
+cache-busting timestamp and nothing else — no device identifier, no install
+identifier, no user identifier, no session token, and no cookie jar. The ad
+markup is parsed and rendered natively; no web view is embedded and no
+JavaScript is executed. See [PRIVACY.md](PRIVACY.md) for the full disclosure,
+and `flutter/test/ad_request_anonymity_test.dart` for the test that keeps it
+that way.
 
-[**FAQ**](https://github.com/rustdesk/rustdesk/wiki/FAQ)
+## Building from source
 
-[**BINARY DOWNLOAD**](https://github.com/rustdesk/rustdesk/releases)
+The supported build path is the GitHub Actions workflow
+[`.github/workflows/nexdesk-windows.yml`](.github/workflows/nexdesk-windows.yml),
+which produces both the MSI installer and the single-file portable executable.
+It pins the toolchain versions RustDesk's patched Flutter engine requires
+(Rust 1.75, Flutter 3.24.5, LLVM 15.0.6) and installs the `vcpkg` dependencies
+(`ffmpeg`, `libvpx`, `opus`, `libyuv`, `aom`) before compiling.
 
-[**NIGHTLY BUILD**](https://github.com/rustdesk/rustdesk/releases/tag/nightly)
+To build on a Windows machine instead, run:
 
-[<img src="https://f-droid.org/badge/get-it-on.png"
-    alt="Get it on F-Droid"
-    height="80">](https://f-droid.org/en/packages/com.carriez.flutter_hbb)
-[<img src="https://flathub.org/api/badge?svg&locale=en"
-    alt="Get it on Flathub"
-    height="80">](https://flathub.org/apps/com.rustdesk.RustDesk)
-
-## Dependencies
-
-Desktop versions use Flutter or Sciter (deprecated) for GUI. This tutorial is for Sciter only, since it is easier and more friendly to start. Check out our [CI](https://github.com/rustdesk/rustdesk/blob/master/.github/workflows/flutter-build.yml) for building the Flutter version.
-
-Please download Sciter dynamic library yourself.
-
-[Windows](https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.win/x64/sciter.dll) |
-[Linux](https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.lnx/x64/libsciter-gtk.so) |
-[macOS](https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.osx/libsciter.dylib)
-
-## Raw Steps to build
-
-- Prepare your Rust development env and C++ build env
-
-- Install [vcpkg](https://github.com/microsoft/vcpkg), and set `VCPKG_ROOT` env variable correctly
-
-  - Windows: vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
-  - Linux/macOS: vcpkg install libvpx libyuv opus aom
-
-- run `cargo run`
-
-## [Build](https://rustdesk.com/docs/en/dev/build/)
-
-## How to Build on Linux
-
-### Ubuntu 18 (Debian 10)
-
-```sh
-sudo apt install -y zip g++ gcc git curl wget nasm yasm libgtk-3-dev clang libxcb-randr0-dev libxdo-dev \
-        libxfixes-dev libxcb-shape0-dev libxcb-xfixes0-dev libasound2-dev libpulse-dev cmake make \
-        libclang-dev ninja-build libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+```bat
+BUILD-NexDesk.cmd
 ```
 
-### openSUSE Tumbleweed
+which drives `build/build-all.ps1` → `build/build-windows.ps1`. That script
+detects a missing toolchain and can install it, so a cold first run downloads
+roughly 8 GB and takes 40–60 minutes. Output lands in `dist/`.
 
-```sh
-sudo zypper install gcc-c++ git curl wget nasm yasm gcc gtk3-devel clang libxcb-devel libXfixes-devel cmake alsa-lib-devel gstreamer-devel gstreamer-plugins-base-devel xdotool-devel
+The version is read from `Cargo.toml`; `python scripts/bump-version.py <x.y.z>`
+updates every place it is duplicated — `Cargo.toml`, `flutter/pubspec.yaml`, the
+portable packer and the virtual-display DLL manifests, and their `Cargo.lock`
+entries. Bump it with that script rather than by hand, because
+`cargo build --locked` fails when the lock and the manifests disagree.
+
+### Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/` | Rust core: session handling, capture, input, the updater |
+| `flutter/` | Flutter UI shell (Windows and Android) |
+| `libs/portable/` | Single-file self-extracting packer |
+| `libs/virtual_display/` | Virtual display driver and its DLL |
+| `res/msi/` | WiX v4 project for the MSI installer |
+| `scripts/` | Version bumping and branding helpers |
+| `docs/` | Contributor and policy documentation |
+
+## Code signing
+
+Release binaries are Authenticode-signed, with a timestamp, by the SignPath
+Foundation. The signing policy, the exact build → sign → pack ordering, and the
+commands to verify a download are in [docs/CODE-SIGNING.md](docs/CODE-SIGNING.md).
+
+To check a file you downloaded:
+
+```powershell
+Get-AuthenticodeSignature .\NexDesk-<version>-x64.msi |
+  Format-List Status, SignerCertificate, TimeStamperCertificate
 ```
 
-### Fedora 28 (CentOS 8)
+`Status` must read `Valid`. The publisher shown is **SignPath Foundation** — the
+certificate is issued to the foundation rather than to NexDesk, which is the
+normal arrangement for free open-source code signing.
 
-```sh
-sudo yum -y install gcc-c++ git curl wget nasm yasm gcc gtk3-devel clang libxcb-devel libxdo-devel libXfixes-devel pulseaudio-libs-devel cmake alsa-lib-devel gstreamer1-devel gstreamer1-plugins-base-devel
-```
+## Security and privacy
 
-### Arch (Manjaro)
+- [SECURITY.md](SECURITY.md) — threat model, how to report a vulnerability, and
+  the abuse-reporting process.
+- [PRIVACY.md](PRIVACY.md) — every network request the client makes, and what it
+  carries.
 
-```sh
-sudo pacman -Syu --needed unzip git cmake gcc curl wget yasm nasm zip make pkg-config clang gtk3 xdotool libxcb libxfixes alsa-lib pipewire
-```
+## Contributing
 
-### Install vcpkg
+Issues and pull requests are welcome. Because this is a fork, `main` carries the
+NexDesk changes on top of an `upstream` branch that tracks
+`rustdesk/rustdesk`; the sync workflow merges new upstream releases and bumps the
+version. Please open an issue before starting work on anything larger than a bug
+fix, so the change does not collide with an upstream merge.
 
-```sh
-git clone https://github.com/microsoft/vcpkg
-cd vcpkg
-git checkout 2023.04.15
-cd ..
-vcpkg/bootstrap-vcpkg.sh
-export VCPKG_ROOT=$HOME/vcpkg
-vcpkg/vcpkg install libvpx libyuv opus aom
-```
+## Licence
 
-### Fix libvpx (For Fedora)
+NexDesk is distributed under the **GNU Affero General Public License v3.0**. See
+[LICENCE](LICENCE) for the full text.
 
-```sh
-cd vcpkg/buildtrees/libvpx/src
-cd *
-./configure
-sed -i 's/CFLAGS+=-I/CFLAGS+=-fPIC -I/g' Makefile
-sed -i 's/CXXFLAGS+=-I/CXXFLAGS+=-fPIC -I/g' Makefile
-make
-cp libvpx.a $HOME/vcpkg/installed/x64-linux/lib/
-cd
-```
+This program is free software: you can redistribute it and/or modify it under
+the terms of the AGPL as published by the Free Software Foundation, either
+version 3 of the Licence, or (at your option) any later version.
 
-### Build
+Because NexDesk is a modified version of RustDesk, the AGPL requires that the
+complete corresponding source of the version you are running remains available.
+If you operate a modified NexDesk as a network service, section 13 of the
+Licence requires you to offer its source to the users of that service.
 
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-git clone --recurse-submodules https://github.com/rustdesk/rustdesk
-cd rustdesk
-mkdir -p target/debug
-wget https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.lnx/x64/libsciter-gtk.so
-mv libsciter-gtk.so target/debug
-VCPKG_ROOT=$HOME/vcpkg cargo run
-```
-
-## How to build with Docker
-
-Begin by cloning the repository and building the Docker container:
-
-```sh
-git clone https://github.com/rustdesk/rustdesk
-cd rustdesk
-git submodule update --init --recursive
-docker build -t "rustdesk-builder" .
-```
-
-Then, each time you need to build the application, run the following command:
-
-```sh
-docker run --rm -it -v $PWD:/home/user/rustdesk -v rustdesk-git-cache:/home/user/.cargo/git -v rustdesk-registry-cache:/home/user/.cargo/registry -e PUID="$(id -u)" -e PGID="$(id -g)" rustdesk-builder
-```
-
-Note that the first build may take longer before dependencies are cached, subsequent builds will be faster. Additionally, if you need to specify different arguments to the build command, you may do so at the end of the command in the `<OPTIONAL-ARGS>` position. For instance, if you wanted to build an optimized release version, you would run the command above followed by `--release`. The resulting executable will be available in the target folder on your system, and can be run with:
-
-```sh
-target/debug/rustdesk
-```
-
-Or, if you're running a release executable:
-
-```sh
-target/release/rustdesk
-```
-
-Please ensure that you run these commands from the root of the RustDesk repository, or the application may not find the required resources. Also note that other cargo subcommands such as `install` or `run` are not currently supported via this method as they would install or run the program inside the container instead of the host.
-
-## File Structure
-
-- **[libs/hbb_common](https://github.com/rustdesk/rustdesk/tree/master/libs/hbb_common)**: video codec, config, tcp/udp wrapper, and some other utility functions shared with the server
-- **[libs/base](https://github.com/rustdesk/rustdesk/tree/master/libs/base)**: protobuf, fs functions for file transfer, keyboard and platform code used only by this app
-- **[libs/scrap](https://github.com/rustdesk/rustdesk/tree/master/libs/scrap)**: screen capture
-- **[libs/enigo](https://github.com/rustdesk/rustdesk/tree/master/libs/enigo)**: platform specific keyboard/mouse control
-- **[libs/clipboard](https://github.com/rustdesk/rustdesk/tree/master/libs/clipboard)**: file copy and paste implementation for Windows, Linux, macOS.
-- **[src/ui](https://github.com/rustdesk/rustdesk/tree/master/src/ui)**: obsolete Sciter UI (deprecated)
-- **[src/server](https://github.com/rustdesk/rustdesk/tree/master/src/server)**: audio/clipboard/input/video services, and network connections
-- **[src/client.rs](https://github.com/rustdesk/rustdesk/tree/master/src/client.rs)**: start a peer connection
-- **[src/rendezvous_mediator.rs](https://github.com/rustdesk/rustdesk/tree/master/src/rendezvous_mediator.rs)**: Communicate with [rustdesk-server](https://github.com/rustdesk/rustdesk-server), wait for remote direct (TCP hole punching) or relayed connection
-- **[src/platform](https://github.com/rustdesk/rustdesk/tree/master/src/platform)**: platform specific code
-- **[flutter](https://github.com/rustdesk/rustdesk/tree/master/flutter)**: Flutter code for desktop and mobile
-
-## Screenshots
-
-![Connection Manager](https://github.com/rustdesk/rustdesk/assets/28412477/db82d4e7-c4bc-4823-8e6f-6af7eadf7651)
-
-![Connected to a Windows PC](https://github.com/rustdesk/rustdesk/assets/28412477/9baa91e9-3362-4d06-aa1a-7518edcbd7ea)
-
-![File Transfer](https://github.com/rustdesk/rustdesk/assets/28412477/39511ad3-aa9a-4f8c-8947-1cce286a46ad)
-
-![TCP Tunneling](https://github.com/rustdesk/rustdesk/assets/28412477/78e8708f-e87e-4570-8373-1360033ea6c5)
-
+RustDesk is © RustDesk and contributors, licensed under the AGPL-3.0. NexDesk's
+changes are © 2026 NexDesk / Yar Holding, released under the same licence.

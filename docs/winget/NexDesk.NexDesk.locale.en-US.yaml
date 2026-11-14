@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: NexDesk.NexDesk
+PackageVersion: <version>
+PackageLocale: en-US
+Publisher: NexDesk
+PublisherUrl: https://nexdesk.ir
+PublisherSupportUrl: https://nexdesk.ir
+PackageName: NexDesk
+PackageUrl: https://nexdesk.ir
+License: AGPL-3.0-or-later
+LicenseUrl: https://github.com/vahidkar20/deskyar/blob/main/LICENCE
+Copyright: Copyright © 2026 NexDesk. Based on RustDesk (AGPL-3.0).
+ShortDescription: Free remote desktop client with a Persian-first interface.
+Description: >-
+  NexDesk is a free remote desktop client for Windows and Android, with a
+  Persian-first interface and a self-hosted rendezvous server. It is a fork of
+  RustDesk, licensed AGPL-3.0, and is funded by advertising rather than by
+  licence fees. Release binaries are Authenticode-signed by the SignPath
+  Foundation.
+Moniker: nexdesk
+Tags:
+  - remote-desktop
+  - remote-control
+  - vnc
+  - rdp
+  - remote-support
+ReleaseNotesUrl: https://github.com/vahidkar20/deskyar/releases
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0
