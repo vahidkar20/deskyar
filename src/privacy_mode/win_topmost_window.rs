@@ -218,7 +218,10 @@ impl PrivacyModeImpl {
             let cmd_utf16: Vec<u16> = cmdline.encode_utf16().chain(Some(0).into_iter()).collect();
 
             let mut start_info = STARTUPINFOW {
-                cb: 0,
+                // Required by the API. Upstream left this at 0, which only ever
+                // went unnoticed because the injection path never ran in this
+                // build - WindowInjection.dll was not part of it.
+                cb: size_of::<STARTUPINFOW>() as u32,
                 lpReserved: NULL as _,
                 lpDesktop: NULL as _,
                 lpTitle: NULL as _,
