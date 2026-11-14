@@ -18,7 +18,8 @@ use windows::{
         System::{Com, SystemInformation, Threading},
         UI::{
             Shell::{
-                self, FOLDERID_ProgramData, FOLDERID_Public, SHGetKnownFolderPath, KF_FLAG_DEFAULT,
+                self, FOLDERID_Desktop, FOLDERID_ProgramData, FOLDERID_Public,
+                SHGetKnownFolderPath, KF_FLAG_DEFAULT,
             },
             WindowsAndMessaging,
         },
@@ -120,6 +121,16 @@ fn get_known_folder(id: &windows::core::GUID) -> ResultType<PathBuf> {
     let path = unsafe { value.to_string() };
     unsafe { Com::CoTaskMemFree(Some(value.0.cast())) };
     Ok(PathBuf::from(path?))
+}
+
+/// Absolute path of `<Desktop>\<file_name>` for the current user.
+///
+/// Used instead of letting a script resolve `SpecialFolders("Desktop")`, so the
+/// caller can write the `.lnk` directly.
+pub(super) fn desktop_shortcut_path(file_name: &str) -> ResultType<PathBuf> {
+    let mut path = get_known_folder(&FOLDERID_Desktop)?;
+    path.push(file_name);
+    Ok(path)
 }
 
 // `%VAR%` is expanded before cmd.exe executes even inside a quoted `set` assignment.

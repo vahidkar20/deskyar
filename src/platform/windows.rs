@@ -106,8 +106,8 @@ pub use acl::{
 };
 use installer_handoff::run_cmds;
 use installer_shell::{
-    embedded_shortcut_commands, embedded_tray_shortcut_commands, escape_nested_cmd_ampersands,
-    shortcut_bytes, validate_install_value,
+    desktop_shortcut_path, embedded_shortcut_commands, embedded_tray_shortcut_commands,
+    escape_nested_cmd_ampersands, shortcut_bytes, validate_install_value,
 };
 
 pub const FLUTTER_RUNNER_WIN32_WINDOW_CLASS: &'static str = "FLUTTER_RUNNER_WIN32_WINDOW"; // main window, install window
@@ -1527,7 +1527,6 @@ fn get_after_install(
     netsh advfirewall firewall add rule name=\"{app_name} Service\" dir=out action=allow program=\"{exe}\" enable=yes
     netsh advfirewall firewall add rule name=\"{app_name} Service\" dir=in action=allow program=\"{exe}\" enable=yes
     {create_service}
-    reg add HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /f /v SoftwareSASGeneration /t REG_DWORD /d 1
     ", create_service=get_create_service(&exe))
 }
 
@@ -1809,34 +1808,6 @@ fn get_uninstall(kill_self: bool, uninstall_printer: bool) -> ResultType<String>
 
 pub fn uninstall_me(kill_self: bool) -> ResultType<()> {
     run_cmds(get_uninstall(kill_self, true)?, true, "uninstall")
-}
-
-fn write_vbs(cmds: String, tip: &str) -> ResultType<PathBuf> {
-    const UTF16LE_BOM: &[u8] = &[0xFF, 0xFE];
-    let mut tmp = std::env::temp_dir();
-    if vec!["&", "@", "^"]
-        .drain(..)
-        .any(|s| tmp.to_string_lossy().to_string().contains(s))
-    {
-        if let Ok(dir) = user_accessible_folder() {
-            tmp = dir;
-        }
-    }
-    tmp.push(format!("{}_{}.vbs", crate::get_app_name(), tip));
-    let mut file = fs::File::create(&tmp)?;
-    let cmds = cmds.replace("\r\n", "\n").replace('\n', "\r\n");
-    let mut utf16: Vec<u16> = cmds.encode_utf16().collect();
-    file.write_all(UTF16LE_BOM)?;
-    file.write_all(to_le(&mut utf16))?;
-    file.sync_all()?;
-    Ok(tmp)
-}
-
-fn to_le(v: &mut [u16]) -> &[u8] {
-    for b in v.iter_mut() {
-        *b = b.to_le()
-    }
-    unsafe { v.align_to().1 }
 }
 
 pub fn toggle_blank_screen(v: bool) {
@@ -2193,14 +2164,11 @@ fn get_custom_icon(install_dir: &str, exe: &str) -> Option<String> {
 }
 
 #[inline]
-fn get_shortcut_icon_location(install_dir: &str, exe: &str) -> String {
+fn get_shortcut_icon(install_dir: &str, exe: &str) -> Option<String> {
     if exe.is_empty() {
-        return "".to_owned();
+        return None;
     }
-
     get_custom_icon(install_dir, exe)
-        .map(|p| format!("oLink.IconLocation = \"{}\"", p))
-        .unwrap_or_default()
 }
 
 pub fn create_shortcut(id: &str) -> ResultType<()> {
@@ -2212,32 +2180,18 @@ pub fn create_shortcut(id: &str) -> ResultType<()> {
     // https://github.com/rustdesk/rustdesk/issues/13735
     // Replace ':' with '_' for filename since ':' is not allowed in Windows filenames
     // https://github.com/rustdesk/hbb_common/blob/8b0e25867375ba9e6bff548acf44fe6d6ffa7c0e/src/config.rs#L1384
-    let filename = id.replace(':', "_");
-    let shortcut_icon_location = get_shortcut_icon_location("", &exe);
-    let shortcut = write_vbs(
-        format!(
-            "
-Set oWS = WScript.CreateObject(\"WScript.Shell\")
-strDesktop = oWS.SpecialFolders(\"Desktop\")
-Set objFSO = CreateObject(\"Scripting.FileSystemObject\")
-sLinkFile = objFSO.BuildPath(strDesktop, \"{filename}.lnk\")
-Set oLink = oWS.CreateShortcut(sLinkFile)
-    oLink.TargetPath = \"{exe}\"
-    oLink.Arguments = \"--connect {id}\"
-    {shortcut_icon_location}
-oLink.Save
-        "
-        ),
-        "connect_shortcut",
-    )?
-    .to_str()
-    .unwrap_or("")
-    .to_owned();
-    std::process::Command::new("cscript")
-        .arg(&shortcut)
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()?;
-    allow_err!(std::fs::remove_file(shortcut));
+    let filename = format!("{}.lnk", id.replace(':', "_"));
+    let icon = get_shortcut_icon("", &exe);
+
+    // Written straight out as a .lnk file.
+    //
+    // This used to generate a VBScript that drove WScript.Shell, drop it in
+    // %TEMP%, and run it with cscript. Writing an executable script to a temp
+    // directory and handing it to a Windows scripting host is a pattern scanners
+    // score, and the Shell API that shortcut_bytes() already wraps does the same
+    // job in-process with nothing left on disk.
+    let bytes = shortcut_bytes(&exe, Some(&format!("--connect {id}")), icon.as_deref())?;
+    std::fs::write(desktop_shortcut_path(&filename)?, bytes)?;
     Ok(())
 }
 
@@ -3920,44 +3874,6 @@ fn run_after_run_cmds(silent: bool) {
 }
 
 #[inline]
-pub fn try_remove_temp_update_files() {
-    let temp_dir = std::env::temp_dir();
-    let Ok(entries) = std::fs::read_dir(&temp_dir) else {
-        log::debug!("Failed to read temp directory: {:?}", temp_dir);
-        return;
-    };
-
-    let one_hour = std::time::Duration::from_secs(60 * 60);
-    for entry in entries {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-                // Match files like rustdesk-*.msi or rustdesk-*.exe
-                if file_name.starts_with("rustdesk-")
-                    && (file_name.ends_with(".msi") || file_name.ends_with(".exe"))
-                {
-                    // Skip files modified within the last hour to avoid deleting files being downloaded
-                    if let Ok(metadata) = std::fs::metadata(&path) {
-                        if let Ok(modified) = metadata.modified() {
-                            if let Ok(elapsed) = modified.elapsed() {
-                                if elapsed < one_hour {
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    if let Err(e) = std::fs::remove_file(&path) {
-                        log::debug!("Failed to remove temp update file {:?}: {}", path, e);
-                    } else {
-                        log::info!("Removed temp update file: {:?}", path);
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[inline]
 pub fn try_kill_privacy_host() {
     allow_err!(std::process::Command::new("cmd")
         .arg("/c")
@@ -4798,17 +4714,6 @@ mod tests {
                 "unsafe application name was accepted: {app_name}"
             );
         }
-    }
-
-    #[test]
-    fn vbs_files_use_utf16le_with_bom_and_crlf() {
-        const EXPECTED: &[u8] = &[0xFF, 0xFE, b'a', 0, b'\r', 0, b'\n', 0, b'b', 0];
-        let tip = format!("vbs_encoding_{}", uuid::Uuid::new_v4().simple());
-        let path = write_vbs("a\nb".to_owned(), &tip).expect("VBS file should be written");
-        let bytes = std::fs::read(&path).expect("VBS file should be readable");
-        std::fs::remove_file(path).expect("VBS file should be removed");
-
-        assert_eq!(bytes, EXPECTED);
     }
 
     #[cfg(not(target_pointer_width = "64"))]
