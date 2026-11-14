@@ -17,8 +17,15 @@ logging.basicConfig(
 # The URL of your Flask server
 BASE_URL = os.getenv("BASE_URL") or "http://localhost:5000"
 
-# The secret key for API authentication
-SECRET_KEY = os.getenv("SECRET_KEY") or "worldpeace2024"
+# The secret key for API authentication.
+#
+# No default. This shipped with upstream's public source as a literal fallback,
+# which means anyone reading the repository knew the credential the signing
+# service would accept if the environment did not override it. Refuse to run
+# rather than fall back to a known value.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise SystemExit("SECRET_KEY is not set - refusing to authenticate with a default")
 
 # The headers for API requests
 HEADERS = {"Authorization": f"Bearer {SECRET_KEY}"}

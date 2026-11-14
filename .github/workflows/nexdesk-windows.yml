@@ -488,18 +488,21 @@ jobs:
             echo "server public key: ${#NEXDESK_SERVER_KEY} characters"
           fi
 
-      - name: Verify the update signing key
+      - name: Report the update signing key
         shell: bash
         run: |
-          # A release without a baked key can never update itself: the client
-          # deliberately refuses to run an unsigned update path. Fail here
-          # instead of shipping a build that is stuck forever.
-          if [[ "${GITHUB_REF}" == refs/tags/* && -z "${NEXDESK_UPDATE_PUBKEY:-}" ]]; then
-            echo "::error::NEXDESK_UPDATE_PUBKEY is empty - a tagged release must bake in the update public key"
-            exit 1
-          fi
+          # The key is baked into the build, but nothing verifies the update
+          # manifest with it yet: nexdesk_update::verify_signatures() exists and
+          # has no caller, and manifests built from the API response carry an
+          # empty signature list. So this step reports the state rather than
+          # failing a release over a key that changes no behaviour today.
+          #
+          # Turning it into a hard gate is the next step, together with
+          # publishing signatures from tools/nexdesk_update/publish.py.
           if [[ -z "${NEXDESK_UPDATE_PUBKEY:-}" ]]; then
-            echo "::warning::NEXDESK_UPDATE_PUBKEY is empty - this build has auto-update disabled"
+            echo "::warning::NEXDESK_UPDATE_PUBKEY is empty - the build carries no update public key"
+          else
+            echo "update public key: ${#NEXDESK_UPDATE_PUBKEY} characters"
           fi
 
       - name: Build NexDesk
@@ -512,9 +515,22 @@ jobs:
           }
           mv .\flutter\build\windows\x64\runner\Release .\NexDesk
 
-      # The MSI is built before the optional runtime resources are fetched, so
-      # it carries only what the application needs. A driver package inside an
-      # installer is one of the louder things a scanner can find.
+      # Optional runtime helpers. Missing ones degrade gracefully rather than
+      # failing the build, since they are not needed for the install flow.
+      - name: Fetch optional runtime resources
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+          Expand-Archive usbmmidd_v2.zip -DestinationPath .
+          Remove-Item -Path usbmmidd_v2\Win32 -Recurse -ErrorAction SilentlyContinue
+          Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe","usbmmidd_v2\deviceinstaller.exe","usbmmidd_v2\usbmmidd.bat" -ErrorAction SilentlyContinue
+          mv -Force .\usbmmidd_v2 .\NexDesk
+
+      # Built after the optional resources are in place so the MSI and the
+      # portable exe carry the same payload. Virtual displays need the driver
+      # files in the install directory; an MSI without them would silently drop
+      # a feature the portable build keeps.
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
@@ -535,21 +551,16 @@ jobs:
           popd
           Get-Item ".\dist\$env:MSI_NAME" | Format-List Name,Length
 
-      # Optional runtime helpers. Missing ones degrade gracefully rather than
-      # failing the build, since they are not needed for the install flow.
-      - name: Fetch optional runtime resources
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
-          Expand-Archive usbmmidd_v2.zip -DestinationPath .
-          Remove-Item -Path usbmmidd_v2\Win32 -Recurse -ErrorAction SilentlyContinue
-          Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe","usbmmidd_v2\deviceinstaller.exe","usbmmidd_v2\usbmmidd.bat" -ErrorAction SilentlyContinue
-          mv -Force .\usbmmidd_v2 .\NexDesk
-
       - name: Pack single-file portable exe
         shell: bash
         run: |
+          set -euo pipefail
+          # libs/portable/build.rs embeds res/manifest.xml at compile time, and
+          # the portable stub must not declare DPI awareness. Edit it, but always
+          # put it back: a build step that leaves a tracked file modified is how
+          # a working tree ends up carrying changes nobody made.
+          restore_manifest() { git checkout -- res/manifest.xml || true; }
+          trap restore_manifest EXIT
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip install -r requirements.txt
@@ -558,6 +569,28 @@ jobs:
           mkdir -p dist
           cp ./target/release/rustdesk-portable-packer.exe "./dist/${ARTIFACT_NAME}"
           ls -lh "./dist/${ARTIFACT_NAME}"
+
+      # Reported, not enforced. An unsigned build draws occasional detections and
+      # failing a release over a known false positive helps nobody - the point is
+      # to see the detection here rather than in a user's browser. See
+      # docs/false-positives.md.
+      - name: Scan the artifacts with Defender
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $scan = Join-Path $env:ProgramFiles "Windows Defender\MpCmdRun.exe"
+          if (-not (Test-Path $scan)) {
+            Write-Warning "MpCmdRun.exe not found - skipping the scan"
+            exit 0
+          }
+          foreach ($file in @("dist\$env:MSI_NAME", "dist\$env:ARTIFACT_NAME")) {
+            if (-not (Test-Path $file)) { continue }
+            Write-Host "scanning $file"
+            & $scan -Scan -ScanType 3 -File (Resolve-Path $file).Path -DisableRemediation
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Defender returned $LASTEXITCODE for $file"
+            }
+          }
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

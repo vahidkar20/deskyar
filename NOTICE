@@ -1,0 +1,26 @@
+NexDesk
+Copyright (C) 2026 Yar.One Holding
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, version 3. The full text is in the file LICENCE.
+
+NexDesk is a derivative work of RustDesk.
+
+    RustDesk
+    Copyright (C) RustDesk and contributors
+    https://github.com/rustdesk/rustdesk
+    Licensed under the GNU Affero General Public License v3.0
+
+NexDesk is not affiliated with, endorsed by, or sponsored by the RustDesk
+project. Modifications made for NexDesk are recorded in this repository's commit
+history; the complete corresponding source for every release is this repository
+at the release tag.
+
+Bundled third-party components remain under their own licences. Notably:
+
+- The virtual display driver package in `usbmmidd_v2`, redistributed unmodified
+  from https://github.com/rustdesk-org/rdev
+- `libs/enigo` and `libs/scrap`, licensed MIT
+- A large number of Rust and Dart crates, listed in `Cargo.lock` and
+  `flutter/pubspec.lock` with their respective licences
