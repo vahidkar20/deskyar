@@ -176,10 +176,7 @@ impl PrivacyModeImpl {
         Self {
             impl_key: impl_key.to_owned(),
             conn_id: INVALID_PRIVACY_MODE_CONN_ID,
-            handlers: WindowHandlers {
-                hthread: 0,
-                hprocess: 0,
-            },
+            handlers: WindowHandlers { hprocess: 0 },
             hwnd: 0,
         }
     }
