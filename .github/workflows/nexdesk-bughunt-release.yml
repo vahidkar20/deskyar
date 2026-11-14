@@ -1,0 +1,119 @@
+name: Publish a bug-hunt build
+
+# Cuts a pre-release from an artifact that already exists, without rebuilding.
+#
+# This is deliberately separate from `publish-release.yml`, which publishes a
+# stable release and marks it `latest`. A bug-hunt build is not a stable
+# release: it must not take the "Latest" badge, must not be picked up as the
+# current download, and must not look like the supported version. Hence
+# `prerelease: true` and `make_latest: false`, plus a tag that cannot collide
+# with `v<version>` - the app's own version stays whatever Cargo.toml says, and
+# the tag only names this build.
+#
+# The artifact is pulled server-side from the run that produced it, so no bytes
+# travel through a developer machine.
+
+on:
+  workflow_dispatch:
+    inputs:
+      windows_run:
+        description: "Run id that produced the NexDesk-windows-x64 artifact"
+        required: true
+        type: string
+      tag:
+        description: "Tag for this pre-release, e.g. v1.5.11-bughunt.1"
+        required: true
+        type: string
+      title:
+        description: "Release title (optional)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download the built artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: NexDesk-windows-x64
+          run-id: ${{ inputs.windows_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist
+
+      - name: List what arrived
+        run: ls -lh dist
+
+      # The build only writes SHA256SUMS.txt when signing is enabled, because
+      # the checksums must describe the signed bytes. An unsigned build has no
+      # such file, so produce one here from whatever is actually in the release.
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create the pre-release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.title || inputs.tag }}
+          target_commitish: ${{ github.ref_name }}
+          # Never "latest": this is a test build, and marking it latest would
+          # make it the download the stable channel points at.
+          make_latest: 'false'
+          prerelease: true
+          draft: false
+          files: dist/*
+          body: |
+            > **این یک بیلد آزمایشی برای باگ‌یابی است، نه نسخه پایدار.**
+            > نسخه پایدار فعلی همچنان [v1.5.11](https://github.com/vahidkar20/deskyar/releases/tag/v1.5.11) است.
+
+            ## چه چیزی در این بیلد هست
+
+            این بیلد از شاخه `fix/signing-and-packaging` ساخته شده و شامل اصلاحاتی است که هنوز
+            به نسخه پایدار نرسیده‌اند:
+
+            - **نسخه‌ها یکدست شدند.** `NexDesk.exe`، `librustdesk.dll` و
+              `dylib_virtual_display.dll` هر سه `1.5.11` را گزارش می‌کنند؛ پیش‌تر دو DLL هیچ
+              اطلاعات نسخه‌ای نداشتند و بسته‌بند `1.5.8` بود.
+            - **MSI اضافه شد.** برای اولین بار یک installer معمولی ویندوزی در کنار نسخه پرتابل
+              منتشر می‌شود. توصیه می‌شود همین را تست کنید.
+            - **نشانه‌های مشکوک در بسته‌بند حذف شد.** magic marker از `rustdesk` به `nexdesk1`
+              تغییر کرد و کپی `RuntimeBroker_rustdesk.exe` به `NexDeskBroker.exe` تغییر نام یافت.
+            - **GUID کامپوننت‌های MSI پایدار شد** تا upgrade درست کار کند.
+
+            ## ⚠️ این بیلد امضا نشده است
+
+            هیچ‌کدام از فایل‌ها امضای دیجیتال ندارند. بنابراین:
+
+            - ویندوز ممکن است هنگام اجرا هشدار SmartScreen بدهد: **More info → Run anyway**.
+            - Defender ممکن است فایل را قرنطینه کند. این یک false positive است؛ گزارش آن در
+              `docs/false-positives.md` ثبت می‌شود.
+            - در پنجره UAC نام ناشر خالی است.
+
+            امضا پس از پذیرش درخواست SignPath Foundation انجام می‌شود و در این بیلد نیست.
+
+            ## چه چیزی را تست کنید
+
+            مشخصاً دنبال این موارد هستم:
+
+            1. نصب و حذف با MSI — به‌خصوص upgrade از نسخه ۱.۵.۱۱ نصب‌شده.
+            2. حالت پرتابل: اجرا، سپس دکمه «نصب روی این کامپیوتر».
+            3. Privacy mode — پس از تغییر نام پردازه به `NexDeskBroker.exe` باید بدون تغییر کار کند.
+            4. نمایش بنر تبلیغ در صفحه اصلی.
+            5. آپدیت خودکار.
+
+            باگ‌ها را در Issues با ذکر نسخه و مرحله‌ای که خطا رخ داد ثبت کنید.
+
+            ## صحت فایل‌ها
+
+            `SHA256SUMS.txt` همراه ریلیز است. بررسی:
+
+            ```powershell
+            Get-FileHash .\NexDesk-1.5.11-x64.msi -Algorithm SHA256
+            ```
