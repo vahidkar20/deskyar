@@ -43,7 +43,44 @@ import 'package:flutter_hbb/desktop/widgets/ad_document.dart';
 import 'package:http/http.dart' as http;
 
 /// Where the ad page is served from.
+///
+/// ## Privacy constraint - do not add identifiers
+///
+/// The request built by [nexDeskAdRequest] carries exactly one query key, a
+/// cache-busting timestamp. No device id, install id, user id, session token or
+/// cookie may ever be added to it - not in the query, not in a header, not via
+/// a cookie jar.
+///
+/// This is a product decision, not an oversight. NexDesk is free and funded by
+/// these ads, so the slot stays; an anonymous request is what keeps that
+/// compatible with the code-signing policy the project applies under, which
+/// requires disclosed and opt-outable data collection. There is no collection
+/// here to opt out of, and that argument only holds while the request stays
+/// anonymous. `test/ad_request_anonymity_test.dart` fails if an identifier is
+/// introduced.
 const String kNexDeskBannerUrl = 'https://ad.yar.one';
+
+/// The base URI and the request URI the ad slot uses.
+///
+/// Extracted from the widget so a test can assert the query stays anonymous -
+/// see the privacy constraint on [kNexDeskBannerUrl]. Production code must go
+/// through this function rather than building the URI inline.
+({Uri base, Uri request}) nexDeskAdRequest({DateTime? now}) {
+  // Normalise to an absolute path so relative `src="logo.png"` in the markup
+  // resolves to `https://host/logo.png` rather than to a path that depends on
+  // how the base URL was written.
+  final parsedBase = Uri.parse(kNexDeskBannerUrl);
+  final base =
+      parsedBase.path.isEmpty ? parsedBase.replace(path: '/') : parsedBase;
+  // A cache-busting parameter keeps an intermediate proxy from pinning an old
+  // creative; the server ignores unknown query keys. This is the *only* key the
+  // request may carry.
+  final request = base.replace(queryParameters: {
+    ...base.queryParameters,
+    '_': (now ?? DateTime.now()).millisecondsSinceEpoch.toString(),
+  });
+  return (base: base, request: request);
+}
 
 /// Maximum width of the slot, in logical pixels.
 const double kNexDeskBannerWidth = 240;
@@ -110,18 +147,11 @@ class _NexDeskBannerSlotState extends State<NexDeskBannerSlot>
       });
     }
     try {
-      // Normalise to an absolute path so relative `src="logo.png"` in the
-      // markup resolves to `https://host/logo.png` rather than to a path that
-      // depends on how the base URL was written.
-      final parsedBase = Uri.parse(kNexDeskBannerUrl);
-      final base =
-          parsedBase.path.isEmpty ? parsedBase.replace(path: '/') : parsedBase;
-      // A cache-busting parameter keeps an intermediate proxy from pinning an
-      // old creative; the server ignores unknown query keys.
-      final uri = base.replace(queryParameters: {
-        ...base.queryParameters,
-        '_': DateTime.now().millisecondsSinceEpoch.toString(),
-      });
+      // Built through nexDeskAdRequest so the query stays anonymous; see the
+      // privacy constraint on kNexDeskBannerUrl.
+      final ad = nexDeskAdRequest();
+      final base = ad.base;
+      final uri = ad.request;
       final response = await http
           .get(uri, headers: const {
             'Cache-Control': 'no-cache',

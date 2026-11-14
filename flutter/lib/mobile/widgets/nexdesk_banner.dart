@@ -28,6 +28,15 @@ class _NexDeskBannerState extends State<NexDeskBanner> {
   static const _dismissKey = 'nexdesk-mobile-banner-dismissed';
 
   /// The ad slot, not the image. Resolved at runtime - see ad_creative.dart.
+  ///
+  /// Privacy constraint: this request carries no query parameters and no
+  /// identifier of any kind - no device id, install id, user id or session
+  /// token, and no cookie jar. NexDesk is free and funded by these ads, so the
+  /// slot stays; anonymity is what keeps that compatible with the code-signing
+  /// policy the project applies under. The desktop slot states the same
+  /// constraint on kNexDeskBannerUrl and is guarded by
+  /// test/ad_request_anonymity_test.dart; this URL is a bare literal with no
+  /// query, which the same test asserts against the shared host.
   static const _pageUrl = 'https://ad.yar.one';
 
   static const _fallbackTarget = 'https://nexdesk.ir';
