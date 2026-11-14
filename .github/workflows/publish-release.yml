@@ -11,23 +11,37 @@ name: Publish NexDesk release
 # trigger on tag pushes: creating the tag here would otherwise start a second
 # build of both platforms, which is exactly the waste this workflow exists to
 # avoid.
+#
+# Two ways to use it:
+#
+#   prerelease = false  a real release. Becomes "Latest", moves users to it.
+#   prerelease = true   a test build. Tagged, downloadable, and deliberately
+#                       kept out of "Latest" so nobody installs it by accident.
+#
+# A test build may be Windows-only; leave `android_run` empty and the Android
+# step is skipped.
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, e.g. v1.5.5"
+        description: "Release tag, e.g. v1.5.11 or v1.5.11-av.1"
         required: true
       windows_run:
         description: "Run id that produced NexDesk-windows-x64"
         required: true
       android_run:
-        description: "Run id that produced NexDesk-android-universal"
-        required: true
+        description: "Run id that produced NexDesk-android-universal (empty to skip)"
+        required: false
+        default: ""
       title:
         description: "Release title"
         required: false
         default: ""
+      prerelease:
+        description: "Pre-release: publish, but leave 'Latest' on the stable version"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -47,6 +61,7 @@ jobs:
           path: staging/win
 
       - name: Download the Android artifact
+        if: ${{ inputs.android_run != '' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: NexDesk-android-universal
@@ -59,6 +74,7 @@ jobs:
           set -euo pipefail
           mkdir -p out
           find staging -type f \( -name '*.exe' -o -name '*.apk' -o -name '*.msi' \) -exec cp {} out/ \;
+          test -n "$(ls -A out)"
           ls -lh out
           ( cd out && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt )
 
@@ -66,15 +82,47 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "## NexDesk ${INPUTS_TAG#v}"
-            echo
-            echo "نسخه‌ی ویندوز و اندروید. هر دو باینری با سرور \`rd.nexdesk.ir\` و همان کلید عمومی کامپایل شده‌اند،"
-            echo "پس اتصال در هر چهار حالت کار می‌کند: اندروید ↔ ویندوز، اندروید ↔ اندروید، ویندوز ↔ ویندوز و ویندوز ↔ اندروید."
-            echo
+            if [ "${INPUTS_PRERELEASE}" = "true" ]; then
+              echo "## NexDesk ${INPUTS_TAG#v} — آزمایشی"
+              echo
+              echo "> **این نسخه برای تست است، نه برای استفاده‌ی روزمره.**"
+              echo "> تگ «Latest» روی نسخه‌ی پایدار باقی می‌ماند و کاربران عادی این نسخه را نمی‌بینند."
+              echo
+              echo "هدف: بررسی اینکه تغییرات زیر هیچ چیزی را نشکسته باشد."
+              echo
+              echo "### چه چیزی در این نسخه تغییر کرده"
+              echo
+              echo "- کپی و تزریق به \`RuntimeBroker.exe\` حذف شد؛ حالت حریم خصوصی حالا با یک پروسه‌ی مستقل"
+              echo "  (\`NexDeskPrivacyHost.exe\`) کار می‌کند که پنجره‌ی پوششی را خودش می‌سازد."
+              echo "- خروجی MSI اضافه شد؛ نصب‌کننده‌ی ویندوزی استاندارد در کنار نسخه‌ی پرتابل."
+              echo "- نوشتن دائمی سیاست UAC در نصب حذف شد."
+              echo "- ساخت میان‌بر با اسکریپت در \`%TEMP%\` حذف شد؛ فایل \`.lnk\` مستقیم نوشته می‌شود."
+              echo "- متادیتای محصول و مستندات اصلاح شد."
+              echo
+              echo "### چک‌لیست تست"
+              echo
+              echo "- [ ] نصب MSI روی ویندوز ۱۰ و ویندوز ۱۱"
+              echo "- [ ] اجرا و اتصال به همان دستگاه (loopback)"
+              echo "- [ ] انتقال فایل و کلیپ‌بورد"
+              echo "- [ ] حالت حریم خصوصی روی **تک‌مانیتور** — صفحه باید سیاه شود و با قطع جلسه برگردد"
+              echo "- [ ] حالت حریم خصوصی روی **چند‌مانیتور** — همه‌ی مانیتورها پوشش داده شوند"
+              echo "- [ ] ارتقا از 1.5.11 نصب‌شده روی همین نسخه"
+              echo "- [ ] حذف برنامه و بررسی اینکه سرویس و پوشه‌ها پاک شده‌اند"
+              echo "- [ ] بررسی اینکه هیچ \`NexDeskBroker.exe\` در پوشه‌ی نصب باقی نمانده"
+              echo "- [ ] گزارش Defender و SmartScreen (این نسخه امضای دیجیتال ندارد)"
+              echo
+            else
+              echo "## NexDesk ${INPUTS_TAG#v}"
+              echo
+              echo "نسخه‌ی ویندوز و اندروید. هر دو باینری با سرور \`rd.nexdesk.ir\` و همان کلید عمومی کامپایل شده‌اند،"
+              echo "پس اتصال در هر چهار حالت کار می‌کند: اندروید ↔ ویندوز، اندروید ↔ اندروید، ویندوز ↔ ویندوز و ویندوز ↔ اندروید."
+              echo
+            fi
             echo "| فایل | پلتفرم |"
             echo "|---|---|"
-            for f in out/*.exe; do echo "| \`$(basename "$f")\` | ویندوز ۶۴ بیتی (پرتابل) |"; done
-            for f in out/*.apk; do echo "| \`$(basename "$f")\` | اندروید (arm64 + armv7 + x86_64) |"; done
+            for f in out/*.msi; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | ویندوز ۶۴ بیتی (نصب‌کننده) |"; done
+            for f in out/*.exe; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | ویندوز ۶۴ بیتی (پرتابل) |"; done
+            for f in out/*.apk; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | اندروید (arm64 + armv7 + x86_64) |"; done
             echo
             echo "### بررسی سالم بودن دانلود"
             echo
@@ -90,6 +138,7 @@ jobs:
           cat release-body.md
         env:
           INPUTS_TAG: ${{ inputs.tag }}
+          INPUTS_PRERELEASE: ${{ inputs.prerelease }}
 
       - name: Publish
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
@@ -98,8 +147,8 @@ jobs:
           name: ${{ inputs.title || inputs.tag }}
           body_path: release-body.md
           draft: false
-          prerelease: false
-          make_latest: true
+          prerelease: ${{ inputs.prerelease }}
+          make_latest: ${{ !inputs.prerelease }}
           files: |
             out/*.msi
             out/*.exe
