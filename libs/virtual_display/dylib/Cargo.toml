@@ -1,6 +1,11 @@
 [package]
 name = "dylib_virtual_display"
-version = "0.1.0"
+# Deliberately the product version rather than a library version: this DLL ships
+# inside the NexDesk payload, so its VERSIONINFO is what a user reads in
+# Explorer and what heuristic scanners compare against the rest of the folder.
+# winres derives FileVersion/ProductVersion from this value, so bumping it here
+# is the whole mechanism - scripts/bump-version.py keeps it in step.
+version = "1.5.11"
 edition = "2021"
 
 [lib]
@@ -8,8 +13,20 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[package.metadata.winres]
+LegalCopyright = "Copyright © 2026 NexDesk. Based on RustDesk (AGPL-3.0)."
+CompanyName = "NexDesk"
+ProductName = "NexDesk"
+FileDescription = "NexDesk Virtual Display Driver"
+InternalName = "dylib_virtual_display"
+OriginalFilename = "dylib_virtual_display.dll"
+
 [build-dependencies]
 cc = "1.0"
+
+[target.'cfg(target_os="windows")'.build-dependencies]
+winres = "0.1"
+winapi = { version = "0.3", features = ["winnt"] }
 
 [dependencies]
 thiserror = "1.0.30"

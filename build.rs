@@ -22,17 +22,33 @@ fn build_mac() {
     println!("cargo:rerun-if-changed={}", file);
 }
 
-#[cfg(all(windows, feature = "inline"))]
+// Windows resources for `librustdesk.dll`.
+//
+// This used to be gated on `feature = "inline"`, because the only Windows
+// binary this crate produced was the Sciter build - where the crate *is* the
+// process and therefore owns the manifest. The Flutter build ships
+// `librustdesk.dll` instead, and that DLL went out with no VERSIONINFO at all:
+// Explorer showed an empty Details tab, and an unsigned, version-less DLL
+// inside a remote-access payload is precisely the shape heuristic scanners
+// score highest.
+//
+// The manifest stays behind the `inline` gate deliberately. A DLL has no
+// activation context of its own - `NexDesk.exe` supplies one from Runner.rc -
+// so a second copy would at best be ignored and at worst duplicate the
+// Common-Controls dependency.
+#[cfg(windows)]
 fn build_manifest() {
     use std::io::Write;
     if std::env::var("PROFILE").unwrap() == "release" {
         let mut res = winres::WindowsResource::new();
-        res.set_icon("res/icon.ico")
-            .set_language(winapi::um::winnt::MAKELANGID(
+        res.set_icon("res/icon.ico").set_language(
+            winapi::um::winnt::MAKELANGID(
                 winapi::um::winnt::LANG_ENGLISH,
                 winapi::um::winnt::SUBLANG_ENGLISH_US,
-            ))
-            .set_manifest_file("res/manifest.xml");
+            ),
+        );
+        #[cfg(feature = "inline")]
+        res.set_manifest_file("res/manifest.xml");
         match res.compile() {
             Err(e) => {
                 write!(std::io::stderr(), "{}", e).unwrap();
@@ -106,7 +122,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=NEXDESK_SERVER_KEY");
     hbb_common::gen_version();
     install_android_deps();
-    #[cfg(all(windows, feature = "inline"))]
+    #[cfg(windows)]
     build_manifest();
     #[cfg(windows)]
     build_windows();

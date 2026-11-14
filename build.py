@@ -973,7 +973,12 @@ def build_flutter_windows(version, features, skip_portable_pack):
             print("cargo build failed, please check rust source code.")
             exit(-1)
     os.chdir('flutter')
-    system2('flutter build windows --release')
+    # pubspec carries `1.5.11+81`: the `+81` is the Android versionCode and must
+    # stay, but on Windows Flutter feeds it into Runner.rc as the fourth version
+    # field, so the exe used to report 1.5.11.81 while the packer reported
+    # 1.5.8.0. Pinning the build number to 0 makes the exe report 1.5.11.0 and
+    # match everything else in the payload.
+    system2(f'flutter build windows --release --build-name {version} --build-number 0')
     os.chdir('..')
     shutil.copy2('target/release/deps/dylib_virtual_display.dll',
                  flutter_build_dir_2)
@@ -1020,6 +1025,12 @@ def main():
     if os.path.isfile('/usr/bin/pacman'):
         system2('git checkout src/ui/common.tis')
     version = get_version()
+    # `libs/virtual_display/dylib/build.rs` stamps its VERSIONINFO from this.
+    # That crate carries its own package version (0.1.0) which has nothing to do
+    # with the product version, and a shipped DLL reporting a different version
+    # from every other binary is both an antivirus signal and a code-signing
+    # rejection: SignPath requires identical version attributes across a build.
+    os.environ['NEXDESK_VERSION'] = version
     features = ','.join(get_features(args))
     flutter = args.flutter
     if not flutter:

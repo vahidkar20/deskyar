@@ -1,6 +1,11 @@
 [package]
 name = "rustdesk-portable-packer"
-version = "1.5.8"
+# This is the version stamped into the single-file exe that users download, so
+# it has to track the product version rather than drift on its own. It had
+# drifted: the packer reported 1.5.8 while the app inside it reported 1.5.11,
+# which reads as a repacked/re-signed binary to scanners and fails code-signing
+# metadata review. scripts/bump-version.py now rewrites it.
+version = "1.5.11"
 edition = "2021"
 description = "RustDesk Remote Desktop"
 
