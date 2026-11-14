@@ -972,6 +972,13 @@ def build_flutter_windows(version, features, skip_portable_pack):
         if not os.path.exists("target/release/librustdesk.dll"):
             print("cargo build failed, please check rust source code.")
             exit(-1)
+        # Privacy mode overlay host. A separate build because --lib above only
+        # produces the Flutter cdylib. It ships next to the app and is spawned
+        # on demand; see libs/privacy-host/src/main.rs for why it exists.
+        system2('cargo build --locked --release -p nexdesk-privacy-host')
+        if not os.path.exists("target/release/NexDeskPrivacyHost.exe"):
+            print("cargo build of NexDeskPrivacyHost failed.")
+            exit(-1)
     os.chdir('flutter')
     # pubspec carries `1.5.11+81`: the `+81` is the Android versionCode and must
     # stay, but on Windows Flutter feeds it into Runner.rc as the fourth version
@@ -982,6 +989,7 @@ def build_flutter_windows(version, features, skip_portable_pack):
     os.chdir('..')
     shutil.copy2('target/release/deps/dylib_virtual_display.dll',
                  flutter_build_dir_2)
+    shutil.copy2('target/release/NexDeskPrivacyHost.exe', flutter_build_dir_2)
     if skip_portable_pack:
         return
     os.chdir('libs/portable')

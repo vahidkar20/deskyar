@@ -1,0 +1,41 @@
+[package]
+name = "nexdesk-privacy-host"
+# Product version, because winres stamps VERSIONINFO from it and every shipped
+# binary has to report the same four numbers. scripts/bump-version.py rewrites
+# it alongside the other versioned members.
+version = "1.5.11"
+edition = "2021"
+description = "NexDesk privacy mode overlay host"
+license = "AGPL-3.0-only"
+build = "build.rs"
+
+[[bin]]
+name = "NexDeskPrivacyHost"
+path = "src/main.rs"
+
+# Windows-only by nature: the crate is a Win32 message loop with no portable
+# behaviour. Other targets get an empty main so `cargo check` on a Linux host
+# still succeeds for the workspace.
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = [
+    "winuser",
+    "winbase",
+    "wingdi",
+    "libloaderapi",
+] }
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+winapi = { version = "0.3", features = ["winnt"] }
+
+[package.metadata.winres]
+# This is the process that puts a black overlay on every monitor. It has to look
+# like part of the product: a small unsigned helper with no version resource,
+# spawned at the moment the screen is blanked, is exactly the shape of a
+# click-fraud overlay.
+LegalCopyright = "Copyright © 2026 NexDesk. Based on RustDesk (AGPL-3.0)."
+CompanyName = "NexDesk"
+ProductName = "NexDesk"
+FileDescription = "NexDesk Privacy Mode Host"
+InternalName = "NexDeskPrivacyHost"
+OriginalFilename = "NexDeskPrivacyHost.exe"

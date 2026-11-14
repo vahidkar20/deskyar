@@ -5005,6 +5005,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexdesk-privacy-host"
+version = "1.5.11"
+dependencies = [
+ "winapi 0.3.9",
+ "winres",
+]
+
+[[package]]
 name = "nix"
 version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
