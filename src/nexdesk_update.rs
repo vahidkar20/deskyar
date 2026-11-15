@@ -1204,6 +1204,9 @@ mod tests {
             notes_fa: "سلام\nدنیا".to_owned(),
             notes_en: "hello\nworld".to_owned(),
             signatures: vec![],
+            retired_current: false,
+            minimum_version: String::new(),
+            message: String::new(),
         }
     }
 
