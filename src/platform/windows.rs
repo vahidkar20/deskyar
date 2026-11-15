@@ -4363,7 +4363,10 @@ pub fn send_raw_data_to_printer(printer_name: Option<String>, data: Vec<u8>) -> 
             data.len() as c_ulong,
         );
         if res != 0 {
-            bail!("Failed to send data to the printer, see logs in C:\\Windows\\temp\\test_rustdesk.log for more details.");
+            // Points at where flog() actually writes. It used to name
+            // C:\Windows\temp\test_rustdesk.log, a path that needed elevation
+            // and was never created.
+            bail!("Failed to send data to the printer. Diagnostics were written to %TEMP%\\nexdesk-print.log.");
         } else {
             log::info!("Successfully sent data to the printer");
         }
