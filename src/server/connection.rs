@@ -24,6 +24,11 @@ use crate::{
 };
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::{common::DEVICE_NAME, flutter::connection_manager::start_channel};
+use base::{
+    config::keys,
+    fs::{self, can_enable_overwrite_detection, JobType},
+    message_proto::{option_message::BoolOption, permission_info::Permission},
+};
 use cidr_utils::cidr::IpCidr;
 #[cfg(target_os = "android")]
 use hbb_common::protobuf::EnumOrUnknown;
@@ -44,11 +49,6 @@ use hbb_common::{
         time::{self, Duration, Instant},
     },
     tokio_util::codec::{BytesCodec, Framed},
-};
-use base::{
-    config::keys,
-    fs::{self, can_enable_overwrite_detection, JobType},
-    message_proto::{option_message::BoolOption, permission_info::Permission},
 };
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use scrap::android::{call_main_service_key_event, call_main_service_pointer_input};
@@ -2863,13 +2863,15 @@ impl Connection {
             if !self.check_login_scope(&lr).await {
                 return false;
             }
-            // A mandatory update is pending: refuse new logins from builds
-            // below the published floor. An already-authorized connection
-            // never reaches this branch, so live sessions keep running.
-            if crate::nexdesk_update::login_blocked() {
-                self.send_login_error("Update required").await;
-                return false;
-            }
+            // No version check belongs here.
+            //
+            // This used to refuse the login with "Update required" when the
+            // local build sat below a floor the updater had persisted. The floor
+            // was taken from the offered version when the publisher had not
+            // named one, and it was never cleared - so an outdated machine
+            // silently lost the ability to accept any session, including from
+            // its own owner. Access must not depend on the update state; the
+            // outdated build is warned about on the controller side instead.
             self.awaiting_2fa = false;
             self.handle_login_request_without_validation(&lr).await;
             if self.authorized {
@@ -4058,7 +4060,9 @@ impl Connection {
                         self.refresh_video_display(Some(request.display as usize));
                     }
                 }
-                Some(message::Union::PortForwardChannel(ch)) => self.handle_port_forward_channel(ch),
+                Some(message::Union::PortForwardChannel(ch)) => {
+                    self.handle_port_forward_channel(ch)
+                }
                 Some(message::Union::TerminalAction(action)) => {
                     #[cfg(not(any(target_os = "android", target_os = "ios")))]
                     allow_err!(self.handle_terminal_action(action).await);

@@ -2631,9 +2631,8 @@ bool handleUriLink({List<String>? cmdArgs, Uri? uri, String? uriString}) {
   if (type != null && id != null) {
     switch (type) {
       case UriLinkType.remoteDesktop:
-        if (nexDeskUpdate.blocksNewConnections) {
-          nexDeskUpdate.onBlockedConnection?.call();
-          break;
+        if (nexDeskUpdate.pendingMandatoryUpdate) {
+          nexDeskUpdate.onConnectWhileOutdated?.call();
         }
         Future.delayed(Duration.zero, () {
           rustDeskWinManager.newRemoteDesktop(id!,
@@ -2872,11 +2871,11 @@ connect(BuildContext context, String id,
     String? connToken,
     bool? isSharedPassword}) async {
   if (id == '') return;
-  // A mandatory update is pending: new sessions are refused. A session that is
-  // already running never reaches this function, so it is left alone.
-  if (nexDeskUpdate.blocksNewConnections) {
-    nexDeskUpdate.onBlockedConnection?.call();
-    return;
+  // An update may be pending, but it never blocks a session: losing remote
+  // access to your own machine because a build is old is worse than running an
+  // old build. The callback lets the UI warn; the connect proceeds regardless.
+  if (nexDeskUpdate.pendingMandatoryUpdate) {
+    nexDeskUpdate.onConnectWhileOutdated?.call();
   }
   if (!isDesktop || desktopType == DesktopType.main) {
     try {

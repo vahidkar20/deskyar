@@ -142,8 +142,7 @@ void runMainApp(bool startService) async {
   // Optional updates are surfaced by the bottom-left card
   // (`nexdesk_update_banner.dart`), not by a modal that steals focus.
   nexDeskUpdate.onAvailable = () {};
-  nexDeskUpdate.onBlockedConnection = () =>
-      showNexDeskUpdateDialog(forceMandatory: true);
+  nexDeskUpdate.onConnectWhileOutdated = () => showNexDeskUpdateDialog();
   nexDeskUpdate.start();
   // trigger connection status updater
   await bind.mainCheckConnectStatus();

@@ -533,7 +533,18 @@ jobs:
       # session (ci.yml skips them for the same reason).
       - name: Test the installer command parser
         shell: pwsh
-        run: "cargo test --lib -- installer_exec:: installer_handoff::"
+        run: "cargo test --lib -- installer_exec:: installer_handoff:: floor_tests::"
+
+      # The login path must never consult the updater. It did once: an outdated
+      # build refused every inbound session with "Update required", because a
+      # presentation fact had been given the power to authorise. A grep is crude
+      # but it fails the build rather than relying on a reviewer noticing.
+      - name: Assert the login path ignores the updater
+        shell: pwsh
+        run: |
+          if (Select-String -Path src\server\connection.rs -Pattern 'nexdesk_update' -Quiet) {
+            Write-Error "src/server/connection.rs references nexdesk_update; the login path must not depend on update state."
+          }
 
       # Built after the optional resources are in place so the MSI and the
       # portable exe carry the same payload. Virtual displays need the driver

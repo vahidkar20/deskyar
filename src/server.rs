@@ -7,6 +7,7 @@ use std::{
 
 use bytes::Bytes;
 
+use base::message_proto::*;
 pub use connection::*;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use hbb_common::config::Config2;
@@ -23,7 +24,6 @@ use hbb_common::{
     sodiumoxide::crypto::{box_, sign},
     timeout, tokio, ResultType, Stream,
 };
-use base::message_proto::*;
 use scrap::camera;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use service::ServiceTmpl;
@@ -69,9 +69,9 @@ pub mod input_service {
 }
 
 mod connection;
+pub mod display_service;
 mod login_failure_check;
 pub(crate) mod port_forward_mux;
-pub mod display_service;
 #[cfg(windows)]
 pub mod portable_service;
 mod service;
@@ -670,9 +670,9 @@ pub async fn start_server(is_server: bool, no_server: bool) {
     });
 
     if is_server {
-        // The server process never runs the updater, so it has to restore the
-        // version floor a previous GUI run persisted.
-        crate::nexdesk_update::load_login_gate();
+        // The server process resolves a different config file than the GUI, so
+        // it has to clear the legacy login-gate key on its own copy.
+        crate::nexdesk_update::migrate_legacy_options();
         crate::common::set_server_running(true);
         std::thread::spawn(move || {
             if let Err(err) = crate::ipc::start("") {

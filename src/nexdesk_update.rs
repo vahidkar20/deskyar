@@ -215,7 +215,6 @@ static PENDING: Mutex<Option<Manifest>> = Mutex::new(None);
 static DOWNLOAD_ID: Mutex<Option<String>> = Mutex::new(None);
 static LAST_CHECK: Mutex<Option<Instant>> = Mutex::new(None);
 static STARTED: Once = Once::new();
-static LOGIN_GATE: Mutex<Option<String>> = Mutex::new(None);
 
 fn with_state<F: FnOnce(&mut UpdateState)>(f: F) {
     let mut guard = STATE.lock().unwrap();
@@ -818,11 +817,7 @@ pub fn check_now(manual: bool) -> ResultType<()> {
         return Ok(());
     }
 
-    let floor = if manifest.minimum_version.is_empty() {
-        manifest.min_supported.clone()
-    } else {
-        manifest.minimum_version.clone()
-    };
+    let floor = publisher_floor(&manifest);
     let below_floor = !floor.is_empty() && current < hbb_common::get_version_number(&floor);
     // Three independent reasons to force the update, all publisher-controlled:
     // the release is flagged, the running build was retired, or it sits below
@@ -856,13 +851,28 @@ pub fn check_now(manual: bool) -> ResultType<()> {
         .to_owned();
     });
     *PENDING.lock().unwrap() = Some(manifest);
-    apply_login_gate();
     emit();
     Ok(())
 }
 
 /// Background poller. Idempotent.
+/// The publisher's floor for this channel, or empty when none was given.
+///
+/// Deliberately does *not* fall back to the offered version. An earlier build
+/// did, which turned every flagged update into a floor equal to the new version
+/// and locked outdated machines out of accepting any session at all.
+fn publisher_floor(manifest: &Manifest) -> String {
+    if manifest.minimum_version.is_empty() {
+        manifest.min_supported.clone()
+    } else {
+        manifest.minimum_version.clone()
+    }
+}
+
 pub fn start() {
+    // Before the enabled check: a machine whose update path is disabled still
+    // carries the key from an older build and must be cleaned.
+    migrate_legacy_options();
     if !is_enabled() {
         log::warn!("nexdesk update: disabled on this platform");
         return;
@@ -1102,67 +1112,22 @@ pub fn cancel() {
     emit();
 }
 
-/// Publish the version floor to the server process so new logins are refused
-/// while a mandatory update is pending. The gate is a version, so it clears
-/// itself once the app is updated.
-fn apply_login_gate() {
-    let floor = {
-        let guard = STATE.lock().unwrap();
-        match guard.as_ref() {
-            Some(state) if state.mandatory => state.min_supported.clone(),
-            _ => String::new(),
-        }
-    };
-    // Without a publisher floor, block anything below the offered version.
-    let floor = if floor.is_empty() {
-        STATE
-            .lock()
-            .unwrap()
-            .as_ref()
-            .filter(|s| s.mandatory)
-            .map(|s| s.latest.clone())
-            .unwrap_or_default()
-    } else {
-        floor
-    };
-    *LOGIN_GATE.lock().unwrap() = if floor.is_empty() {
-        None
-    } else {
-        Some(floor.clone())
-    };
-    if floor.is_empty() {
+/// Clears the version floor that older builds persisted.
+///
+/// Builds before this one wrote `nexdesk-block-below-version` and refused every
+/// inbound login while the local version was below it. The floor was taken from
+/// the *offered* version whenever the publisher had not specified one, and it
+/// was never cleared by a successful update, a reinstall or a downgrade, so a
+/// machine could stay locked out of remote access permanently. Nothing consults
+/// it any more; this removes the key so a downgrade or a restored profile cannot
+/// resurrect it.
+///
+/// Both the GUI and the service call this, because they resolve different
+/// config files.
+pub fn migrate_legacy_options() {
+    if !read_option(OPTION_LOGIN_GATE).is_empty() {
         persist(OPTION_LOGIN_GATE, "");
-    } else {
-        persist(OPTION_LOGIN_GATE, &floor);
-    }
-}
-
-/// True when this build is below the published floor and must not accept new
-/// logins. Read by the server on every login request.
-pub fn login_blocked() -> bool {
-    let gate = LOGIN_GATE.lock().unwrap().clone().or_else(|| {
-        let stored = read_option(OPTION_LOGIN_GATE);
-        if stored.is_empty() {
-            None
-        } else {
-            Some(stored)
-        }
-    });
-    match gate {
-        Some(version) if !version.is_empty() => {
-            hbb_common::get_version_number(crate::VERSION)
-                < hbb_common::get_version_number(&version)
-        }
-        _ => false,
-    }
-}
-
-/// Restore the persisted gate at process start (the server process does not
-/// run the updater).
-pub fn load_login_gate() {
-    let stored = read_option(OPTION_LOGIN_GATE);
-    if !stored.is_empty() {
-        *LOGIN_GATE.lock().unwrap() = Some(stored);
+        log::info!("Cleared the legacy login gate");
     }
 }
 
@@ -1262,5 +1227,62 @@ mod tests {
         let mut bad = sample();
         bad.version = "1.5.4\nschema=2".to_owned();
         assert!(validate(&bad).is_err());
+    }
+}
+
+#[cfg(test)]
+mod floor_tests {
+    use super::*;
+
+    fn manifest_with(mandatory: bool, minimum: &str, min_supported: &str) -> Manifest {
+        Manifest {
+            schema: 1,
+            channel: "stable".to_owned(),
+            platform: "windows-x86_64".to_owned(),
+            version: "9.9.9".to_owned(),
+            url: "https://nexdesk.ir/updates/x.exe".to_owned(),
+            sha256: "a".repeat(64),
+            size: 1,
+            mandatory,
+            min_supported: min_supported.to_owned(),
+            published_at: "2026-11-07T12:00:00Z".to_owned(),
+            notes_fa: String::new(),
+            notes_en: String::new(),
+            signatures: vec![],
+            retired_current: false,
+            minimum_version: minimum.to_owned(),
+            message: String::new(),
+        }
+    }
+
+    // The exact regression: a flagged release with no publisher floor must not
+    // invent one. It used to fall back to the offered version, which made the
+    // host refuse every inbound login.
+    #[test]
+    fn flagged_update_without_a_floor_produces_no_floor() {
+        let m = manifest_with(true, "", "");
+        assert_eq!(publisher_floor(&m), "");
+    }
+
+    #[test]
+    fn the_floor_is_never_the_offered_version() {
+        for minimum in ["", "1.0.0"] {
+            for min_supported in ["", "1.2.0"] {
+                let m = manifest_with(true, minimum, min_supported);
+                assert_ne!(publisher_floor(&m), m.version);
+            }
+        }
+    }
+
+    #[test]
+    fn minimum_version_wins_over_the_legacy_field() {
+        let m = manifest_with(false, "1.6.0", "1.2.0");
+        assert_eq!(publisher_floor(&m), "1.6.0");
+    }
+
+    #[test]
+    fn the_legacy_field_is_still_honoured_when_alone() {
+        let m = manifest_with(false, "", "1.2.0");
+        assert_eq!(publisher_floor(&m), "1.2.0");
     }
 }

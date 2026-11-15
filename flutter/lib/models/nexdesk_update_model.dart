@@ -116,14 +116,17 @@ class NexDeskUpdateController extends GetxController {
   /// Kept as a callback so the model does not import the dialog layer.
   void Function()? onAvailable;
 
-  /// Fired when a new session is attempted while a mandatory update is pending.
-  void Function()? onBlockedConnection;
+  /// Fired when a session starts while an update is pending. The session
+  /// proceeds either way; this only drives a reminder.
+  void Function()? onConnectWhileOutdated;
 
   String? _promptedVersion;
 
-  /// True while a mandatory update is pending: the main window is blocked and
-  /// new remote sessions must not start.
-  bool get blocksNewConnections {
+  /// True while an update the publisher asked for has not been installed yet.
+  ///
+  /// This is presentation state. It used to be read as authorisation and
+  /// suppressed connections, which is what made an outdated machine unreachable.
+  bool get pendingMandatoryUpdate {
     final current = state.value;
     if (current == null || !current.mandatory) return false;
     return current.phase == 'available' ||
