@@ -107,8 +107,8 @@ pub use acl::{
 };
 use installer_handoff::run_cmds;
 use installer_shell::{
-    desktop_shortcut_path, embedded_shortcut_commands, embedded_tray_shortcut_commands,
-    escape_nested_cmd_ampersands, shortcut_bytes, validate_install_value,
+    desktop_shortcut_path, embedded_shortcut_commands, escape_nested_cmd_ampersands,
+    shortcut_bytes, validate_install_value,
 };
 
 pub const FLUTTER_RUNNER_WIN32_WINDOW_CLASS: &'static str = "FLUTTER_RUNNER_WIN32_WINDOW"; // main window, install window
@@ -1592,8 +1592,6 @@ pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> Res
         &format!("Uninstall {app_name}.lnk"),
         "uninstall_shortcut",
     );
-    let tray_shortcut_commands =
-        embedded_tray_shortcut_commands(&app_name, &exe, shortcut_icon_location.as_deref())?;
     let mut reg_value_desktop_shortcuts = "0".to_owned();
     let mut reg_value_start_menu_shortcuts = "0".to_owned();
     let mut reg_value_printer = "0".to_owned();
@@ -1648,14 +1646,19 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
         Config::set_option("api-server".into(), lic.api);
     }
 
-    let tray_shortcuts = if config::is_outgoing_only() {
-        "".to_owned()
-    } else {
-        format!("
-{tray_shortcut_commands}
-copy /Y \"{tmp_path}\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\"
-")
-    };
+    // No tray entry in the Startup folder.
+    //
+    // The service already starts at boot and accepts connections; the tray is
+    // only the local UI. Dropping it removes the "installer drops an autorun
+    // entry" leg from the behaviour that Windows Defender scores as
+    // Behavior:Win32/Persistence.A!ml, and it is the one item in that list the
+    // product does not actually need - the other three are the service, the
+    // uninstall key and the shortcuts, which are functionality and Windows
+    // requirements respectively.
+    //
+    // The uninstall path still deletes any shortcut left behind by an older
+    // version, so upgrades converge.
+    let tray_shortcuts = "";
 
     let install_remote_printer = if install_printer {
         // No need to use `|| true` here.
@@ -3232,15 +3235,11 @@ fn get_install_service_commands(path: &str, exe: &str) -> ResultType<String> {
     if let Some(icon) = shortcut_icon_location.as_deref() {
         validate_install_value(icon)?;
     }
-    let tray_shortcut_commands =
-        embedded_tray_shortcut_commands(&app_name, exe, shortcut_icon_location.as_deref())?;
     let filter = format!(" /FI \"PID ne {}\"", get_current_pid());
     Ok(format!(
         "
 chcp 65001
 taskkill /F /IM {app_name}.exe{filter}
-{tray_shortcut_commands}
-copy /Y \"%RUSTDESK_OUTPUT_DIR%\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\"
 {import_config}
 {create_service}
     ",

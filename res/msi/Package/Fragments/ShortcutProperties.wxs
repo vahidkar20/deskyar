@@ -13,7 +13,18 @@
 				 properties from command line, bundle, or registry values. -->
 		<Property Id="STARTMENUSHORTCUTS" Value="1" Secure="yes"></Property>
 		<Property Id="DESKTOPSHORTCUTS" Value="1" Secure="yes"></Property>
-		<Property Id="STARTUPSHORTCUTS" Value="1" Secure="yes"></Property>
+		<!--
+			No Startup-folder shortcut by default.
+
+			The service already starts at boot and accepts connections; the tray
+			is only the local UI, so an autorun entry is convenience, not
+			function. It is also one of the entries Defender lists under
+			Behavior:Win32/Persistence.A!ml when it quarantines the installer, and
+			it is the only item in that list we can drop without losing a
+			capability. Pass STARTUPSHORTCUTS=1 on the msiexec command line to opt
+			back in.
+		-->
+		<Property Id="STARTUPSHORTCUTS" Secure="yes"></Property>
 		<Property Id="PRINTER" Secure="yes"></Property>
 
 		<!-- These properties get set from either the command line, bundle or registry value,

@@ -28,6 +28,15 @@ away:
 | VBScript in `%TEMP%` run by `cscript` | Desktop shortcut creation | Writing an executable script to temp and handing it to a scripting host. |
 | `%TEMP%` sweep on startup | Deleted `rustdesk-*.exe` / `.msi` older than an hour | Looked like "scans temp and deletes executables", and never matched our own files anyway. |
 | Elevated install script | A `.bat`/`.cmd` file written to disk and run by an elevated `cmd.exe`, whose body created the service | The exact shape of `HEUR/Malware.bat.Gen`: a script in a writable directory that installs a service. It was moved out of `%TEMP%` and renamed once, which lowered the hit rate but kept the pattern. The elevated step now runs inside the application itself and receives its commands over a named pipe — no script file, no `cmd.exe`, no `certutil`. |
+| Startup-folder tray shortcut | `NexDesk Tray.lnk` in the all-users Startup folder | One of the four items Defender lists under `Behavior:Win32/Persistence.A!ml`. The service already starts at boot and accepts connections, so the autorun entry was convenience rather than function. `STARTUPSHORTCUTS=1` on the msiexec command line restores it. |
+
+What remains, and why it cannot be removed: the **service**, the **uninstall
+registry key** and the **Start Menu / Desktop shortcuts**. The first is the
+product (unattended access), the second is how Windows lists an installed
+application, and the third is what a user asks for when they tick the box.
+A remote-support installer will always look like it installs itself for
+persistence, because it does. That is why the durable fix for this class is a
+false-positive ruling from the vendor, not a code change.
 
 The remaining durable fixes are signing every shipped binary and completing
 version metadata. Signing is not in place yet — see the *Code signing policy*
