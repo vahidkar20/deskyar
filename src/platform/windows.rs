@@ -122,8 +122,6 @@ const REG_NAME_MSI_PRODUCT_CODE: &str = "MsiProductCode";
 const REG_NAME_UNINSTALL_STRING: &str = "UninstallString";
 const REG_NAME_WINDOWS_INSTALLER: &str = "WindowsInstaller";
 const MSI_WINDOWS_INSTALLER_VALUE: u32 = 1;
-const MSI_EXIT_SUCCESS_REBOOT_INITIATED: u32 = 1641;
-const MSI_EXIT_SUCCESS_REBOOT_REQUIRED: u32 = 3010;
 const HKLM_PREFIX: &str = "HKEY_LOCAL_MACHINE\\";
 
 fn validate_install_app_name(app_name: &str) -> ResultType<()> {
@@ -1518,13 +1516,13 @@ fn get_after_install(
     reg add HKEY_CLASSES_ROOT\\.{ext}\\shell /f
     reg add HKEY_CLASSES_ROOT\\.{ext}\\shell\\open /f
     reg add HKEY_CLASSES_ROOT\\.{ext}\\shell\\open\\command /f
-    reg add HKEY_CLASSES_ROOT\\.{ext}\\shell\\open\\command /f /ve /t REG_SZ /d \"\\\"{nested_exe}\\\" --play \\\"%%1\\\"\"
+    reg add HKEY_CLASSES_ROOT\\.{ext}\\shell\\open\\command /f /ve /t REG_SZ /d \"\\\"{nested_exe}\\\" --play \\\"%1\\\"\"
     reg add HKEY_CLASSES_ROOT\\{ext} /f
     reg add HKEY_CLASSES_ROOT\\{ext} /f /v \"URL Protocol\" /t REG_SZ /d \"\"
     reg add HKEY_CLASSES_ROOT\\{ext}\\shell /f
     reg add HKEY_CLASSES_ROOT\\{ext}\\shell\\open /f
     reg add HKEY_CLASSES_ROOT\\{ext}\\shell\\open\\command /f
-    reg add HKEY_CLASSES_ROOT\\{ext}\\shell\\open\\command /f /ve /t REG_SZ /d \"\\\"{nested_exe}\\\" \\\"%%1\\\"\"
+    reg add HKEY_CLASSES_ROOT\\{ext}\\shell\\open\\command /f /ve /t REG_SZ /d \"\\\"{nested_exe}\\\" \\\"%1\\\"\"
     netsh advfirewall firewall add rule name=\"{app_name} Service\" dir=out action=allow program=\"{exe}\" enable=yes
     netsh advfirewall firewall add rule name=\"{app_name} Service\" dir=in action=allow program=\"{exe}\" enable=yes
     {create_service}
@@ -3550,15 +3548,12 @@ fn normalize_msi_product_code(value: &str) -> Option<String> {
 }
 
 fn build_msi_uninstall_command(product_code: &str) -> String {
-    format!(
-        "set \"RUSTDESK_MSI_EXIT_CODE=\"\n\
-MsiExec.exe /X {product_code} /norestart REBOOT=ReallySuppress\n\
-set \"RUSTDESK_MSI_EXIT_CODE=%ERRORLEVEL%\"\n\
-if \"%RUSTDESK_MSI_EXIT_CODE%\"==\"{MSI_EXIT_SUCCESS_REBOOT_REQUIRED}\" echo MSI uninstall succeeded with a reboot recommendation; continuing without reboot.\n\
-if \"%RUSTDESK_MSI_EXIT_CODE%\"==\"{MSI_EXIT_SUCCESS_REBOOT_INITIATED}\" echo MSI uninstall succeeded with a reboot request; continuing without forcing reboot.\n\
-if not \"%RUSTDESK_MSI_EXIT_CODE%\"==\"0\" if not \"%RUSTDESK_MSI_EXIT_CODE%\"==\"{MSI_EXIT_SUCCESS_REBOOT_REQUIRED}\" if not \"%RUSTDESK_MSI_EXIT_CODE%\"==\"{MSI_EXIT_SUCCESS_REBOOT_INITIATED}\" exit /b %RUSTDESK_MSI_EXIT_CODE%\n\
-ver > nul"
-    )
+    // A bare msiexec line. The exit-code handling that used to wrap it relied on
+    // `set` and `%ERRORLEVEL%`, which only exist inside a batch file - the
+    // executor has no shell, so the whole block was dead and a failed MSI
+    // uninstall went unnoticed. The executor's policy now treats 0, 3010 and
+    // 1641 as success for msiexec and fails the install on anything else.
+    format!("MsiExec.exe /X {product_code} /norestart REBOOT=ReallySuppress")
 }
 
 fn get_reg_string_of(subkey: &str, name: &str) -> ResultType<Option<String>> {
@@ -3821,8 +3816,9 @@ pub fn update_to(file: &str) -> ResultType<()> {
 //    We need also to handle the command line parsing to find the tray processes.
 pub fn update_me_msi(msi: &str, quiet: bool) -> ResultType<()> {
     let quiet_args = if quiet { " /qn LAUNCH_TRAY_APP=N" } else { "" };
-    let cmds =
-        format!("chcp 65001 && msiexec /i \"{msi}\"{quiet_args} REBOOT=ReallySuppress /norestart");
+    // No `chcp` prefix: the executor dropped every line starting with it, so
+    // the whole MSI update was a no-op that reported success.
+    let cmds = format!("msiexec /i \"{msi}\"{quiet_args} REBOOT=ReallySuppress /norestart");
     run_cmds(cmds, false, "update-msi")?;
     Ok(())
 }

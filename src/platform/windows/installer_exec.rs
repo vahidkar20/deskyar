@@ -17,6 +17,7 @@
 
 use std::{
     fs,
+    os::windows::process::CommandExt,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -35,6 +36,12 @@ use super::ResultType;
 
 /// Commands are bounded so a malformed pipe cannot make us allocate forever.
 const MAX_SCRIPT_BYTES: usize = 4 * 1024 * 1024;
+
+// Exit codes shared with `installer_handoff`, which turns them into messages.
+pub(super) const EXIT_OK: i32 = 0;
+pub(super) const EXIT_PIPE_FAILED: i32 = 0x5253_0001;
+pub(super) const EXIT_BAD_ARGUMENTS: i32 = 0x5253_0003;
+pub(super) const EXIT_COMMAND_FAILED: i32 = 0x5253_0009;
 
 pub(super) fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
@@ -109,14 +116,7 @@ pub(super) fn run_from_pipe(pipe_name: &str) -> ResultType<i32> {
     let script = script?;
 
     let mut executor = Executor::new()?;
-    let result = executor.run(&script);
-    match result {
-        Ok(()) => Ok(0),
-        Err(err) => {
-            log::error!("Elevated setup failed: {err}");
-            Ok(1)
-        }
-    }
+    executor.run(&script)
 }
 
 /// Executes the installer's command text.
@@ -161,23 +161,59 @@ impl Executor {
         out
     }
 
-    pub(super) fn run(&mut self, script: &str) -> ResultType<()> {
-        for raw in script.lines() {
+    /// Executes every line, collecting failures instead of stopping at the first.
+    ///
+    /// The script begins by uninstalling the previous version, so there is no
+    /// snapshot to roll back to. Aborting halfway leaves the machine in a worse
+    /// state than finishing and reporting precisely which command broke.
+    pub(super) fn run(&mut self, script: &str) -> ResultType<i32> {
+        let mut required_failures = 0;
+        for (index, raw) in script.lines().enumerate() {
             let line = raw.trim();
             if line.is_empty() || line.starts_with("rem ") || line.starts_with("::") {
                 continue;
             }
             let expanded = self.expand(line);
-            self.run_line(expanded.trim())?;
+            let expanded = expanded.trim();
+            if expanded.is_empty() {
+                continue;
+            }
+            if let Err(err) = self.run_line(expanded) {
+                if classify(expanded).required {
+                    required_failures += 1;
+                    log::error!("Installer command {index} failed ({err}): {expanded}");
+                } else {
+                    log::warn!("Installer command {index} failed, ignored ({err}): {expanded}");
+                }
+            }
         }
-        Ok(())
+        if required_failures == 0 {
+            Ok(EXIT_OK)
+        } else {
+            log::error!("{required_failures} required installer command(s) failed");
+            Ok(EXIT_COMMAND_FAILED)
+        }
     }
 
     fn run_line(&mut self, line: &str) -> ResultType<()> {
         let lower = line.to_ascii_lowercase();
 
-        // Purely cosmetic in a script; there is no console here.
-        if lower.starts_with("chcp") || lower.starts_with("timeout") || lower.starts_with("set ") {
+        // `chcp` only existed to set a code page for a batch file. An older
+        // generator may still chain it to a real command with `&&`; run the
+        // remainder rather than dropping the whole line, which is what made the
+        // MSI update a silent no-op.
+        if lower.starts_with("chcp") {
+            if let Some((_, rest)) = line.split_once("&&") {
+                let rest = rest.trim();
+                if !rest.is_empty() {
+                    return self.run_line(rest);
+                }
+            }
+            return Ok(());
+        }
+        // Shell variables have no meaning without a shell; the generators must
+        // not rely on them.
+        if lower.starts_with("timeout") || lower.starts_with("set ") {
             return Ok(());
         }
         if lower.starts_with("echo ") || lower == "echo." {
@@ -191,7 +227,7 @@ impl Executor {
             return self.decode_embedded(rest_of(line, "nexdesk-decode "));
         }
         if lower.starts_with("reg ") {
-            return self.reg(rest_of(line, "reg "));
+            return run_tool_raw("reg", rest_of(line, "reg "));
         }
         if lower.starts_with("md ") || lower.starts_with("mkdir ") {
             let dir = strip_quotes(after_first_word(line));
@@ -218,23 +254,26 @@ impl Executor {
         if line.starts_with('"') {
             // A bare quoted command line, e.g. `"C:\...\NexDesk.exe" --flag`.
             if let Some((exe, args)) = split_first_quoted(line) {
-                return run_tool(&exe, args);
+                return run_tool_raw(&exe, args);
             }
         }
+        if lower.starts_with("msiexec") {
+            return run_tool_raw("msiexec", after_first_word(line));
+        }
         if lower.starts_with("taskkill ") {
-            return run_tool("taskkill", after_first_word(line));
+            return run_tool_raw("taskkill", after_first_word(line));
         }
         if lower.starts_with("sc ") {
-            return run_tool("sc", after_first_word(line));
+            return run_tool_raw("sc", after_first_word(line));
         }
         if lower.starts_with("netsh ") {
-            return run_tool("netsh", after_first_word(line));
+            return run_tool_raw("netsh", after_first_word(line));
         }
 
         // Unknown shape: run it through cmd exactly as the old script would
         // have, so behaviour is preserved rather than silently dropped.
         log::info!("Installer: running unrecognised command through cmd: {line}");
-        run_tool("cmd", &format!("/C {line}"))
+        run_tool_raw("cmd", &format!("/C {line}"))
     }
 
     fn write_redirect(&mut self, rest: &str) -> ResultType<()> {
@@ -267,13 +306,6 @@ impl Executor {
         fs::write(&dst, decode_base64(&data)?)?;
         let _ = fs::remove_file(&src);
         Ok(())
-    }
-
-    fn reg(&mut self, rest: &str) -> ResultType<()> {
-        // Registry edits are delegated to reg.exe rather than reimplemented:
-        // the generated arguments already carry the exact types and escaping,
-        // and a wrong type here would corrupt an uninstall entry.
-        run_tool("reg", rest)
     }
 
     fn copy(&mut self, rest: &str) -> ResultType<()> {
@@ -399,15 +431,95 @@ fn tokenize(s: &str) -> Vec<String> {
     out
 }
 
-fn run_tool(tool: &str, args: &str) -> ResultType<()> {
+/// How a failing command is treated.
+struct Verdict {
+    /// The install is not usable without this command.
+    required: bool,
+    /// Exit codes that mean success in practice (already exists, already
+    /// running, reboot required).
+    tolerated: &'static [i32],
+}
+
+/// Decides whether a command's failure should fail the install.
+///
+/// "Required" means the installed product does not work without it. Everything
+/// else is best-effort cleanup that is expected to fail when the thing it
+/// removes was never there - `sc delete` on a fresh machine, `taskkill` on a
+/// process that is not running.
+fn classify(line: &str) -> Verdict {
+    let lower = line.to_ascii_lowercase();
+    let required = |tolerated: &'static [i32]| Verdict {
+        required: true,
+        tolerated,
+    };
+    let optional = Verdict {
+        required: false,
+        tolerated: &[],
+    };
+
+    if lower.starts_with("reg ") {
+        return required(&[]);
+    }
+    if lower.starts_with("sc ") {
+        if lower.contains(" stop ") || lower.contains(" delete ") {
+            return optional;
+        }
+        if lower.contains(" create ") {
+            // 1073 = the service already exists.
+            return required(&[1073]);
+        }
+        // 1056 = the service is already running.
+        return required(&[1056]);
+    }
+    if lower.starts_with("netsh ") {
+        return if lower.contains(" delete ") {
+            optional
+        } else {
+            required(&[])
+        };
+    }
+    if lower.starts_with("taskkill ")
+        || lower.starts_with("del ")
+        || lower.starts_with("erase ")
+        || lower.starts_with("rd ")
+    {
+        return optional;
+    }
+    if lower.starts_with("msiexec") {
+        // 3010 and 1641 both mean success with a pending reboot.
+        return required(&[3010, 1641]);
+    }
+    if lower.starts_with("chcp")
+        || lower.starts_with("timeout")
+        || lower.starts_with("set ")
+        || lower.starts_with("echo")
+    {
+        return optional;
+    }
+    // Everything else, including the `cmd /C` fallback, must succeed: an
+    // unrecognised command is a generator bug we want to hear about.
+    required(&[])
+}
+
+/// Runs a system tool with the argument tail passed through unmodified.
+///
+/// `raw_arg` reproduces byte for byte what `cmd.exe` used to hand the child.
+/// Re-tokenising turned cmd escapes into literals: `binpath= "\"C:\...\exe\"
+/// --service"` reached `sc` with the backslashes intact, so the service was
+/// registered with a broken binary path.
+fn run_tool_raw(tool: &str, raw_tail: &str) -> ResultType<()> {
     let mut command = Command::new(tool);
-    for arg in tokenize(args) {
-        command.arg(strip_quotes(&arg));
-    }
+    command.raw_arg(raw_tail);
     let status = command.status()?;
-    if !status.success() {
-        log::warn!("{tool} exited with {:?} for: {args}", status.code());
+    let code = status.code().unwrap_or(-1);
+    let verdict = classify(&format!("{tool} {raw_tail}"));
+    if code == 0 || verdict.tolerated.contains(&code) {
+        return Ok(());
     }
+    if verdict.required {
+        bail!("{tool} exited with {code}: {raw_tail}");
+    }
+    log::warn!("{tool} exited with {code} (ignored): {raw_tail}");
     Ok(())
 }
 
@@ -481,6 +593,42 @@ mod tests {
         let payload = b"shortcut bytes";
         let encoded = STANDARD.encode(payload);
         assert_eq!(decode_base64(encoded.as_bytes()).unwrap(), payload.to_vec());
+    }
+
+    #[test]
+    fn policy_distinguishes_required_from_cleanup() {
+        // A failed service creation must fail the install; a failed cleanup of
+        // something that was never there must not.
+        assert!(classify("reg add HKLM\\Software\\X /f").required);
+        assert!(classify("sc create NexDesk binpath= \"x\" start= auto").required);
+        assert!(classify("sc start NexDesk").required);
+        assert!(classify("netsh advfirewall firewall add rule name=\"x\" dir=in").required);
+
+        assert!(!classify("sc stop NexDesk").required);
+        assert!(!classify("sc delete NexDesk").required);
+        assert!(!classify("taskkill /F /IM NexDesk.exe").required);
+        assert!(!classify("del /f /q \"C:\\x\\y.lnk\"").required);
+        assert!(!classify("netsh advfirewall firewall delete rule name=\"x\"").required);
+        assert!(!classify("chcp 65001").required);
+
+        // An unrecognised line is a generator bug, so it must fail loudly.
+        assert!(classify("something-we-do-not-know").required);
+    }
+
+    #[test]
+    fn tolerated_codes_cover_the_expected_no_ops() {
+        // 1073 = service already exists, 1056 = already running.
+        assert!(classify("sc create NexDesk").tolerated.contains(&1073));
+        assert!(classify("sc start NexDesk").tolerated.contains(&1056));
+        // 3010 / 1641 = success with a pending reboot.
+        assert!(classify("msiexec /i \"a.msi\" /qn")
+            .tolerated
+            .contains(&3010));
+        assert!(classify("msiexec /i \"a.msi\" /qn")
+            .tolerated
+            .contains(&1641));
+        // A required command that is not sc/msiexec tolerates nothing.
+        assert!(classify("reg add HKLM\\X /f").tolerated.is_empty());
     }
 
     #[test]

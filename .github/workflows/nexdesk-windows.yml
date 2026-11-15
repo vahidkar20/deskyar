@@ -527,6 +527,14 @@ jobs:
           Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe","usbmmidd_v2\deviceinstaller.exe","usbmmidd_v2\usbmmidd.bat" -ErrorAction SilentlyContinue
           mv -Force .\usbmmidd_v2 .\NexDesk
 
+      # Nothing else runs Rust tests on Windows, so without this the installer
+      # parser and its policy table are only exercised by hand. Filtered to the
+      # two modules: the full suite contains platform tests that need a desktop
+      # session (ci.yml skips them for the same reason).
+      - name: Test the installer command parser
+        shell: pwsh
+        run: cargo test --lib -- installer_exec:: installer_handoff::
+
       # Built after the optional resources are in place so the MSI and the
       # portable exe carry the same payload. Virtual displays need the driver
       # files in the install directory; an MSI without them would silently drop

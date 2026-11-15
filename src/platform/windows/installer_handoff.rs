@@ -16,6 +16,7 @@
 //! the UAC prompt.
 
 use super::{
+    installer_exec::{EXIT_BAD_ARGUMENTS, EXIT_COMMAND_FAILED, EXIT_PIPE_FAILED},
     installer_shell::{spawn_elevated_self, wait_process},
     validate_install_app_name, ResultType,
 };
@@ -33,7 +34,14 @@ use windows::{
 };
 
 /// Exit codes reported by the elevated side, kept for the failure messages.
-const ELEVATED_SETUP_FAILED_EXIT_CODE: u32 = 0x5253_0009;
+fn elevated_install_failure_reason(exit_code: i32) -> &'static str {
+    match exit_code {
+        EXIT_PIPE_FAILED => "the elevated setup step could not open its command pipe",
+        EXIT_BAD_ARGUMENTS => "the elevated setup step received bad arguments",
+        EXIT_COMMAND_FAILED => "one or more installer commands failed; see the log",
+        _ => "installer command failed",
+    }
+}
 
 fn pipe_name() -> String {
     format!("nexdesk-setup-{}", uuid::Uuid::new_v4().simple())
@@ -114,6 +122,7 @@ pub(super) fn run_cmds(cmds: String, show: bool, tip: &str) -> ResultType<()> {
             return Err(err);
         }
     };
+    let exit_code = exit_code as i32;
     if exit_code != 0 {
         bail!(
             "{tip} failed with elevated exit code {exit_code}: {}",
@@ -121,14 +130,6 @@ pub(super) fn run_cmds(cmds: String, show: bool, tip: &str) -> ResultType<()> {
         );
     }
     Ok(())
-}
-
-fn elevated_install_failure_reason(exit_code: u32) -> &'static str {
-    match exit_code {
-        ELEVATED_SETUP_FAILED_EXIT_CODE => "the elevated setup step reported a failure",
-        1223 => "elevation was cancelled",
-        _ => "installer command failed",
-    }
 }
 
 #[cfg(test)]
@@ -146,10 +147,17 @@ mod tests {
     }
 
     #[test]
-    fn failure_reasons_cover_the_reported_codes() {
-        assert!(
-            elevated_install_failure_reason(ELEVATED_SETUP_FAILED_EXIT_CODE).contains("elevated")
-        );
-        assert!(elevated_install_failure_reason(1223).contains("cancelled"));
+    fn every_exit_code_has_its_own_message() {
+        let messages = [
+            elevated_install_failure_reason(EXIT_PIPE_FAILED),
+            elevated_install_failure_reason(EXIT_BAD_ARGUMENTS),
+            elevated_install_failure_reason(EXIT_COMMAND_FAILED),
+        ];
+        for (i, a) in messages.iter().enumerate() {
+            for b in messages.iter().skip(i + 1) {
+                assert_ne!(a, b, "exit codes must not share a message");
+            }
+        }
+        assert!(elevated_install_failure_reason(EXIT_COMMAND_FAILED).contains("log"));
     }
 }
