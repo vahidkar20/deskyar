@@ -533,7 +533,7 @@ jobs:
       # session (ci.yml skips them for the same reason).
       - name: Test the installer command parser
         shell: pwsh
-        run: cargo test --lib -- installer_exec:: installer_handoff::
+        run: "cargo test --lib -- installer_exec:: installer_handoff::"
 
       # Built after the optional resources are in place so the MSI and the
       # portable exe carry the same payload. Virtual displays need the driver
