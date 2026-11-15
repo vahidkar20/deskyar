@@ -272,6 +272,25 @@ pub fn core_main() -> Option<Vec<String>> {
                     log::error!("Failed to before-uninstall: {}", err);
                 }
                 return None;
+            } else if args[0] == "--elevated-setup" {
+                // The privileged half of the installer, running inside an
+                // elevated copy of this same executable. The parent streams the
+                // command text over the named pipe; nothing is written to disk
+                // and no cmd.exe bootstrap is involved.
+                let code = match args.get(1) {
+                    Some(pipe) => match crate::platform::windows::run_elevated_setup(pipe) {
+                        Ok(code) => code,
+                        Err(err) => {
+                            log::error!("Elevated setup failed: {err}");
+                            1
+                        }
+                    },
+                    None => {
+                        log::error!("--elevated-setup requires a pipe name");
+                        1
+                    }
+                };
+                std::process::exit(code);
             } else if args[0] == "--silent-install" {
                 if config::is_disable_installation() {
                     return None;

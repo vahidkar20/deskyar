@@ -95,6 +95,7 @@ use windows_service::{
 use winreg::{enums::*, RegKey};
 
 mod acl;
+mod installer_exec;
 mod installer_handoff;
 mod installer_shell;
 mod msi_registry;
@@ -1731,6 +1732,13 @@ pub fn run_after_install() -> ResultType<()> {
 
 pub fn run_before_uninstall() -> ResultType<()> {
     run_cmds(get_before_uninstall(true), true, "before_install")
+}
+
+/// Runs the privileged installer step inside an elevated copy of this process.
+///
+/// Reached through `--elevated-setup <pipe>`; see `installer_exec`.
+pub fn run_elevated_setup(pipe: &str) -> ResultType<i32> {
+    installer_exec::run_from_pipe(pipe)
 }
 
 fn get_before_uninstall(kill_self: bool) -> String {

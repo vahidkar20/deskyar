@@ -228,11 +228,20 @@ fn elevated_working_directory(executable: &Path) -> ResultType<&Path> {
         .ok_or_else(|| anyhow!("Elevated executable has no parent directory"))
 }
 
-pub(super) fn run_elevated_and_wait(
-    executable: &Path,
-    parameters: &str,
-    show: bool,
-) -> ResultType<u32> {
+/// Handle to a process started with the `runas` verb.
+pub(super) struct ElevatedProcess(ProcessHandle);
+
+/// Starts our own executable elevated, without waiting for it.
+///
+/// Split from the wait on purpose: the installer streams its command text over a
+/// pipe that the child creates, so the caller has to be able to talk to the child
+/// before it exits.
+pub(super) fn spawn_elevated_self(parameters: &str, show: bool) -> ResultType<ElevatedProcess> {
+    let executable = std::env::current_exe()?;
+    spawn_elevated(&executable, parameters, show)
+}
+
+fn spawn_elevated(executable: &Path, parameters: &str, show: bool) -> ResultType<ElevatedProcess> {
     let parameter_chars = parameters.encode_utf16().count();
     if parameter_chars >= WIN7_SHELL_EXECUTE_MAX_PARAMETER_CHARS {
         bail!("Elevated command is too long: {parameter_chars} UTF-16 characters");
@@ -260,8 +269,12 @@ pub(super) fn run_elevated_and_wait(
     if info.hProcess.0.is_null() {
         bail!("Windows did not return an elevated process handle");
     }
-    let process = ProcessHandle(info.hProcess);
-    let wait_result = unsafe { Threading::WaitForSingleObject(process.0, Threading::INFINITE) };
+    Ok(ElevatedProcess(ProcessHandle(info.hProcess)))
+}
+
+pub(super) fn wait_process(process: ElevatedProcess) -> ResultType<u32> {
+    let handle = process.0 .0;
+    let wait_result = unsafe { Threading::WaitForSingleObject(handle, Threading::INFINITE) };
     if wait_result == Foundation::WAIT_FAILED {
         return Err(io::Error::last_os_error().into());
     }
@@ -269,7 +282,7 @@ pub(super) fn run_elevated_and_wait(
         bail!("Unexpected elevated process wait result: {}", wait_result.0);
     }
     let mut exit_code = 0;
-    unsafe { Threading::GetExitCodeProcess(process.0, &mut exit_code) }?;
+    unsafe { Threading::GetExitCodeProcess(handle, &mut exit_code) }?;
     Ok(exit_code)
 }
 

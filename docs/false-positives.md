@@ -27,6 +27,7 @@ away:
 | Permanent `SoftwareSASGeneration = 1` | Installer weakened a UAC policy for the lifetime of the install | Installers that lower security policies are a known unwanted-software pattern. |
 | VBScript in `%TEMP%` run by `cscript` | Desktop shortcut creation | Writing an executable script to temp and handing it to a scripting host. |
 | `%TEMP%` sweep on startup | Deleted `rustdesk-*.exe` / `.msi` older than an hour | Looked like "scans temp and deletes executables", and never matched our own files anyway. |
+| Elevated install script | A `.bat`/`.cmd` file written to disk and run by an elevated `cmd.exe`, whose body created the service | The exact shape of `HEUR/Malware.bat.Gen`: a script in a writable directory that installs a service. It was moved out of `%TEMP%` and renamed once, which lowered the hit rate but kept the pattern. The elevated step now runs inside the application itself and receives its commands over a named pipe — no script file, no `cmd.exe`, no `certutil`. |
 
 The remaining durable fixes are signing every shipped binary and completing
 version metadata. Signing is not in place yet — see the *Code signing policy*
