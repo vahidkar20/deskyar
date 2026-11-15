@@ -2714,7 +2714,7 @@ class _AboutState extends State<_About> {
 
       return SingleChildScrollView(
         controller: scrollController,
-        child: _Card(title: translate('About RustDesk'), children: [
+        child: _Card(title: translate('About NexDesk'), children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
