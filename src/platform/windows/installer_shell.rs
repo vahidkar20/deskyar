@@ -27,7 +27,6 @@ use windows::{
 };
 
 pub(super) const CMD_RELATIVE_PATH: &str = "cmd.exe";
-pub(super) const BATCH_SHORTCUT_DECODE_FAILURE_EXIT_CODE: u32 = 0x5253_0008;
 pub(super) const WIN7_SHELL_EXECUTE_MAX_PARAMETER_CHARS: usize = 2048;
 const SHORTCUT_ICON_INDEX: i32 = 0;
 
@@ -75,9 +74,13 @@ pub(super) fn shortcut_bytes(
 pub(super) fn embedded_shortcut_commands(bytes: Vec<u8>, filename: &str, name: &str) -> String {
     let encoded = STANDARD.encode(bytes);
     let encoded_path = format!("%~f0.{name}.b64");
+    // `nexdesk-decode` is a directive the elevated executor handles itself; it
+    // is not a command that exists on the system. It used to be
+    // `certutil -f -decode`, which worked but put one of the most abused
+    // LOLBins into the installer's command text and into the binary.
     format!(
         "> \"{encoded_path}\" echo {encoded}\r\n\
-         certutil -f -decode \"{encoded_path}\" \"%RUSTDESK_OUTPUT_DIR%\\{filename}\" > nul || exit /b {BATCH_SHORTCUT_DECODE_FAILURE_EXIT_CODE}"
+         nexdesk-decode \"{encoded_path}\" \"%RUSTDESK_OUTPUT_DIR%\\{filename}\""
     )
 }
 

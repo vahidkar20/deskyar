@@ -187,8 +187,8 @@ impl Executor {
         if let Some(rest) = line.strip_prefix("> ") {
             return self.write_redirect(rest);
         }
-        if lower.starts_with("certutil ") {
-            return self.decode_embedded(rest_of(line, "certutil "));
+        if lower.starts_with("nexdesk-decode ") {
+            return self.decode_embedded(rest_of(line, "nexdesk-decode "));
         }
         if lower.starts_with("reg ") {
             return self.reg(rest_of(line, "reg "));
@@ -256,7 +256,7 @@ impl Executor {
             !p.starts_with('-') && p != ">" && p != "nul" && p != "||" && p != "exit" && p != "/b"
         });
         if parts.len() < 2 {
-            bail!("Malformed certutil decode in installer command");
+            bail!("Malformed shortcut decode in installer command");
         }
         let src = self.expand(strip_quotes(&parts[0]));
         let dst = self.expand(strip_quotes(&parts[1]));
