@@ -1025,6 +1025,16 @@ fn download_and_install(manifest: Manifest) -> ResultType<()> {
     emit();
 
     install_file(&path, &manifest)?;
+
+    // The handover has been started. On Windows the elevated updater runs
+    // detached and restarts the app, so this process may be killed at any
+    // moment; without this the UI stayed on "Installing" forever whenever the
+    // restart did not happen.
+    with_state(|s| {
+        s.phase = Phase::Done;
+        s.downloaded = s.size;
+    });
+    emit();
     Ok(())
 }
 

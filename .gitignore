@@ -13,6 +13,12 @@ src/version.rs
 *exe
 *tgz
 cert.pfx
+# Signing material must never reach the tree; the Android workflow used to
+# write these next to the source it was building.
+*.p12
+*.jks
+*.keystore
+key.properties
 *.bak
 *png
 *svg
