@@ -6,10 +6,11 @@ Cafe Bazaar rejected the upload with:
 > بسته بارگذاری شده توسط «سپر امنیت بازار» بررسی شده است و توسط آنتی‌ویروس(های)
 > «Kaspersky» به عنوان بدافزار «HEUR:Trojan.AndroidOS.Fakeapp.fm» شناخته شده است.
 
-`HEUR:` means a heuristic verdict, not a signature match. The `Fakeapp` family in
-Kaspersky's encyclopedia is described as apps that masquerade as popular apps and
-run premium-SMS/ad fraud. None of that exists in this app; the detector is
-scoring the *shape* of a remote-desktop client that ships as a fork.
+`HEUR:` means a heuristic verdict, not a signature match. The family name states
+the claim being made: an application that presents itself as another application.
+This one does not. It has its own package name, its own signing certificate, its
+own brand, its own server, and since version code 85 its own name on every system
+surface it creates.
 
 A second verdict appeared when the owner scanned the APK directly, and it changes
 the argument in our favour:
@@ -28,8 +29,54 @@ one: a GPL fork of a known remote-desktop project, which is exactly what it is.
 The `Fakeapp` hit is the heuristic misfiring on a repackaged remote-access client
 - the shape, not the behaviour.
 
-This file is the evidence package for the reanalysis request. Fill in the two
-`TODO` values from the build being submitted, then send it.
+## Four packaging changes, one unchanged verdict
+
+| versionCode | what changed | Kaspersky result |
+|---|---|---|
+| 82 | boot receiver `exported=false`, `allowBackup=false`, debug action removed | unchanged |
+| 83 | overlay-permission prompt removed from the normal flow | unchanged |
+| 84 | native library renamed `librustdesk.so` → `libnexdesk.so`, scheme `nexdesk://` | unchanged |
+| 85 | notification title, channel id/name and virtual-display name renamed; **zero** `RustDesk` strings left in either DEX | unchanged |
+
+Four independent changes to packaging, naming and system-UI strings, and both
+verdicts come back byte-identical every time. That is the empirical core of this
+request: the `Fakeapp` line is not computed from anything a fork can rename.
+
+## What actually differs from upstream RustDesk 1.5.3
+
+Compared archive to archive against `rustdesk-1.5.3-universal-signed.apk`
+(SHA-256 `2223ab4a1be46f841e50bbd15d6b81b1618658530c6d382f52acfa61febf566b`,
+signer `O=carriez, CN=zhou huabing`):
+
+| | NexDesk 1.5.11+85 | RustDesk 1.5.3 |
+|---|---|---|
+| package | `ir.nexdesk.app` | `com.carriez.flutter_hbb` |
+| Rust core | `libnexdesk.so` 36.72 MB | `librustdesk.so` 37.80 MB |
+| Dart AOT | `libapp.so` 12.39 MB | `libapp.so` 12.52 MB |
+| sdk | 22 → 36 | 22 → 36 |
+
+Entries present in NexDesk and absent upstream: four Vazirmatn font files, one
+`icon.png`, and the signature block. Nothing else. The Rust core is 1.08 MB
+*smaller* than upstream's and the Dart snapshot is 130 KB *smaller* — this build
+adds no capability to the RustDesk core, it removes some.
+
+## The control
+
+Scanning upstream `rustdesk-1.5.3-universal-signed.apk` with the same tool is the
+discriminator, and it is worth doing before sending anything:
+
+- if upstream also returns `Fakeapp`, the verdict is inherent to RustDesk code and
+  no fork can fix it — the entry itself is wrong and must be corrected;
+- if upstream returns only `RemoteAdmin.RustDesk.a`, then `Fakeapp` is a verdict on
+  the *publisher's identity*, not on behaviour — and the fix is recognition of the
+  publisher, again a reanalysis rather than a code change.
+
+Either outcome leads to the same request: reanalyse this build.
+
+## How to send it
+
+Both build facts below are current; nothing needs filling in. Upload the APK at
+<https://opentip.kaspersky.com> and use the English text at the end of this file.
 
 ## Facts already verified locally
 
@@ -113,9 +160,37 @@ release URL above and let Kaspersky pull the file.
 > distributed outside Google Play, carrying a different package name and brand
 > from the upstream project while containing its native library. That is also
 > the shape of repackaged remote-access trojans, which is presumably what the
-> heuristic is reacting to. The behaviour, however, is a normal remote-desktop
-> product: the host only accepts connections with an ID and password that the
-> user configured, and all traffic goes to our own server at rd.nexdesk.ir.
+> heuristic is reacting to.
+>
+> **Four builds, four changes, no change in the verdict.** Version 82: boot
+> receiver made non-exportable, backup disabled, a debug broadcast action
+> removed. 83: the overlay-permission prompt removed from the normal flow. 84:
+> the native library renamed `librustdesk.so` -> `libnexdesk.so` and the URI
+> scheme changed. 85: the notification title, notification channel and virtual
+> display renamed, leaving zero occurrences of the string `RustDesk` in either
+> DEX. Both verdicts returned byte-identical after each of the four.
+>
+> **What actually differs from upstream.** Compared archive to archive against
+> `rustdesk-1.5.3-universal-signed.apk`, the entries present in ours and absent
+> there are four Persian font files, one icon, and the signature block. Nothing
+> else. Our Rust core is 36.72 MB against upstream's 37.80 MB, and our Dart
+> snapshot is 130 KB smaller: this build adds no capability to the RustDesk
+> core, it removes some.
+>
+> **The bytecode has the same shape as the build you already know.** In both
+> APKs, `classes.dex` + `classes2.dex` contain zero references to
+> `DexClassLoader`, `PathClassLoader`, `InMemoryDexClassLoader`,
+> `Runtime.getRuntime`, `ProcessBuilder`, `SmsManager`, `addJavascriptInterface`
+> and `javascript:` URLs. The counts for `AccessibilityService`,
+> `TelephonyManager` and `getDeviceId` are identical in both. Neither file loads
+> code at runtime, executes a shell, bridges web content into app code, or
+> touches SMS.
+>
+> **Behaviour.** A normal remote-desktop product: the host only accepts
+> connections with an ID and password the user configured, and all traffic goes
+> to our own server at rd.nexdesk.ir. The only third-party content the app shows
+> is a single self-hosted banner image, fetched over HTTPS and drawn with native
+> widgets - no remote script is executed and there is no web-to-native bridge.
 >
 > **The same scan already classifies it correctly.** Alongside the `Fakeapp`
 > verdict, the product is detected as
