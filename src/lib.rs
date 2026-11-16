@@ -63,6 +63,10 @@ mod updater;
 mod nexdesk;
 pub mod nexdesk_update;
 
+/// One-line warning shown when the host is older than the build this one is
+/// tested against. See the module docs for why it warns instead of refusing.
+pub mod nexdesk_advisory;
+
 /// Self-hosted server configuration. See the module docs for why the server
 /// has to be baked into the build rather than typed in at runtime.
 pub mod nexdesk_server;

@@ -889,6 +889,12 @@ impl InvokeUiSession for FlutterHandler {
         }
         let features = serde_json::ser::to_string(&features).unwrap_or("".to_owned());
         let resolutions = serialize_resolutions(&pi.resolutions.resolutions);
+        // Empty when the host is current, or when it reported no version this
+        // build can parse. The UI turns the code into a dismissible bar and
+        // nothing here can affect the session.
+        let host_advisory: String = crate::nexdesk_advisory::host_advisory(&pi.version)
+            .unwrap_or_default()
+            .to_owned();
         *self.peer_info.write().unwrap() = pi.clone();
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let is_support_multi_ui_session = crate::common::is_support_multi_ui_session(&pi.version);
@@ -914,6 +920,7 @@ impl InvokeUiSession for FlutterHandler {
                 ("current_display", &pi.current_display.to_string()),
                 ("resolutions", &resolutions),
                 ("platform_additions", &pi.platform_additions),
+                ("nexdesk_host_advisory", &host_advisory),
             ],
             &[],
         );

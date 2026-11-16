@@ -1365,6 +1365,7 @@ class FfiModel with ChangeNotifier {
     _pi.username = evt['username'];
     _pi.hostname = evt['hostname'];
     _pi.platform = evt['platform'];
+    _pi.hostAdvisory = evt['nexdesk_host_advisory'] ?? '';
     _pi.sasEnabled = evt['sas_enabled'] == 'true';
     final currentDisplay = int.parse(evt['current_display']);
     if (_pi.primaryDisplay == kInvalidDisplayIndex) {
@@ -4689,6 +4690,9 @@ class PeerInfo with ChangeNotifier {
   String username = '';
   String hostname = '';
   String platform = '';
+  /// Code from the host side, empty when there is nothing to say.
+  /// See `src/nexdesk_advisory.rs` for what the values mean.
+  String hostAdvisory = '';
   bool sasEnabled = false;
   bool isSupportMultiUiSession = false;
   int currentDisplay = 0;

@@ -107,6 +107,9 @@ class _RemotePageState extends State<RemotePage>
   bool _macOSExplicitFocusRequestPending = false;
   StreamSubscription<DesktopTabState>? _tabStateSubscription;
   final _cursorOverImage = false.obs;
+  /// Set once the user closes the "host is outdated" bar. Scoped to this page,
+  /// so a new session against the same old host shows it again.
+  final _advisoryClosed = false.obs;
   late RxBool _showRemoteCursor;
   late RxBool _zoomCursor;
   late RxBool _remoteCursorMoved;
@@ -801,17 +804,85 @@ class _RemotePageState extends State<RemotePage>
             _blockableOverlayState.applyFfi(_ffi);
           }
           // Block the whole `bodyWidget()` when dialog shows.
-          return BlockableOverlay(
-            underlying: bodyWidget(),
-            state: _blockableOverlayState,
+          return _withAdvisory(
+            context,
+            BlockableOverlay(
+              underlying: bodyWidget(),
+              state: _blockableOverlayState,
+            ),
           );
         } else {
           // `_blockableOverlayState` is not recreated here.
           // The toolbar's block state won't work properly when reconnecting, but that's okay.
-          return bodyWidget();
+          return _withAdvisory(context, bodyWidget());
         }
       }),
     );
+  }
+
+  /// Puts the "host is outdated" bar above the session.
+  ///
+  /// The bar is informational only: it does not block input, does not close the
+  /// session, and stays closed once dismissed. An empty code - the normal case,
+  /// and the only thing an older controller sends - returns [child] untouched,
+  /// so the layout is byte-for-byte what it was before.
+  Widget _withAdvisory(BuildContext context, Widget child) {
+    final code = _ffi.ffiModel.pi.hostAdvisory;
+    if (code.isEmpty || _advisoryClosed.value) return child;
+    final text = _advisoryText(code);
+    if (text.isEmpty) return child;
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Material(
+          color: scheme.secondaryContainer,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 18, color: scheme.onSecondaryContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close,
+                        size: 18, color: scheme.onSecondaryContainer),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: translate('Dismiss'),
+                    onPressed: () => _advisoryClosed.value = true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+
+  /// Maps the code from `src/nexdesk_advisory.rs` to a sentence.
+  ///
+  /// An unknown code renders nothing rather than leaking the raw token into the
+  /// interface, which is what would happen if this returned the input.
+  String _advisoryText(String code) {
+    switch (code) {
+      case 'outdated_host':
+        return translate(
+            'This host runs an older NexDesk build. Some features may not work; updating it is recommended.');
+      default:
+        return '';
+    }
   }
 
   @override
