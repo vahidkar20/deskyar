@@ -47,7 +47,7 @@ import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
 
-const val DEFAULT_NOTIFY_TITLE = "RustDesk"
+const val DEFAULT_NOTIFY_TITLE = "NexDesk"
 const val DEFAULT_NOTIFY_TEXT = "Service is running"
 const val DEFAULT_NOTIFY_ID = 1
 const val NOTIFY_ID_OFFSET = 100
@@ -761,7 +761,7 @@ class MainService : Service() {
                 true
             } else {
                 val display = mp.createVirtualDisplay(
-                    "RustDeskVD",
+                    "NexDeskVD",
                     SCREEN_INFO.width, SCREEN_INFO.height, SCREEN_INFO.dpi, VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                     s, null, null
                 )
@@ -837,13 +837,21 @@ class MainService : Service() {
     private fun initNotification() {
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationChannel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = "RustDesk"
-            val channelName = "RustDesk Service"
+            // The channel id and label are what the notification shade and
+            // Settings > Notifications show. They must carry the product's own
+            // name: an app labelled NexDesk that posts a permanent notification
+            // titled "RustDesk" reads, at runtime, as a renamed copy of another
+            // product - which is exactly the pattern repackaging heuristics
+            // look for. Changing the id also orphans the old channel on
+            // devices that already installed a previous build, which is the
+            // intended outcome: no "RustDesk Service" entry survives.
+            val channelId = "nexdesk"
+            val channelName = "NexDesk Service"
             val channel = NotificationChannel(
                 channelId,
                 channelName, NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "RustDesk Service Channel"
+                description = "NexDesk Service Channel"
             }
             channel.lightColor = Color.BLUE
             channel.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
