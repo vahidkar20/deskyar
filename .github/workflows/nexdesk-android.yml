@@ -372,12 +372,20 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          printf '%s' "$ANDROID_SIGNING_KEY" | base64 -d > flutter/android/app/nexdesk-release.p12
+          # The keystore is written outside the checkout: a stray `tar` or an
+          # `upload-artifact` of the working tree then cannot pick it up, and
+          # the cleanup step at the end of the job removes it even when the
+          # build fails. Only the two passwords remain in key.properties, which
+          # Gradle insists on reading from the project directory.
+          signing_dir="$RUNNER_TEMP/nexdesk-signing"
+          mkdir -p "$signing_dir"
+          umask 077
+          printf '%s' "$ANDROID_SIGNING_KEY" | base64 -d > "$signing_dir/nexdesk-release.p12"
           cat > flutter/android/key.properties <<EOF
           storePassword=$ANDROID_KEY_STORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
           keyAlias=$ANDROID_ALIAS
-          storeFile=nexdesk-release.p12
+          storeFile=$signing_dir/nexdesk-release.p12
           storeType=PKCS12
           EOF
           echo "::notice::APK will be signed with the release keystore ($ANDROID_ALIAS)"
@@ -427,3 +435,12 @@ jobs:
           files: signed-apk/NexDesk-${{ env.VERSION }}-android-universal.apk
           name: NexDesk ${{ env.VERSION }}
           draft: true
+
+      # `always()` so a failed build does not leave the keystore or the two
+      # passwords behind in the workspace.
+      - name: Remove signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f flutter/android/key.properties
+          rm -rf "${RUNNER_TEMP}/nexdesk-signing"

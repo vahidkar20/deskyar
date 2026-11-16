@@ -1,0 +1,14 @@
+<resources>
+    <!--
+      Android-level strings only. Everything the user sees inside the app comes
+      from the Flutter translation tables; these three are read by the system:
+      the accessibility settings screen, the foreground-service notice, and the
+      post-boot toast. The accessibility description is what a Bazaar reviewer
+      reads before deciding whether the permission is justified, so it says
+      plainly what the service does and what it does not do.
+    -->
+    <string name="app_name">NexDesk</string>
+    <string name="boot_started">%1$s اجرا شد</string>
+    <string name="accessibility_service_description">پس از برقراری اشتراک صفحه در NexDesk، به دستگاه‌های دیگر اجازه می‌دهد با لمس و صفحه‌کلید مجازی گوشی شما را کنترل کنند. محتوای صفحه فقط برای درج متن در فیلدهای ورودی خوانده می‌شود و جدا از همان جلسه‌ی اشتراک صفحه، جایی ذخیره یا ارسال نمی‌شود.</string>
+    <string name="foreground_service_special_use_subtype">سرویس NexDesk را برای اتصال‌های از پیش مجاز و اعلان‌های در حال اجرا زنده نگه می‌دارد؛ ضبط صفحه پیش از تأیید کاربر آغاز نمی‌شود.</string>
+</resources>
