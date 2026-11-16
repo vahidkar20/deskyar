@@ -11,6 +11,23 @@ Kaspersky's encyclopedia is described as apps that masquerade as popular apps an
 run premium-SMS/ad fraud. None of that exists in this app; the detector is
 scoring the *shape* of a remote-desktop client that ships as a fork.
 
+A second verdict appeared when the owner scanned the APK directly, and it changes
+the argument in our favour:
+
+```
+Malware           HEUR:Trojan.AndroidOS.Fakeapp.fm
+Adware and other  not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a
+```
+
+`not-a-virus:` is Kaspersky's own prefix for *not malware*: it is the riskware
+category for remote-administration tools, and this one is named after RustDesk
+because the engine has recognised the RustDesk core inside the APK. So the same
+scan says both "this is a RustDesk-based remote-admin tool" and "this is a fake
+app". Both cannot be true of the same binary. The consistent reading is the first
+one: a GPL fork of a known remote-desktop project, which is exactly what it is.
+The `Fakeapp` hit is the heuristic misfiring on a repackaged remote-access client
+- the shape, not the behaviour.
+
 This file is the evidence package for the reanalysis request. Fill in the two
 `TODO` values from the build being submitted, then send it.
 
@@ -92,6 +109,15 @@ in `librustdesk.so`, no nested `.apk`/`.jar`, certificate as above.
 > heuristic is reacting to. The behaviour, however, is a normal remote-desktop
 > product: the host only accepts connections with an ID and password that the
 > user configured, and all traffic goes to our own server at rd.nexdesk.ir.
+>
+> **The same scan already classifies it correctly.** Alongside the `Fakeapp`
+> verdict, the product is detected as
+> `not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a` - your own riskware
+> category for remote-administration software, recognising the RustDesk core.
+> A binary cannot be both a legitimate remote-admin tool and an app that
+> impersonates something else. We are asking for the `Fakeapp` verdict to be
+> removed so that only the accurate `RemoteAdmin` classification remains, which
+> is how other remote-desktop clients are treated.
 >
 > The file is attached. Please reanalyse it; we are happy to provide anything
 > else you need.
