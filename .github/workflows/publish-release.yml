@@ -127,6 +127,13 @@ jobs:
             for f in out/*.exe; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | ویندوز ۶۴ بیتی (پرتابل) |"; done
             for f in out/*.apk; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | اندروید (arm64 + armv7 + x86_64) |"; done
             echo
+            echo "### اگر اندروید نصب نشد"
+            echo
+            echo "اگر Google Play Protect هنگام نصب پیام «برنامه مسدود شد» داد، این پیام از مجوز"
+            echo "دسترسی‌پذیری می‌آید که برای کنترل گوشی لازم است — نه از ویروس. یک بار اسکن را خاموش"
+            echo "کنید (Play → پروفایل → Play Protect → چرخ‌دنده → Scan apps with Play Protect)، نصب"
+            echo "کنید و دوباره روشنش کنید. راه دیگر: \`adb install\`."
+            echo
             echo "### بررسی سالم بودن دانلود"
             echo
             echo '```'
