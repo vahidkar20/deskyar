@@ -60,18 +60,32 @@ Entries present in NexDesk and absent upstream: four Vazirmatn font files, one
 *smaller* than upstream's and the Dart snapshot is 130 KB *smaller* — this build
 adds no capability to the RustDesk core, it removes some.
 
-## The control
+## The control result
 
-Scanning upstream `rustdesk-1.5.3-universal-signed.apk` with the same tool is the
-discriminator, and it is worth doing before sending anything:
+Scanned with the same tool, upstream `rustdesk-1.5.3-universal-signed.apk` returns:
 
-- if upstream also returns `Fakeapp`, the verdict is inherent to RustDesk code and
-  no fork can fix it — the entry itself is wrong and must be corrected;
-- if upstream returns only `RemoteAdmin.RustDesk.a`, then `Fakeapp` is a verdict on
-  the *publisher's identity*, not on behaviour — and the fix is recognition of the
-  publisher, again a reanalysis rather than a code change.
+```
+Adware and other  not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a
+```
 
-Either outcome leads to the same request: reanalyse this build.
+No `Fakeapp`. Two conclusions follow directly from that:
+
+1. `RemoteAdmin.RustDesk.a` is inherent to the RustDesk core and appears on any
+   build containing it, including the official one. It is not a defect and it
+   cannot be removed from a fork.
+2. `Fakeapp` is specific to this build. The detector is not reacting to the
+   RustDesk code — it is reacting to something this fork adds.
+
+The only capability this fork adds over upstream is an ad slot that fetches one
+banner from `ad.yar.one` at launch. That is the remaining single-variable
+hypothesis, and it is being tested with a build that has the slot compiled out.
+
+## What to say about the riskware line
+
+Do not ask Kaspersky to remove `RemoteAdmin.RustDesk.a`. Their own scan returns
+it for upstream RustDesk as well, so it is the correct classification for a
+remote-administration tool, and Bazaar did not object to it. The request is only
+about `Fakeapp`.
 
 ## How to send it
 
@@ -87,6 +101,7 @@ Both build facts below are current; nothing needs filling in. Upload the APK at
 | Sensitive permissions | no SMS, no contacts, no location, no `REQUEST_INSTALL_PACKAGES`, no `QUERY_ALL_PACKAGES` |
 | Rendezvous server baked in | `rd.nexdesk.ir` plus the server's Ed25519 public key are present in `libnexdesk.so` |
 | Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD`; `classes.dex` + `classes2.dex` contain **zero** occurrences of the string `RustDesk` (verified on the published 1.5.11+85 APK) |
+| Control scan | upstream `rustdesk-1.5.3-universal-signed.apk`, scanned with the same tool, returns `not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a` **only** — no `Fakeapp` |
 | Accessibility service | used only for touch/key injection; the service description is shown by Android before the user can enable it |
 | Screen capture | `MediaProjection`, and the system asks for consent on every session |
 | Autostart | opt-in and off by default (`KEY_START_ON_BOOT_OPT` defaults to false) |
