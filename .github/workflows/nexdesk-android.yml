@@ -25,13 +25,6 @@ on:
         description: "Attach the APK to a GitHub Release (tag refs only)"
         type: boolean
         default: false
-      variant:
-        description: "full = host + controller. controller = no accessibility service, installs where Play Protect blocks the full build."
-        type: choice
-        options:
-          - full
-          - controller
-        default: full
   # Deliberately not triggered by tag pushes: the release is created by
   # `publish-release.yml` from artifacts that already exist, and a `push: tags`
   # trigger would start a second, pointless rebuild of both platforms.
@@ -64,13 +57,6 @@ env:
   ANDROID_ALIAS: ${{ secrets.ANDROID_ALIAS }}
   ANDROID_KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
   ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-  # `full` builds the app as it is. `controller` removes the accessibility
-  # service before Gradle runs, because Play Protect refuses to install an
-  # internet-sideloaded app that declares it and offers no "install anyway":
-  # https://developers.google.com/android/play-protect/warning-dev-guidance
-  # The controller build still controls other machines; it just cannot be
-  # controlled itself.
-  VARIANT: ${{ inputs.variant || 'full' }}
 
 jobs:
   bridge:
@@ -404,19 +390,6 @@ jobs:
           EOF
           echo "::notice::APK will be signed with the release keystore ($ANDROID_ALIAS)"
 
-      # Play Protect refuses to install an internet-sideloaded app that declares
-      # BIND_ACCESSIBILITY_SERVICE and offers no override. The controller variant
-      # simply does not declare it. The script fails the build if the manifest is
-      # not exactly what it expects, so a silent no-op cannot ship an APK that is
-      # still blocked and a silent over-match cannot ship a broken manifest.
-      - name: Strip the accessibility service (controller variant)
-        if: env.VARIANT == 'controller'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/strip_accessibility_service.py \
-            flutter/android/app/src/main/AndroidManifest.xml
-
       - name: Build the universal APK
         shell: bash
         env:
@@ -426,12 +399,6 @@ jobs:
           export PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH
           VERSION=$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          if [ "${VARIANT}" = "controller" ]; then
-            APK_SUFFIX=controller
-          else
-            APK_SUFFIX=universal
-          fi
-          echo "APK_SUFFIX=$APK_SUFFIX" >> "$GITHUB_ENV"
           # Gradle needs more heap than the 1g default for a release build.
           sed -i "s/org.gradle.jvmargs=-Xmx1024M/org.gradle.jvmargs=-Xmx2g/g" ./flutter/android/gradle.properties
           # Fall back to the debug key only when no release keystore is
@@ -451,21 +418,21 @@ jobs:
           popd
           mkdir -p signed-apk
           mv ./flutter/build/app/outputs/flutter-apk/app-release.apk \
-             "signed-apk/NexDesk-${VERSION}-android-${APK_SUFFIX}.apk"
+             "signed-apk/NexDesk-${VERSION}-android-universal.apk"
           ls -lh signed-apk
 
       - name: Upload the APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: NexDesk-android-${{ env.APK_SUFFIX }}
-          path: signed-apk/NexDesk-${{ env.VERSION }}-android-${{ env.APK_SUFFIX }}.apk
+          name: NexDesk-android-universal
+          path: signed-apk/NexDesk-${{ env.VERSION }}-android-universal.apk
           if-no-files-found: error
 
       - name: Attach to release
         if: ${{ inputs.make_release || startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          files: signed-apk/NexDesk-${{ env.VERSION }}-android-${{ env.APK_SUFFIX }}.apk
+          files: signed-apk/NexDesk-${{ env.VERSION }}-android-universal.apk
           name: NexDesk ${{ env.VERSION }}
           draft: true
 
