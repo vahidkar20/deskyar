@@ -38,7 +38,8 @@ This file is the evidence package for the reanalysis request. Fill in the two
 | Signing certificate (1.5.9 and 1.5.11) | `CN=NexDesk, O=NexDesk, C=IR`, valid 2026-11-09 → 2056-11-01, SHA-256 `CE:F5:4E:21:2E:19:3B:9E:31:E7:54:BB:65:4E:31:24:06:4D:14:BC:78:EA:89:82:B7:6F:0A:86:6C:90:30:88` — a real release key, no `Android Debug` marker anywhere in the APK |
 | Nested payloads | none: only `classes.dex` and `classes2.dex`, no embedded `.apk`/`.jar` |
 | Sensitive permissions | no SMS, no contacts, no location, no `REQUEST_INSTALL_PACKAGES`, no `QUERY_ALL_PACKAGES` |
-| Rendezvous server baked in | `rd.nexdesk.ir` plus the server's Ed25519 public key are present in `librustdesk.so` |
+| Rendezvous server baked in | `rd.nexdesk.ir` plus the server's Ed25519 public key are present in `libnexdesk.so` |
+| Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD`; `classes.dex` + `classes2.dex` contain **zero** occurrences of the string `RustDesk` (verified on the published 1.5.11+85 APK) |
 | Accessibility service | used only for touch/key injection; the service description is shown by Android before the user can enable it |
 | Screen capture | `MediaProjection`, and the system asks for consent on every session |
 | Autostart | opt-in and off by default (`KEY_START_ON_BOOT_OPT` defaults to false) |
@@ -59,18 +60,24 @@ This file is the evidence package for the reanalysis request. Fill in the two
 ## File being submitted
 
 - Name: `NexDesk-1.5.11-android-universal.apk`
-- Size: `78204943` bytes
-- SHA-256: `8dd02a0dd16b1dce7a0ff0b2500b1e7666f43d9b7540eb213558c90f88d43dd1`
-- versionName / versionCode: `1.5.11` / `84`
+- Size: `78205043` bytes
+- SHA-256: `15e4f9a7a73a0e473b1c1bb4320873911b04228bcc24aefc21e68315bc0de504`
+- versionName / versionCode: `1.5.11` / `85`
 - Package: `ir.nexdesk.app`
 - Source: <https://github.com/vahidkar20/deskyar> (GPLv3 fork of RustDesk)
-- Build: Android run `43892881827`, commit `9472eeb`; published on
-  <https://github.com/vahidkar20/deskyar/releases/tag/v1.5.11-av.1>
+- Build: Android run `43902902139`, commit `197d1f0`; published on
+  <https://github.com/vahidkar20/deskyar/releases/tag/v1.5.11-av.2>
 
-Verified on the published binary (not on the source): `versionCode 84`,
-`allowBackup=false`, `BootReceiver exported=false`, three ABIs
-(`arm64-v8a`, `armeabi-v7a`, `x86_64`), `rd.nexdesk.ir` and the server key present
-in `librustdesk.so`, no nested `.apk`/`.jar`, certificate as above.
+Verified on the published binary (not on the source): `versionCode 85`,
+`allowBackup=false`, `BootReceiver exported=false`, `minSdk 22`, `targetSdk 36`,
+three ABIs (`arm64-v8a`, `armeabi-v7a`, `x86_64`), `rd.nexdesk.ir` and the server
+key present in `libnexdesk.so`, no nested `.apk`/`.jar`, certificate as above, and
+no `RustDesk` string left in either DEX.
+
+**Upload, do not email.** The APK is 78 MB, above the attachment limit of every
+mainstream mail provider (Gmail 25 MB, Outlook ~20 MB). Use the Opentip upload
+form; if only email is available, send the SHA-256, the package name and the
+release URL above and let Kaspersky pull the file.
 
 ## English text for the form / email
 
