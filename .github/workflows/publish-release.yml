@@ -34,6 +34,10 @@ on:
         description: "Run id that produced NexDesk-android-universal (empty to skip)"
         required: false
         default: ""
+      android_controller_run:
+        description: "Run id that produced NexDesk-android-controller (empty to skip)"
+        required: false
+        default: ""
       title:
         description: "Release title"
         required: false
@@ -68,6 +72,17 @@ jobs:
           run-id: ${{ inputs.android_run }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: staging/android
+
+      # Same app, minus the accessibility service, for devices where Play
+      # Protect refuses to install the full build.
+      - name: Download the controller APK
+        if: ${{ inputs.android_controller_run != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: NexDesk-android-controller
+          run-id: ${{ inputs.android_controller_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: staging/android-controller
 
       - name: Collect and checksum
         run: |
@@ -125,7 +140,25 @@ jobs:
             echo "|---|---|"
             for f in out/*.msi; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | ویندوز ۶۴ بیتی (نصب‌کننده) |"; done
             for f in out/*.exe; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | ویندوز ۶۴ بیتی (پرتابل) |"; done
-            for f in out/*.apk; do [ -e "$f" ] && echo "| \`$(basename "$f")\` | اندروید (arm64 + armv7 + x86_64) |"; done
+            for f in out/*.apk; do
+              [ -e "$f" ] || continue
+              case "$f" in
+                *controller*)
+                  echo "| \`$(basename "$f")\` | اندروید — نسخه‌ی کنترلر، بدون سرویس دسترسی‌پذیری |" ;;
+                *)
+                  echo "| \`$(basename "$f")\` | اندروید (arm64 + armv7 + x86_64) |" ;;
+              esac
+            done
+            echo
+            echo "### دو فایل اندروید"
+            echo
+            echo "Google Play Protect نصب برنامه‌های غیر‌پلی را که مجوز دسترسی‌پذیری اعلام می‌کنند"
+            echo "بدون گزینه‌ی «نصب به‌هرحال» مسدود می‌کند. برای همین دو فایل وجود دارد:"
+            echo
+            echo "- فایل معمولی: گوشی را می‌توان از دستگاه دیگر کنترل کرد. اگر نصب مسدود شد،"
+            echo "  اسکن Play Protect را موقتاً خاموش کنید یا با ADB نصب کنید."
+            echo "- فایل \`controller\`: این مجوز را اعلام نمی‌کند، پس بدون پیام نصب می‌شود؛"
+            echo "  برای کنترل کامپیوتر از گوشی کافی است، ولی خودِ گوشی قابل کنترل نیست."
             echo
             echo "### بررسی سالم بودن دانلود"
             echo
