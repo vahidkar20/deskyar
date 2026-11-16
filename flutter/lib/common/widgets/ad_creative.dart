@@ -79,7 +79,11 @@ Future<String> inlineAdScripts(String html, Uri base) async {
 /// Used by the mobile banner, which paints one image rather than a document.
 /// Returns null when the page carries no image at all, so the caller can hide
 /// the slot instead of leaving a hole in the layout.
-Future<AdCreative?> resolveAdCreative(Uri page) async {
+///
+/// [clickTarget] is used when the response is already the image: an image body
+/// carries no markup, so there is nothing to read an anchor out of, and without
+/// it the banner would fall back to a non-paying destination.
+Future<AdCreative?> resolveAdCreative(Uri page, {Uri? clickTarget}) async {
   try {
     final response = await http.get(page, headers: const {
       'Cache-Control': 'no-cache',
@@ -89,7 +93,7 @@ Future<AdCreative?> resolveAdCreative(Uri page) async {
 
     final contentType = (response.headers['content-type'] ?? '').toLowerCase();
     if (contentType.startsWith('image/')) {
-      return AdCreative(image: page);
+      return AdCreative(image: page, target: clickTarget);
     }
 
     final html = utf8.decode(response.bodyBytes, allowMalformed: true);

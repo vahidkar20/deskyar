@@ -27,8 +27,14 @@ class NexDeskBanner extends StatefulWidget {
 class _NexDeskBannerState extends State<NexDeskBanner> {
   static const _dismissKey = 'nexdesk-mobile-banner-dismissed';
 
-  /// The ad slot, not the image. Resolved at runtime - see ad_creative.dart.
-  static const _pageUrl = 'https://ad.yar.one';
+  /// The creative itself, not the ad page. Resolved at runtime.
+  ///
+  /// Diagnostic build: this asks the ad server for the image directly instead of
+  /// for the HTML shell, so no markup is parsed and no script is fetched or
+  /// interpreted anywhere in the path. The click-through is the same endpoint
+  /// the script used to return.
+  static const _pageUrl = 'https://ad.yar.one/banner.php?id=2';
+  static const _clickUrl = 'https://ad.yar.one/click.php?id=2';
 
   static const _fallbackTarget = 'https://nexdesk.ir';
 
@@ -47,7 +53,10 @@ class _NexDeskBannerState extends State<NexDeskBanner> {
   }
 
   Future<void> _resolve() async {
-    final creative = await resolveAdCreative(Uri.parse(_pageUrl));
+    final creative = await resolveAdCreative(
+      Uri.parse(_pageUrl),
+      clickTarget: Uri.parse(_clickUrl),
+    );
     if (!mounted) return;
     if (creative == null) {
       setState(() => _failed = true);
