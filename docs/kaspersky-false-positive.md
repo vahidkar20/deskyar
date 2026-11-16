@@ -29,7 +29,7 @@ one: a GPL fork of a known remote-desktop project, which is exactly what it is.
 The `Fakeapp` hit is the heuristic misfiring on a repackaged remote-access client
 - the shape, not the behaviour.
 
-## Four packaging changes, one unchanged verdict
+## Five builds, five changes, one unchanged verdict
 
 | versionCode | what changed | Kaspersky result |
 |---|---|---|
@@ -37,10 +37,11 @@ The `Fakeapp` hit is the heuristic misfiring on a repackaged remote-access clien
 | 83 | overlay-permission prompt removed from the normal flow | unchanged |
 | 84 | native library renamed `librustdesk.so` → `libnexdesk.so`, scheme `nexdesk://` | unchanged |
 | 85 | notification title, channel id/name and virtual-display name renamed; **zero** `RustDesk` strings left in either DEX | unchanged |
+| 86 | **the ad slot removed entirely** — no `ad.yar.one`, no `document.write`, no third-party request of any kind left in `libapp.so` | unchanged |
 
-Four independent changes to packaging, naming and system-UI strings, and both
-verdicts come back byte-identical every time. That is the empirical core of this
-request: the `Fakeapp` line is not computed from anything a fork can rename.
+Five independent changes, and both verdicts come back byte-identical every time. The
+last one is the important one: version 86 removes the *only capability this fork adds
+to upstream*, and the verdict does not move. There is no behaviour left to remove.
 
 ## What actually differs from upstream RustDesk 1.5.3
 
@@ -60,25 +61,40 @@ Entries present in NexDesk and absent upstream: four Vazirmatn font files, one
 *smaller* than upstream's and the Dart snapshot is 130 KB *smaller* — this build
 adds no capability to the RustDesk core, it removes some.
 
-## The control result
+## Two controls, one conclusion
 
-Scanned with the same tool, upstream `rustdesk-1.5.3-universal-signed.apk` returns:
+**Control 1 — upstream.** `rustdesk-1.5.3-universal-signed.apk`, scanned with the
+same tool:
 
 ```
 Adware and other  not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a
 ```
 
-No `Fakeapp`. Two conclusions follow directly from that:
+No `Fakeapp`. So `RemoteAdmin.RustDesk.a` is inherent to the RustDesk core and
+appears on the official build too. It is correct, it is the riskware category, and
+it is not what Bazaar objected to.
 
-1. `RemoteAdmin.RustDesk.a` is inherent to the RustDesk core and appears on any
-   build containing it, including the official one. It is not a defect and it
-   cannot be removed from a fork.
-2. `Fakeapp` is specific to this build. The detector is not reacting to the
-   RustDesk code — it is reacting to something this fork adds.
+**Control 2 — this fork with its only added capability removed.** Version 86 has
+the ad slot compiled out: no `ad.yar.one` string, no `document.write`, no
+third-party request anywhere in `libapp.so`, verified on the published APK. It
+still returns both lines.
 
-The only capability this fork adds over upstream is an ad slot that fetches one
-banner from `ad.yar.one` at launch. That is the remaining single-variable
-hypothesis, and it is being tested with a build that has the slot compiled out.
+## What that leaves
+
+After those two controls, the complete difference between this build and the
+official one that is *not* flagged is:
+
+| difference | removable? |
+|---|---|
+| package name `ir.nexdesk.app` instead of `com.carriez.flutter_hbb` | no — a fork must not ship upstream's package name |
+| signing certificate `CN=NexDesk` instead of `CN=zhou huabing` | no — we do not hold upstream's key, and should not |
+| four Persian font files and one icon | yes, but they are not executable and carry no behaviour |
+| the Rust core is 1.08 MB *smaller* than upstream's | no — that is less code, not more |
+
+Every behavioural difference has been removed and tested. What remains is the
+publisher's identity. `Fakeapp` is a claim about identity — an application
+presenting itself as another one — and no build can change who signs it. That is
+why this is a reanalysis request, not a bug report about our code.
 
 ## What to say about the riskware line
 
@@ -102,6 +118,7 @@ Both build facts below are current; nothing needs filling in. Upload the APK at
 | Rendezvous server baked in | `rd.nexdesk.ir` plus the server's Ed25519 public key are present in `libnexdesk.so` |
 | Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD`; `classes.dex` + `classes2.dex` contain **zero** occurrences of the string `RustDesk` (verified on the published 1.5.11+85 APK) |
 | Control scan | upstream `rustdesk-1.5.3-universal-signed.apk`, scanned with the same tool, returns `not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a` **only** — no `Fakeapp` |
+| Ad-free build (vc86) | `ad.yar.one` and `document.write` are absent from `libapp.so`; the slot is tree-shaken out, not hidden. Scanned: **both verdicts, unchanged** |
 | Accessibility service | used only for touch/key injection; the service description is shown by Android before the user can enable it |
 | Screen capture | `MediaProjection`, and the system asks for consent on every session |
 | Autostart | opt-in and off by default (`KEY_START_ON_BOOT_OPT` defaults to false) |
@@ -177,13 +194,19 @@ release URL above and let Kaspersky pull the file.
 > the shape of repackaged remote-access trojans, which is presumably what the
 > heuristic is reacting to.
 >
-> **Four builds, four changes, no change in the verdict.** Version 82: boot
+> **Five builds, five changes, no change in the verdict.** Version 82: boot
 > receiver made non-exportable, backup disabled, a debug broadcast action
 > removed. 83: the overlay-permission prompt removed from the normal flow. 84:
 > the native library renamed `librustdesk.so` -> `libnexdesk.so` and the URI
 > scheme changed. 85: the notification title, notification channel and virtual
 > display renamed, leaving zero occurrences of the string `RustDesk` in either
-> DEX. Both verdicts returned byte-identical after each of the four.
+> DEX. 86: the ad slot removed entirely - no `ad.yar.one`, no `document.write`,
+> no third-party request of any kind left in `libapp.so`. Both verdicts returned
+> byte-identical after each of the five.
+>
+> That last build is the reason for this request. It removes the only capability
+> this fork adds to upstream, and the verdict does not move. There is nothing
+> behavioural left to remove.
 >
 > **What actually differs from upstream.** Compared archive to archive against
 > `rustdesk-1.5.3-universal-signed.apk`, the entries present in ours and absent
@@ -224,12 +247,24 @@ release URL above and let Kaspersky pull the file.
 
 ## If Kaspersky declines
 
-Do not obfuscate anything to dodge the detector — that is the pattern that turns
-a false positive into a real one. The remaining levers, in order of honesty:
+Do not obfuscate anything to dodge the detector. That is the pattern that turns a
+false positive into a real one, and here it is also pointless: the verdict
+survived removing every capability this fork adds.
 
-1. Remove the ad banner from the Bazaar build (a remote-desktop client that
-   fetches an ad creative on launch is closer to the `Fakeapp` profile than one
-   that does not). This costs revenue, so it is the owner's call.
-2. Ship a build with autostart removed entirely rather than opt-in.
-3. Ask Bazaar to review manually: their reviewers can install the app and see
-   the consent dialogs, which a scanner cannot.
+Levers that remain, in order of honesty and cost:
+
+1. **Escalate the ticket with the vc86 evidence.** A first-line "the detection is
+   correct" is the normal first answer. The ad-free build is what makes it
+   arguable, because there is no longer anything to point at.
+2. **Myket.** A different store with a different scanner. Worth one upload: it
+   does not depend on Kaspersky changing anything, and it restores distribution
+   while the ticket is open.
+3. **Bazaar manual review.** Ask for a human install-and-inspect review instead
+   of a re-scan, quoting the Kaspersky case number. A reviewer can see the
+   consent dialogs that a sandbox cannot.
+4. **Do not remove the ad slot for Bazaar.** It has been built and scanned
+   (vc86): the verdict is identical. It would cost revenue for zero benefit.
+
+If all of those fail, the honest options are to distribute from the website with a
+published SHA-256 and a short note explaining the verdict, or to stop shipping a
+RustDesk fork and rebuild the remote core. Everything in between is theatre.
