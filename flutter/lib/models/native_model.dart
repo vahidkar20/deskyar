@@ -135,7 +135,10 @@ class PlatformFFI {
   Future<void> init(String appType) async {
     _appType = appType;
     final dylib = isAndroid
-        ? DynamicLibrary.open('librustdesk.so')
+        // The Android build ships the core as libnexdesk.so; the Windows DLL
+        // and the Linux bundle keep their own names, which is why only this
+        // branch changes.
+        ? DynamicLibrary.open('libnexdesk.so')
         : isLinux
             ? _openLinuxCoreLib()
             : isWindows

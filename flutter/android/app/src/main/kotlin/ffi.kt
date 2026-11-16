@@ -9,7 +9,7 @@ import ir.nexdesk.app.RdClipboardManager
 
 object FFI {
     init {
-        System.loadLibrary("rustdesk")
+        System.loadLibrary("nexdesk")
     }
 
     external fun init(ctx: Context)
