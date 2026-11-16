@@ -998,7 +998,20 @@ class MainActivity : FlutterActivity() {
     override fun onStop() {
         super.onStop()
         val disableFloatingWindow = FFI.getLocalOption("disable-floating-window") == "Y"
-        if (!disableFloatingWindow && MainService.isReady) {
+        // The window is drawn over every other app, so it needs the overlay
+        // permission. Without this check the service was started on every
+        // backgrounding even when the permission had never been granted: the
+        // start failed, and until it did the app had asked the system for
+        // "display over other apps" on each session, which is the behaviour
+        // overlay-phishing malware is recognised by. The feature is now opt-in:
+        // Settings asks for the permission at the moment the user turns it on.
+        // Settings.canDrawOverlays exists from API 23; minSdk is 22, so the
+        // call has to be guarded or the app dies on the last Android release
+        // that predates the runtime permission model.
+        val canDrawOverlays =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                android.provider.Settings.canDrawOverlays(this)
+        if (!disableFloatingWindow && canDrawOverlays && MainService.isReady) {
             startService(Intent(this, FloatingWindowService::class.java))
         }
     }

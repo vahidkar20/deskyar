@@ -383,11 +383,15 @@ class ServerModel with ChangeNotifier {
   /// Accessibility is deliberately not here - it has no runtime dialog, only a
   /// settings page, and the server side already surfaces a notification with
   /// the exact path when a session arrives while it is off.
+  ///
+  /// The floating-window overlay is not here either: it is optional, and asking
+  /// for "display over other apps" while the service starts is the pattern
+  /// overlay-phishing malware is recognised by. Settings asks for it when the
+  /// user turns that feature on.
   Future<void> requestServicePermissionsOnStart() async {
     if (!isAndroid) return;
     try {
       await checkRequestNotificationPermission();
-      await checkFloatingWindowPermission();
     } catch (e) {
       debugPrint("requestServicePermissionsOnStart failed: $e");
     }
@@ -420,9 +424,11 @@ class ServerModel with ChangeNotifier {
       }
     } else {
       await checkRequestNotificationPermission();
-      if (bind.mainGetLocalOption(key: kOptionDisableFloatingWindow) != 'Y') {
-        await checkFloatingWindowPermission();
-      }
+      // The floating window asks for "display over other apps" from Settings,
+      // when the user turns it on - not here. Requesting it while a session
+      // starts put a draw-over-other-apps prompt in the middle of the normal
+      // remote-desktop flow, which is exactly the pattern overlay-phishing
+      // malware is recognised by, and the window is optional anyway.
       final res = await parent.target?.dialogManager
           .show<bool>((setState, close, context) {
         submit() => close(true);
