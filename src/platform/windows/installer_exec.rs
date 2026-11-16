@@ -108,7 +108,13 @@ pub(super) fn run_from_pipe(pipe_name: &str, token: &str, parent_pid: u32) -> Re
         unsafe {
             let _ = CloseHandle(pipe);
         }
-        return Err(err);
+        // Reported as a pipe failure, not as a bare exit 1: the parent turns
+        // this code into "the elevated setup step could not open its command
+        // pipe", which is what happened. Exit 1 reaches the user as "installer
+        // command failed" and sends them looking for a broken command in a log
+        // that contains none.
+        log::error!("{err}");
+        return Ok(EXIT_PIPE_FAILED);
     }
 
     let stream = unsafe { read_pipe(pipe) };
