@@ -59,15 +59,15 @@ This file is the evidence package for the reanalysis request. Fill in the two
 ## File being submitted
 
 - Name: `NexDesk-1.5.11-android-universal.apk`
-- Size: `78205015` bytes
-- SHA-256: `70317ce8b2773cef2fa6e79bc3a21efba4e761df03d5c5dd4a9a200cb624d3e9`
-- versionName / versionCode: `1.5.11` / `83`
+- Size: `78204943` bytes
+- SHA-256: `8dd02a0dd16b1dce7a0ff0b2500b1e7666f43d9b7540eb213558c90f88d43dd1`
+- versionName / versionCode: `1.5.11` / `84`
 - Package: `ir.nexdesk.app`
 - Source: <https://github.com/vahidkar20/deskyar> (GPLv3 fork of RustDesk)
-- Build: Android run `43886521627`, commit `568b290`; published on
+- Build: Android run `43892881827`, commit `9472eeb`; published on
   <https://github.com/vahidkar20/deskyar/releases/tag/v1.5.11-av.1>
 
-Verified on the published binary (not on the source): `versionCode 83`,
+Verified on the published binary (not on the source): `versionCode 84`,
 `allowBackup=false`, `BootReceiver exported=false`, three ABIs
 (`arm64-v8a`, `armeabi-v7a`, `x86_64`), `rd.nexdesk.ir` and the server key present
 in `librustdesk.so`, no nested `.apk`/`.jar`, certificate as above.
