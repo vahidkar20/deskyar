@@ -36,7 +36,7 @@ use hbb_common::{anyhow::anyhow, bail, log};
 use windows::{
     core::PCWSTR,
     Win32::{
-        Foundation::{CloseHandle, HANDLE},
+        Foundation::{CloseHandle, GetLastError, HANDLE},
         Storage::FileSystem::ReadFile,
         System::Pipes::{ConnectNamedPipe, DisconnectNamedPipe, GetNamedPipeClientProcessId},
     },
@@ -90,19 +90,6 @@ unsafe fn read_pipe(pipe: HANDLE) -> ResultType<String> {
 /// the connecting process is the launcher and the first line of the stream is
 /// the token that launcher put on our command line.
 pub(super) fn run_from_pipe(pipe_name: &str, token: &str, parent_pid: u32) -> ResultType<i32> {
-    use windows::Win32::{
-        Foundation::GetLastError,
-        Storage::FileSystem::{FILE_FLAGS_AND_ATTRIBUTES, PIPE_ACCESS_INBOUND},
-        System::Pipes::{
-            CreateNamedPipeW, PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE,
-            PIPE_WAIT,
-        },
-    };
-
-    // FILE_FLAG_FIRST_PIPE_INSTANCE: refuse to attach to a name someone else
-    // already created, so the pipe cannot be squatted.
-    const FILE_FLAG_FIRST_PIPE_INSTANCE: u32 = 0x0008_0000;
-
     // Without a token there is nothing to compare the stream against, and an
     // empty token would be satisfied by an empty first line.
     if token.is_empty() {
@@ -110,18 +97,7 @@ pub(super) fn run_from_pipe(pipe_name: &str, token: &str, parent_pid: u32) -> Re
     }
 
     let name = wide(&format!(r"\\.\pipe\{pipe_name}"));
-    let pipe = unsafe {
-        CreateNamedPipeW(
-            PCWSTR(name.as_ptr()),
-            FILE_FLAGS_AND_ATTRIBUTES(PIPE_ACCESS_INBOUND.0 | FILE_FLAG_FIRST_PIPE_INSTANCE),
-            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
-            1,
-            0,
-            MAX_SCRIPT_BYTES as u32,
-            0,
-            None,
-        )
-    };
+    let pipe = unsafe { create_command_pipe(&name) };
     if pipe.is_invalid() {
         bail!("Failed to create the installer pipe: {:?}", unsafe {
             GetLastError()
@@ -157,6 +133,59 @@ pub(super) fn run_from_pipe(pipe_name: &str, token: &str, parent_pid: u32) -> Re
 
     let mut executor = Executor::new()?;
     executor.run(script)
+}
+
+/// Creates the single-instance inbound pipe the launcher writes into.
+///
+/// `PIPE_REJECT_REMOTE_CLIENTS` arrived in Windows 8. Windows 7 does not ignore
+/// the flag, it fails the whole call with `ERROR_INVALID_PARAMETER`, and the
+/// manifest still declares support down to Windows 7 - so the flag is dropped
+/// there rather than breaking installation on those machines. The pid check and
+/// the token are what authenticate the caller and neither depends on it.
+unsafe fn create_command_pipe(name: &[u16]) -> HANDLE {
+    use windows::Win32::{
+        Foundation::ERROR_INVALID_PARAMETER,
+        Storage::FileSystem::{FILE_FLAGS_AND_ATTRIBUTES, PIPE_ACCESS_INBOUND},
+        System::Pipes::{
+            CreateNamedPipeW, NAMED_PIPE_MODE, PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS,
+            PIPE_TYPE_BYTE, PIPE_WAIT,
+        },
+    };
+
+    // FILE_FLAG_FIRST_PIPE_INSTANCE: refuse to attach to a name someone else
+    // already created, so the pipe cannot be squatted.
+    const FILE_FLAG_FIRST_PIPE_INSTANCE: u32 = 0x0008_0000;
+
+    let open = FILE_FLAGS_AND_ATTRIBUTES(PIPE_ACCESS_INBOUND.0 | FILE_FLAG_FIRST_PIPE_INSTANCE);
+    let mode: NAMED_PIPE_MODE = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT;
+
+    let pipe = CreateNamedPipeW(
+        PCWSTR(name.as_ptr()),
+        open,
+        mode | PIPE_REJECT_REMOTE_CLIENTS,
+        1,
+        0,
+        MAX_SCRIPT_BYTES as u32,
+        0,
+        None,
+    );
+    if !pipe.is_invalid() || GetLastError() != ERROR_INVALID_PARAMETER {
+        return pipe;
+    }
+    log::warn!(
+        "This Windows version does not support PIPE_REJECT_REMOTE_CLIENTS; \
+         the installer pipe will rely on the client pid and the handshake token alone"
+    );
+    CreateNamedPipeW(
+        PCWSTR(name.as_ptr()),
+        open,
+        mode,
+        1,
+        0,
+        MAX_SCRIPT_BYTES as u32,
+        0,
+        None,
+    )
 }
 
 /// Waits for the process that launched us to connect, refusing anyone else.
