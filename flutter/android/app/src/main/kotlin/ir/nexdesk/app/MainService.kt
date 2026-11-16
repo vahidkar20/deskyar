@@ -360,6 +360,16 @@ class MainService : Service() {
         if (intent?.action == ACT_INIT_MEDIA_PROJECTION_AND_SERVICE) {
             if (intent.getBooleanExtra(EXT_INIT_FROM_BOOT, false)) {
                 FFI.startService()
+                // From Android 10 on, an activity started from a background
+                // service is blocked, so the consent dialog below cannot appear
+                // at boot - the call was dead code. It is also the exact shape
+                // a scanner reads as "captures the screen without asking", so
+                // it is not attempted there any more. The host service is up;
+                // capture is requested when a session actually starts.
+                // Releases before Android 10 keep the old behaviour.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    return START_NOT_STICKY
+                }
             }
             Log.d(logTag, "service starting: ${startId}:${Thread.currentThread()}")
             val mediaProjectionManager =
