@@ -114,8 +114,21 @@ const CHARS: &[char] = &[
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
 
-pub const RENDEZVOUS_SERVERS: &[&str] = &["rs-ny.rustdesk.com"];
-pub const RS_PUB_KEY: &str = "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=";
+/// Upstream's public rendezvous servers, deliberately empty.
+///
+/// A build with no server configured used to fall through to these and register
+/// every client with a third party. The server address is baked at build time
+/// from NEXDESK_SERVER; if that is missing the build is unusable, which is
+/// better than silently routing users through someone else's infrastructure.
+pub const RENDEZVOUS_SERVERS: &[&str] = &[];
+
+/// Upstream's signing key, deliberately empty.
+///
+/// The trust anchor must be the key of the server this build talks to, taken
+/// from `Config::get_option("key")` or the baked NEXDESK_SERVER_KEY. Shipping
+/// upstream's key means accepting identities vouched for by a party we do not
+/// control.
+pub const RS_PUB_KEY: &str = "";
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
@@ -1132,8 +1145,8 @@ impl Config {
         if mac.is_empty() {
             return None;
         }
-        let mut id = fnv1a32(mac.as_bytes())
-            .wrapping_add(fnv1a32(APP_NAME.read().unwrap().as_bytes()));
+        let mut id =
+            fnv1a32(mac.as_bytes()).wrapping_add(fnv1a32(APP_NAME.read().unwrap().as_bytes()));
         id &= 0x1FFF_FFFF;
         log::info!("Generated stable android id {}", id);
         Some(id.to_string())

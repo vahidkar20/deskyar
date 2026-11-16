@@ -474,11 +474,20 @@ jobs:
         shell: bash
         run: |
           # The two values below are compiled into the exe via `option_env!`.
-          # If they are empty the client silently falls back to RustDesk's
-          # public infrastructure, which is exactly what a self-hosted build
-          # must not do - so say so loudly in the log.
+          # Upstream's defaults were removed from config.rs, so a build without
+          # them has no server at all: it cannot connect anywhere. That is a
+          # configuration error, and failing here costs seconds instead of the
+          # forty minutes the rest of the job takes.
+          #
+          # NEXDESK_ALLOW_UNCONFIGURED=1 builds a deliberately unusable binary
+          # for compile checks.
           if [ -z "${NEXDESK_SERVER:-}" ]; then
-            echo "::warning::NEXDESK_SERVER is empty - this build will use RustDesk's public servers. Set the repository variable NEXDESK_SERVER to bake in your own."
+            if [ "${NEXDESK_ALLOW_UNCONFIGURED:-}" = "1" ]; then
+              echo "::warning::NEXDESK_SERVER is empty; building an unconfigured binary because NEXDESK_ALLOW_UNCONFIGURED=1."
+            else
+              echo "::error::NEXDESK_SERVER is empty. This build would have no rendezvous server. Set the repository variable NEXDESK_SERVER, or set NEXDESK_ALLOW_UNCONFIGURED=1 for a compile-only build."
+              exit 1
+            fi
           else
             echo "rendezvous server: $NEXDESK_SERVER"
           fi
