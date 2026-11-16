@@ -277,16 +277,36 @@ pub fn core_main() -> Option<Vec<String>> {
                 // elevated copy of this same executable. The parent streams the
                 // command text over the named pipe; nothing is written to disk
                 // and no cmd.exe bootstrap is involved.
-                let code = match args.get(1) {
-                    Some(pipe) => match crate::platform::windows::run_elevated_setup(pipe) {
-                        Ok(code) => code,
-                        Err(err) => {
-                            log::error!("Elevated setup failed: {err}");
-                            1
+                //
+                // The token and the parent pid are part of the pipe handshake
+                // (see `installer_exec`); without both, the elevated side has
+                // nothing to authenticate the caller against and refuses to run.
+                let code = match (args.get(1), args.get(2), args.get(3)) {
+                    (Some(pipe), Some(token), Some(parent_pid)) => {
+                        match parent_pid.parse::<u32>() {
+                            Ok(parent_pid) => {
+                                match crate::platform::windows::run_elevated_setup(
+                                    pipe, token, parent_pid,
+                                ) {
+                                    Ok(code) => code,
+                                    Err(err) => {
+                                        log::error!("Elevated setup failed: {err}");
+                                        1
+                                    }
+                                }
+                            }
+                            Err(err) => {
+                                log::error!(
+                                    "--elevated-setup received an unusable parent pid {parent_pid}: {err}"
+                                );
+                                1
+                            }
                         }
-                    },
-                    None => {
-                        log::error!("--elevated-setup requires a pipe name");
+                    }
+                    _ => {
+                        log::error!(
+                            "--elevated-setup requires a pipe name, a handshake token and the parent pid"
+                        );
                         1
                     }
                 };

@@ -14,6 +14,16 @@
 //! recognised is executed through `cmd /C` one line at a time rather than being
 //! skipped, so an unforeseen command behaves exactly as it did before instead of
 //! leaving a half-installed application behind.
+//!
+//! The pipe carries administrator rights, so it is not open to whoever connects
+//! first. Three things guard it:
+//!
+//! 1. `PIPE_REJECT_REMOTE_CLIENTS` keeps other machines out.
+//! 2. The client must be the process that launched us - the parent pid arrives
+//!    on our command line and is compared with `GetNamedPipeClientProcessId`.
+//!    Any other client is disconnected before a byte is read.
+//! 3. The first line of the stream must repeat the token the launcher generated,
+//!    so the bytes we execute cannot come from a different writer.
 
 use std::{
     fs,
@@ -28,7 +38,7 @@ use windows::{
     Win32::{
         Foundation::{CloseHandle, HANDLE},
         Storage::FileSystem::ReadFile,
-        System::Pipes::ConnectNamedPipe,
+        System::Pipes::{ConnectNamedPipe, DisconnectNamedPipe, GetNamedPipeClientProcessId},
     },
 };
 
@@ -37,10 +47,18 @@ use super::ResultType;
 /// Commands are bounded so a malformed pipe cannot make us allocate forever.
 const MAX_SCRIPT_BYTES: usize = 4 * 1024 * 1024;
 
+/// How many connections from other processes are tolerated before giving up.
+///
+/// A rejected client is disconnected without a byte being read, so retrying
+/// cannot turn a foreign writer into a trusted one; it only stops one stray
+/// connection - an antivirus probe, say - from failing an install.
+const MAX_CONNECT_ATTEMPTS: u32 = 8;
+
 // Exit codes shared with `installer_handoff`, which turns them into messages.
 pub(super) const EXIT_OK: i32 = 0;
 pub(super) const EXIT_PIPE_FAILED: i32 = 0x5253_0001;
 pub(super) const EXIT_BAD_ARGUMENTS: i32 = 0x5253_0003;
+pub(super) const EXIT_UNAUTHORIZED: i32 = 0x5253_0007;
 pub(super) const EXIT_COMMAND_FAILED: i32 = 0x5253_0009;
 
 pub(super) fn wide(s: &str) -> Vec<u16> {
@@ -66,27 +84,37 @@ unsafe fn read_pipe(pipe: HANDLE) -> ResultType<String> {
     Ok(String::from_utf8(out)?)
 }
 
-/// Entry point for `--elevated-setup <pipe>`. Blocks until the parent connects.
-pub(super) fn run_from_pipe(pipe_name: &str) -> ResultType<i32> {
+/// Entry point for `--elevated-setup <pipe> <token> <parent_pid>`.
+///
+/// Blocks until the launcher connects. The command text is executed only after
+/// the connecting process is the launcher and the first line of the stream is
+/// the token that launcher put on our command line.
+pub(super) fn run_from_pipe(pipe_name: &str, token: &str, parent_pid: u32) -> ResultType<i32> {
     use windows::Win32::{
         Foundation::GetLastError,
         Storage::FileSystem::{FILE_FLAGS_AND_ATTRIBUTES, PIPE_ACCESS_INBOUND},
-        System::Pipes::{CreateNamedPipeW, PIPE_READMODE_BYTE, PIPE_TYPE_BYTE, PIPE_WAIT},
+        System::Pipes::{
+            CreateNamedPipeW, PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE,
+            PIPE_WAIT,
+        },
     };
 
     // FILE_FLAG_FIRST_PIPE_INSTANCE: refuse to attach to a name someone else
     // already created, so the pipe cannot be squatted.
     const FILE_FLAG_FIRST_PIPE_INSTANCE: u32 = 0x0008_0000;
-    // ERROR_PIPE_CONNECTED as an HRESULT: the client connected before
-    // ConnectNamedPipe was called, which is success, not failure.
-    const ERROR_PIPE_CONNECTED_HRESULT: u32 = 0x8007_0217;
+
+    // Without a token there is nothing to compare the stream against, and an
+    // empty token would be satisfied by an empty first line.
+    if token.is_empty() {
+        bail!("Refusing to run the elevated setup step without a handshake token");
+    }
 
     let name = wide(&format!(r"\\.\pipe\{pipe_name}"));
     let pipe = unsafe {
         CreateNamedPipeW(
             PCWSTR(name.as_ptr()),
             FILE_FLAGS_AND_ATTRIBUTES(PIPE_ACCESS_INBOUND.0 | FILE_FLAG_FIRST_PIPE_INSTANCE),
-            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
             1,
             0,
             MAX_SCRIPT_BYTES as u32,
@@ -100,23 +128,93 @@ pub(super) fn run_from_pipe(pipe_name: &str) -> ResultType<i32> {
         });
     }
 
-    if let Err(err) = unsafe { ConnectNamedPipe(pipe, None) } {
-        if err.code().0 as u32 != ERROR_PIPE_CONNECTED_HRESULT {
-            unsafe {
-                let _ = CloseHandle(pipe);
-            }
-            bail!("Failed to connect the installer pipe: {err}");
+    if let Err(err) = unsafe { accept_launcher(pipe, parent_pid) } {
+        unsafe {
+            let _ = CloseHandle(pipe);
         }
+        return Err(err);
     }
 
-    let script = unsafe { read_pipe(pipe) };
+    let stream = unsafe { read_pipe(pipe) };
     unsafe {
         let _ = CloseHandle(pipe);
     }
-    let script = script?;
+    let stream = stream?;
+
+    // The token is the first line; everything after it is the command text,
+    // byte for byte as the launcher wrote it.
+    let (handshake, script) = match split_handshake(&stream) {
+        Some(parts) => parts,
+        None => {
+            log::error!("The elevated setup stream carried no handshake line");
+            return Ok(EXIT_UNAUTHORIZED);
+        }
+    };
+    if !check_handshake(handshake, token) {
+        log::error!("The elevated setup stream carried the wrong handshake token");
+        return Ok(EXIT_UNAUTHORIZED);
+    }
 
     let mut executor = Executor::new()?;
-    executor.run(&script)
+    executor.run(script)
+}
+
+/// Waits for the process that launched us to connect, refusing anyone else.
+///
+/// The client is identified before a single byte is read, so a foreign process
+/// cannot feed us anything, and it is disconnected rather than failing the
+/// install, because anything else could break installation by connecting first.
+unsafe fn accept_launcher(pipe: HANDLE, parent_pid: u32) -> ResultType<()> {
+    // ERROR_PIPE_CONNECTED as an HRESULT: the client connected before
+    // ConnectNamedPipe was called, which is success, not failure.
+    const ERROR_PIPE_CONNECTED_HRESULT: u32 = 0x8007_0217;
+
+    for attempt in 1..=MAX_CONNECT_ATTEMPTS {
+        if let Err(err) = ConnectNamedPipe(pipe, None) {
+            if err.code().0 as u32 != ERROR_PIPE_CONNECTED_HRESULT {
+                bail!("Failed to connect the installer pipe: {err}");
+            }
+        }
+        let mut client = 0u32;
+        // An unidentifiable client is treated exactly like a foreign one.
+        let identified = GetNamedPipeClientProcessId(pipe, &mut client).is_ok();
+        if identified && client == parent_pid {
+            return Ok(());
+        }
+        log::warn!(
+            "Refused installer pipe connection {attempt}/{MAX_CONNECT_ATTEMPTS} from {} (expected pid {parent_pid})",
+            if identified {
+                client.to_string()
+            } else {
+                "an unidentified process".to_owned()
+            }
+        );
+        let _ = DisconnectNamedPipe(pipe);
+    }
+    bail!("No connection from the launching process arrived on the installer pipe");
+}
+
+/// Splits the stream into the handshake line and the command text.
+///
+/// `None` means the stream ended before any newline: there is no handshake, so
+/// there is nothing safe to run.
+fn split_handshake(stream: &str) -> Option<(&str, &str)> {
+    stream.split_once('\n')
+}
+
+/// True only when `first_line` is exactly the token the launcher generated.
+///
+/// The whole string is compared instead of stopping at the first difference.
+/// The length is fixed and public, so only the bytes need to stay unguessable.
+fn check_handshake(first_line: &str, token: &str) -> bool {
+    let line = first_line.trim_end_matches('\r');
+    if token.is_empty() || line.len() != token.len() {
+        return false;
+    }
+    line.bytes()
+        .zip(token.bytes())
+        .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+        == 0
 }
 
 /// Executes the installer's command text.
@@ -638,5 +736,50 @@ mod tests {
         assert!(dst.ends_with('\\'));
         let joined = Path::new(dst).join(Path::new(r"C:\stage\a.lnk").file_name().unwrap());
         assert_eq!(joined, Path::new(r"C:\ProgramData\Start Menu\a.lnk"));
+    }
+
+    #[test]
+    fn handshake_accepts_only_the_exact_token() {
+        let token = "9f2c4b1e8a7d4c0fb3e5a6d7c8b9a0e1";
+        assert!(check_handshake(token, token));
+        // Tolerated because a CRLF writer would leave the carriage return.
+        assert!(check_handshake(&format!("{token}\r"), token));
+
+        assert!(!check_handshake("", token));
+        assert!(!check_handshake(&token[..token.len() - 1], token));
+        assert!(!check_handshake(&format!("{token}x"), token));
+        assert!(!check_handshake("9f2c4b1e8a7d4c0fb3e5a6d7c8b9a0e2", token));
+        assert!(!check_handshake(" ", token));
+
+        // An empty token must never be satisfied, not even by an empty line:
+        // that would be the same as having no check at all.
+        assert!(!check_handshake("", ""));
+        assert!(!check_handshake("anything", ""));
+    }
+
+    #[test]
+    fn handshake_line_is_split_from_the_script() {
+        let token = "abc123";
+        let script = "reg add HKLM\\X /f\r\nsc create NexDesk binpath= \"x\"\r\n";
+        let stream = format!("{token}\n{script}");
+        let (handshake, rest) = split_handshake(&stream).unwrap();
+        assert_eq!(handshake, token);
+        assert!(check_handshake(handshake, token));
+        // The command text keeps its own line endings and trailing newline;
+        // the executor relies on that to see every line.
+        assert_eq!(rest, script);
+
+        // No newline at all means no handshake and nothing safe to run.
+        assert!(split_handshake(token).is_none());
+        assert!(split_handshake("").is_none());
+    }
+
+    #[test]
+    fn a_stream_without_a_handshake_cannot_pass_as_one() {
+        // Whatever a foreign writer sends, the first line still has to be the
+        // token. Here the whole script would have been the first line.
+        let stream = "sc create NexDesk binpath= \"C:\\x.exe\"\n";
+        let (handshake, _) = split_handshake(stream).unwrap();
+        assert!(!check_handshake(handshake, "9f2c4b1e8a7d4c0f"));
     }
 }
