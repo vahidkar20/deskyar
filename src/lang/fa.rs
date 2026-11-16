@@ -798,6 +798,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Remote input is off", "ورودی از راه دور خاموش است"),
         ("Tap to allow the accessibility service, otherwise this device can only be viewed.", "برای کنترل این دستگاه، سرویس دسترس‌پذیری را فعال کنید؛ در غیر این صورت فقط قابل مشاهده است."),
         ("Lock view", "قفل نمایش"),
-        ("Unlock view", "باز کردن قفل نمایش")
+        ("Unlock view", "باز کردن قفل نمایش"),
+        ("This host runs an older NexDesk build. Some features may not work; updating it is recommended.", "میزبان نسخهٔ قدیمی‌تری از NexDesk را اجرا می‌کند. ممکن است بخشی از قابلیت‌ها کار نکند؛ به‌روزرسانی آن توصیه می‌شود.")
     ].iter().cloned().collect();
 }

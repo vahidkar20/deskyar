@@ -786,6 +786,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Remote input is off", ""),
         ("Tap to allow the accessibility service, otherwise this device can only be viewed.", ""),
         ("Lock view", ""),
-        ("Unlock view", "")
+        ("Unlock view", ""),
+        ("This host runs an older NexDesk build. Some features may not work; updating it is recommended.", "")
     ].iter().cloned().collect();
 }
