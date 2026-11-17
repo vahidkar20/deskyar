@@ -97,13 +97,17 @@ lazy_static::lazy_static! {
     pub static ref APP_HOME_DIR: RwLock<String> = Default::default();
 }
 
-pub const LINK_DOCS_HOME: &str = "https://rustdesk.com/docs/en/";
-pub const LINK_DOCS_X11_REQUIRED: &str = "https://rustdesk.com/docs/en/manual/linux/#x11-required";
+pub const LINK_DOCS_HOME: &str = "https://nexdesk.ir/docs/";
+pub const LINK_DOCS_X11_REQUIRED: &str = "https://nexdesk.ir/docs/linux/#x11-required";
 
+// These keys are the strings a *remote peer* puts in a message box `link`
+// field; `src/client/io_loop.rs` looks them up here and blanks anything it does
+// not recognise. Renaming them therefore only affects a message from an older
+// peer, which degrades to no link rather than to a wrong one.
 lazy_static::lazy_static! {
     pub static ref HELPER_URL: HashMap<&'static str, &'static str> = HashMap::from([
-        ("rustdesk docs home", LINK_DOCS_HOME),
-        ("rustdesk docs x11-required", LINK_DOCS_X11_REQUIRED),
+        ("nexdesk docs home", LINK_DOCS_HOME),
+        ("nexdesk docs x11-required", LINK_DOCS_X11_REQUIRED),
         ]);
 }
 

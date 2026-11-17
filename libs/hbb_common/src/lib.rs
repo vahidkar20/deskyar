@@ -484,50 +484,11 @@ pub fn init_log(_is_async: bool, _name: &str) -> Option<flexi_logger::LoggerHand
     logger_holder
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
-pub struct VersionCheckRequest {
-    #[serde(default)]
-    pub os: String,
-    #[serde(default)]
-    pub os_version: String,
-    #[serde(default)]
-    pub arch: String,
-    #[serde(default)]
-    pub device_id: Vec<u8>,
-    #[serde(default)]
-    pub typ: String,
-}
-
-#[derive(Debug, Default, Deserialize, Serialize)]
-pub struct VersionCheckResponse {
-    #[serde(default)]
-    pub url: String,
-}
-
-pub const VER_TYPE_RUSTDESK_CLIENT: &str = "rustdesk-client";
-pub const VER_TYPE_RUSTDESK_SERVER: &str = "rustdesk-server";
-
-pub fn version_check_request(typ: String) -> (VersionCheckRequest, String) {
-    const URL: &str = "https://api.rustdesk.com/version/latest";
-
-    use sysinfo::System;
-    let system = System::new();
-    let os = system.distribution_id();
-    let os_version = system.os_version().unwrap_or_default();
-    let arch = std::env::consts::ARCH.to_string();
-    #[allow(deprecated)]
-    let device_id = fingerprint::get_fingerprint(None, None);
-    (
-        VersionCheckRequest {
-            os,
-            os_version,
-            arch,
-            device_id,
-            typ,
-        },
-        URL.to_string(),
-    )
-}
+// The upstream version feed used to live here: a `VersionCheckRequest` posted
+// to a hard-coded third-party URL. NexDesk owns update discovery end to end in
+// `src/nexdesk_update.rs`, served by nexdesk.ir, and nothing in this crate may
+// reference RustDesk infrastructure - so the types, the version-type constants
+// and the request builder are gone rather than merely unused.
 
 pub fn time_based_rand() -> u32 {
     let nanos = std::time::SystemTime::now()
