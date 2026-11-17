@@ -12,7 +12,6 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
-import 'package:flutter_hbb/desktop/widgets/banner_slot.dart';
 import 'package:flutter_hbb/desktop/widgets/install_banner.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -112,9 +111,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           }
         },
       ),
-      // Live ad slot, sized to the pane. The creative is fetched from
-      // ad.yar.one at runtime - see widgets/banner_slot.dart.
-      const NexDeskBannerSlot(),
     ];
     if (isIncomingOnly) {
       children.addAll([
@@ -135,9 +131,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       value: gFFI.serverModel,
       child: Container(
         // Wider than upstream's 200/280: Persian strings run noticeably longer
-        // than their English equivalents, and the pane also carries a 240px
-        // square banner (240 + 2x12 margins = 264). The incoming-only size is
-        // measured after layout, so this is only a starting point.
+        // than their English equivalents. The incoming-only size is measured
+        // after layout, so this is only a starting point.
         width: isIncomingOnly ? 300.0 : 264.0,
         // The sidebar is one tone above the canvas: on a near-black UI the
         // only way to show two panes without drawing a heavy rule is a small
@@ -150,8 +145,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 // Expanded, not a shrink-wrapped scroll view plus a spacer:
                 // upstream sized the pane to its content and pushed a blank
                 // Container underneath, so a tall pane simply overflowed
-                // instead of scrolling. Adding the banner slot made that
-                // reachable on a small window.
+                // instead of scrolling. The help cards alone make that
+                // reachable on a short window.
                 Expanded(
                   child: Scrollbar(
                     controller: _leftPaneScrollController,
