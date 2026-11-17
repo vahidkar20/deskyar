@@ -116,7 +116,9 @@ Both build facts below are current; nothing needs filling in. Upload the APK at
 | Nested payloads | none: only `classes.dex` and `classes2.dex`, no embedded `.apk`/`.jar` |
 | Sensitive permissions | no SMS, no contacts, no location, no `REQUEST_INSTALL_PACKAGES`, no `QUERY_ALL_PACKAGES` |
 | Rendezvous server baked in | `rd.nexdesk.ir` plus the server's Ed25519 public key are present in `libnexdesk.so` |
-| Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD`. The DEX carries no brand string in the current build; 1.5.11+85 still contained one — `Show RustDesk`, a Kotlin label whose displayed text is substituted at runtime — which a value-level check missed and a later build removed |
+| Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD` |
+| Upstream identity in the binaries (1.5.11+90) | `admin.rustdesk`, `api.rustdesk`, the upstream Ed25519 key `5Qbwsde3…` and the string `RustDesk` all return **zero occurrences** in `classes.dex`, `classes2.dex`, `libnexdesk.so` and `libapp.so`. Two things remain and are deliberate: `rustdesk_core_main` (an exported C symbol) and `is_public()`, which recognises the upstream domain in order to switch features **off** for it |
+| Account API | resolves to `https://nexdesk.ir`, baked at build time. It previously fell through to `admin.rustdesk.com` and, with a server configured, to `http://<hbbs>:21114` — plain HTTP against a port that serves no web API. No upstream endpoint is reachable or present |
 | Control scan | upstream `rustdesk-1.5.3-universal-signed.apk`, scanned with the same tool, returns `not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a` **only** — no `Fakeapp` |
 | Ad-free build (vc86) | `ad.yar.one` and `document.write` are absent from `libapp.so`; the slot is tree-shaken out, not hidden. Scanned: **both verdicts, unchanged** |
 | Accessibility service | used only for touch/key injection; the service description is shown by Android before the user can enable it |
