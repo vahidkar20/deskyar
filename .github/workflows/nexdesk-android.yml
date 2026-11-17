@@ -426,6 +426,33 @@ jobs:
              "signed-apk/NexDesk-${VERSION}-android-universal.apk"
           ls -lh signed-apk
 
+      # Fails the build if upstream identity creeps back into the shipped
+      # binaries. The mixed-case brand and the upstream endpoints must be
+      # absent. Lowercase `rustdesk` is deliberately NOT gated: the core
+      # exports `rustdesk_core_main`, and `is_public()` matches the upstream
+      # domain on purpose in order to switch features *off* for it.
+      - name: Verify the binaries carry no upstream identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="signed-apk/NexDesk-${VERSION}-android-universal.apk"
+          rm -rf /tmp/apkcheck && mkdir -p /tmp/apkcheck
+          unzip -o -q "$APK" 'lib/*' 'classes*.dex' -d /tmp/apkcheck
+          fail=0
+          for f in /tmp/apkcheck/lib/*/libnexdesk.so /tmp/apkcheck/classes*.dex; do
+            [ -f "$f" ] || continue
+            hits=$(strings -a "$f" | grep -E 'admin\.rustdesk|api\.rustdesk|5Qbwsde3|RustDesk' || true)
+            if [ -n "$hits" ]; then
+              echo "::error::upstream identity found in $f"
+              echo "$hits" | sort -u | head -20
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo "OK: no upstream endpoints, key or brand in libnexdesk.so or the DEX"
+
       - name: Upload the APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
