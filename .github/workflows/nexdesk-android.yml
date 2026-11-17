@@ -427,15 +427,13 @@ jobs:
           ls -lh signed-apk
 
       # Fails the build if upstream identity creeps back into the shipped
-      # binaries.
+      # binaries. After the de-RustDesk pass the native library carries no
+      # upstream endpoint, no upstream signing key and no brand at all.
       #
-      # The bare word `RustDesk` is deliberately not matched: is_custom_client()
-      # has to name upstream in order to recognise it, and is_public() matches
-      # the upstream domain in order to switch features *off* for it. Gating
-      # either would mean deleting a guard that protects users. What is gated is
-      # the set that can only be there by accident or regression: upstream
-      # endpoints, the upstream signing key, and the brand as it appeared in UI
-      # text.
+      # Lowercase `rustdesk` is deliberately not matched: the core exports the C
+      # symbol `rustdesk_core_main`, and is_public() matches the upstream domain
+      # in order to switch features *off* for it. Both are guards that protect
+      # users, and neither is identity.
       - name: Verify the binaries carry no upstream identity
         shell: bash
         run: |
@@ -443,7 +441,7 @@ jobs:
           APK="signed-apk/NexDesk-${VERSION}-android-universal.apk"
           rm -rf /tmp/apkcheck && mkdir -p /tmp/apkcheck
           unzip -o -q "$APK" 'lib/*' 'classes*.dex' -d /tmp/apkcheck
-          PATTERN='admin\.rustdesk|api\.rustdesk|5Qbwsde3|Show RustDesk|About RustDesk|Keep RustDesk'
+          PATTERN='admin\.rustdesk|api\.rustdesk|5Qbwsde3|RustDesk'
           fail=0
           for f in /tmp/apkcheck/lib/*/libnexdesk.so /tmp/apkcheck/classes*.dex; do
             [ -f "$f" ] || continue

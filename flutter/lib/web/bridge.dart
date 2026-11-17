@@ -1699,8 +1699,11 @@ class RustdeskImpl {
   }
 
   bool isCustomClient({dynamic hint}) {
-    // is_custom_client() checks if app name is not "RustDesk"
-    return mainGetAppNameSync(hint: hint) != "RustDesk";
+    // Mirrors the Rust invariant: this build is never upstream RustDesk, and
+    // `is_custom_client()` is stated in code rather than by comparing the app
+    // name against the upstream one. Keeping the comparison here would put the
+    // upstream name back into the Dart snapshot for a branch that cannot differ.
+    return true;
   }
 
   bool isDisableSettings({dynamic hint}) {
