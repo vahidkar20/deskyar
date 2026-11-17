@@ -4,22 +4,8 @@ NexDesk does not have an account system and does not collect analytics. This
 document lists every outbound connection the application makes on its own
 initiative, so you can check the claim against the source.
 
-## The advertising request
-
-The home screen shows one advertising slot; the mobile app shows a dismissible
-banner. Loading it issues:
-
-```
-GET https://ad.yar.one/?_=<unix timestamp>
-```
-
-Nothing else is sent. Specifically, the request carries **no** device
-identifier, install identifier, user identifier, version number, locale,
-platform, screen size, or session information. The single parameter exists to
-defeat HTTP caching. There is no third-party ad SDK, no WebView, and no
-JavaScript executed from the ad response.
-
-Closing the ad stops further requests.
+The application contacts no advertising service and displays no third-party
+content. Every destination below is operated by NexDesk or supplied by the user.
 
 ## Update checks
 

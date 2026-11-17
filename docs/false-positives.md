@@ -29,6 +29,7 @@ away:
 | `%TEMP%` sweep on startup | Deleted `rustdesk-*.exe` / `.msi` older than an hour | Looked like "scans temp and deletes executables", and never matched our own files anyway. |
 | Elevated install script | A `.bat`/`.cmd` file written to disk and run by an elevated `cmd.exe`, whose body created the service | The exact shape of `HEUR/Malware.bat.Gen`: a script in a writable directory that installs a service. It was moved out of `%TEMP%` and renamed once, which lowered the hit rate but kept the pattern. The elevated step now runs inside the application itself and receives its commands over a named pipe — no script file, no `cmd.exe`, no `certutil`. |
 | Startup-folder tray shortcut | `NexDesk Tray.lnk` in the all-users Startup folder | One of the four items Defender lists under `Behavior:Win32/Persistence.A!ml`. The service already starts at boot and accepts connections, so the autorun entry was convenience rather than function. `STARTUPSHORTCUTS=1` on the msiexec command line restores it. |
+| Live ad slot with server-chosen markup | The home pane fetched `ad.yar.one` at runtime, followed up to three `<script src>` tags and parsed the `document.write` literals into native widgets; the mobile banner resolved an image from the same server | Remote content selected by a third-party server at runtime, inside the process that holds the user's session. It survived five releases while the documentation claimed it had been removed; a build gate now fails if it returns. |
 
 What remains, and why it cannot be removed: the **service**, the **uninstall
 registry key** and the **Start Menu / Desktop shortcuts**. The first is the
@@ -103,9 +104,9 @@ encrypted with the password `infected` containing the exe plus
 >   mode is implemented by a separate helper binary we build from our own source
 >   (libs/privacy-host), which creates an ordinary overlay window and marks it
 >   excluded from capture.
-> - The application is free and funded by a single advertising slot on the home
->   screen. The ad request is anonymous: no device, install or user identifier
->   is sent. See https://github.com/vahidkar20/deskyar/blob/main/PRIVACY.md.
+> - The application displays no third-party content and contacts no advertising
+>   service. Every network destination it uses is operated by NexDesk or supplied
+>   by the user. See https://github.com/vahidkar20/deskyar/blob/main/PRIVACY.md.
 > - Version metadata is consistent across every shipped binary: the exe, the
 >   DLLs and the packer all report the same product version.
 >

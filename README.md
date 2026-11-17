@@ -50,13 +50,9 @@ so, and the publisher shown will be *SignPath Foundation*.
 
 ## Cost, and how it is funded
 
-NexDesk is free. Development is funded by a single advertising slot on the home
-screen and a banner in the mobile app.
-
-The ad request is deliberately minimal: a plain `GET https://ad.yar.one/`
-carrying one cache-busting timestamp and nothing else — no device identifier, no
-install identifier, no version, no locale, no telemetry. See
-[PRIVACY.md](PRIVACY.md).
+NexDesk is free, and the application carries no advertising. It makes no
+third-party requests at all: every network destination it contacts is either
+operated by NexDesk or supplied by the user. See [PRIVACY.md](PRIVACY.md).
 
 ## Repository layout
 

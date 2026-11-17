@@ -21,7 +21,7 @@ False-positive classification of a legitimate open-source Android application.
 |---|---|
 | Application | NexDesk — remote desktop |
 | Package | `ir.nexdesk.app` |
-| Version reported | 1.5.11 (versionCode 90) |
+| Version reported | 1.5.11 (versionCode 92) |
 | Signing certificate | `CN=NexDesk, O=NexDesk, C=IR`, valid 2026-11-09 → 2056-11-01, SHA-256 `CE:F5:4E:21:2E:19:3B:9E:31:E7:54:BB:65:4E:31:24:06:4D:14:BC:78:EA:89:82:B7:6F:0A:86:6C:90:30:88` |
 | Source | `https://github.com/vahidkar20/deskyar` (public, full history) |
 | Distribution | Google Play and Cafe Bazaar (Iran) |
@@ -74,14 +74,21 @@ verified by direct byte search over `classes.dex`, `classes2.dex`,
 | `RustDesk` (the brand, any context) | 0 |
 | `com.carriez` (upstream package prefix) | 0 |
 
-Five earlier builds changed only packaging and branding: notification strings,
-the native library name, the URI scheme, a boot receiver, and finally the removal
-of an advertising slot. **Every one of those six builds returned a byte-identical
-verdict.**
+Four earlier builds changed only packaging and branding: notification strings,
+the native library name, the URI scheme and a boot receiver. **Every one of those
+returned a byte-identical verdict.**
 
-That is the point of this submission: the `Fakeapp` classification is invariant
-to the content of the package. It therefore cannot be a content heuristic, and we
-have no further means to address it from our side.
+Version 92 makes the one change that is not cosmetic. The fork had added a live
+advertising slot: the home pane fetched a third-party page and parsed its markup
+into native widgets. It was present in every build up to and including 91 — an
+earlier draft of this submission claimed version 86 removed it, and that claim was
+false. Version 92 is the first build without it.
+
+That is the point of this submission, stated precisely: four packaging changes did
+not move the verdict, and the one behavioural difference is now gone. If the
+verdict survives version 92, the `Fakeapp` classification is not reachable from
+anything in the package, and we have no further means to address it from our side.
+We are not claiming it will change; we are asking for it to be looked at.
 
 ### What we are asking
 
