@@ -261,34 +261,12 @@ pub fn translate_locale(name: String, locale: &str) -> String {
         if let Some(value) = placeholder_value.as_ref() {
             s = s.replace("{}", &value);
         }
-        if !crate::is_rustdesk() {
-            // No key or value in `src/lang/*` carries the upstream brand any
-            // more, so the old exemption for the server-upgrade tip is gone
-            // with it. The substitution stays as a safety net for a value that
-            // slips through.
-            if s.contains("RustDesk") && name != "powered_by_me" {
-                let app_name = crate::get_app_name();
-                if !app_name.contains("RustDesk") {
-                    s = s.replace("RustDesk", &app_name);
-                } else {
-                    // https://github.com/rustdesk/rustdesk-server-pro/issues/845
-                    // If app_name contains "RustDesk" (e.g., "RustDesk-Admin"), we need to avoid
-                    // replacing "RustDesk" within the already-substituted app_name, which would
-                    // cause duplication like "RustDesk-Admin" -> "RustDesk-Admin-Admin".
-                    //
-                    // app_name only contains alphanumeric and hyphen.
-                    const PLACEHOLDER: &str = "#A-P-P-N-A-M-E#";
-                    if !s.contains(PLACEHOLDER) {
-                        s = s.replace(&app_name, PLACEHOLDER);
-                        s = s.replace("RustDesk", &app_name);
-                        s = s.replace(PLACEHOLDER, &app_name);
-                    } else {
-                        // It's very unlikely to reach here.
-                        // Skip replacement to avoid incorrect result.
-                    }
-                }
-            }
-        }
+        // The upstream brand used to be substituted out of every translated
+        // value here, with an exemption for the server-upgrade tip and a
+        // placeholder dance for an app name that itself contained the brand.
+        // No key or value in `src/lang/*` carries it any more, so the whole
+        // block is gone - and with it the literals it needed, which were the
+        // last upstream strings in the native library.
         s
     };
     if let Some(v) = m.get(&name as &str) {
