@@ -262,10 +262,11 @@ pub fn translate_locale(name: String, locale: &str) -> String {
             s = s.replace("{}", &value);
         }
         if !crate::is_rustdesk() {
-            if s.contains("RustDesk")
-                && !name.starts_with("upgrade_rustdesk_server_pro")
-                && name != "powered_by_me"
-            {
+            // No key or value in `src/lang/*` carries the upstream brand any
+            // more, so the old exemption for the server-upgrade tip is gone
+            // with it. The substitution stays as a safety net for a value that
+            // slips through.
+            if s.contains("RustDesk") && name != "powered_by_me" {
                 let app_name = crate::get_app_name();
                 if !app_name.contains("RustDesk") {
                     s = s.replace("RustDesk", &app_name);

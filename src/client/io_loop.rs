@@ -1497,7 +1497,7 @@ impl<T: InvokeUiSession> Remote<T> {
             self.handler.msgbox(
                 "error",
                 "Download new version",
-                "upgrade_remote_rustdesk_client_to_{1.3.9}_tip",
+                "upgrade_remote_client_to_{1.3.9}_tip",
                 "",
             );
         } else {
