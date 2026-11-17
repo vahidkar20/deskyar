@@ -46,8 +46,9 @@
 use hbb_common::config::Config;
 
 /// Fallback used when neither the environment nor the option store carries a
-/// server address. Empty means "use whatever upstream provides", which is the
-/// safe default for a fork that has not been pointed at a server yet.
+/// server address. Empty means "no rendezvous server is configured": the
+/// upstream server list is compiled out, so a client with nothing configured
+/// fails to register rather than silently reaching RustDesk's infrastructure.
 ///
 /// **To hard-code your own server, put its host here** - the DNS name or IP,
 /// without `https://` and without a port. The port is filled in automatically
@@ -83,6 +84,19 @@ pub const ENV_SERVER: &str = "NEXDESK_SERVER";
 
 /// Name of the environment variable holding the server's public key.
 pub const ENV_SERVER_KEY: &str = "NEXDESK_SERVER_KEY";
+
+/// Name of the environment variable holding the account API base URL.
+pub const ENV_API_SERVER: &str = "NEXDESK_API_SERVER";
+
+/// Account API base used when `NEXDESK_API_SERVER` is not supplied.
+///
+/// This is the website that owns the account database, **not** the rendezvous
+/// host. They are different services: hbbs answers on 21116 and speaks the
+/// RustDesk wire protocol, while the account API is ordinary HTTPS on 443.
+/// Deriving one from the other is what previously produced
+/// `http://rd.nexdesk.ir:21114` - plain HTTP against a port that serves no web
+/// API - and, when nothing was configured at all, `https://admin.rustdesk.com`.
+pub const DEFAULT_API_SERVER: &str = "https://nexdesk.ir";
 
 /// Option key under which the rendezvous host is stored.
 pub const OPTION_SERVER: &str = "custom-rendezvous-server";
@@ -151,6 +165,39 @@ fn compile_time_server_key() -> Option<String> {
     option_env!("NEXDESK_SERVER_KEY")
         .map(|value| value.trim().to_owned())
         .filter(|value| !value.is_empty())
+}
+
+/// The account API base baked in at build time.
+fn compile_time_api_server() -> Option<String> {
+    option_env!("NEXDESK_API_SERVER")
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
+/// Base URL of the account API, without a trailing slash.
+///
+/// Resolution order:
+///   1. `NEXDESK_API_SERVER` in the environment (run time override)
+///   2. `NEXDESK_API_SERVER` compiled into the binary (build time)
+///   3. [`DEFAULT_API_SERVER`]
+///
+/// Returns `None` only if the default has been deliberately emptied, in which
+/// case `get_api_server` derives an address from the rendezvous host and
+/// finally falls back to an empty string, which the callers already treat as
+/// "no account service configured".
+pub fn api_server() -> Option<String> {
+    if let Ok(value) = std::env::var(ENV_API_SERVER) {
+        let value = value.trim();
+        if !value.is_empty() {
+            return Some(value.trim_end_matches('/').to_owned());
+        }
+    }
+    compile_time_api_server()
+        .map(|value| value.trim_end_matches('/').to_owned())
+        .or_else(|| {
+            (!DEFAULT_API_SERVER.is_empty())
+                .then(|| DEFAULT_API_SERVER.trim_end_matches('/').to_owned())
+        })
 }
 
 /// Whether a self-hosted server has been configured at all.
@@ -271,6 +318,36 @@ mod tests {
             assert!(
                 !DEFAULT_SERVER_KEY.contains(' '),
                 "DEFAULT_SERVER_KEY must be one line with no spaces"
+            );
+        }
+    }
+
+    #[test]
+    fn api_server_is_a_bare_origin() {
+        // The value is concatenated with `/api/...`, so it has to be scheme +
+        // host with no trailing slash and no path of its own.
+        if let Some(url) = api_server() {
+            assert!(
+                url.starts_with("http://") || url.starts_with("https://"),
+                "the account API base must carry a scheme, got {url}"
+            );
+            assert!(
+                !url.ends_with('/'),
+                "a trailing slash would double up in `$url/api/...`"
+            );
+            assert_eq!(url.trim(), url, "the base must not carry whitespace");
+        }
+    }
+
+    #[test]
+    fn api_server_never_points_at_upstream() {
+        // The invariant this whole module exists for: a NexDesk build must
+        // never resolve its account API to RustDesk's infrastructure. The old
+        // fallback in `get_api_server_` did exactly that.
+        if let Some(url) = api_server() {
+            assert!(
+                !url.contains("rustdesk.com"),
+                "account API resolves upstream: {url}"
             );
         }
     }

@@ -49,6 +49,11 @@ env:
   # at RustDesk's public infrastructure, which cannot be reached from Iran.
   NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER || vars.DESKYAR_SERVER }}
   NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY || vars.DESKYAR_SERVER_KEY }}
+  # Base URL of the account API on the product's own website. This is a
+  # different service from the rendezvous host above: hbbs speaks the RustDesk
+  # wire protocol on 21116, while the account API is ordinary HTTPS on 443.
+  # Empty means the value compiled into src/nexdesk_server.rs applies.
+  NEXDESK_API_SERVER: ${{ vars.NEXDESK_API_SERVER }}
   # Release keystore, optional. Without it the APK is debug-signed (installable,
   # fine for testing) - but Cafe Bazaar needs a release signature, so add the
   # four secrets before publishing there. The `if:` below checks for an empty

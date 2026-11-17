@@ -1211,6 +1211,8 @@ jobs:
           # NEXDESK_SERVER / NEXDESK_SERVER_KEY (or the legacy DESKYAR_* names).
           NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER || vars.DESKYAR_SERVER }}
           NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY || vars.DESKYAR_SERVER_KEY }}
+          # Account API base (the website), distinct from the rendezvous host.
+          NEXDESK_API_SERVER: ${{ vars.NEXDESK_API_SERVER }}
         run: |
           if [ -z "${NEXDESK_SERVER:-}" ]; then
             echo "::warning::NEXDESK_SERVER is empty - this APK will use RustDesk's public servers and will not work for Iranian users. Set the repository variable NEXDESK_SERVER."

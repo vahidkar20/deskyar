@@ -1161,6 +1161,14 @@ fn get_api_server_(api: String, custom: String) -> String {
     if !api.is_empty() {
         return api.to_owned();
     }
+    // The account API lives on the product's own website, which is a different
+    // host and a different service from the rendezvous server. It is resolved
+    // *before* the rendezvous derivation on purpose: deriving from the server
+    // yields `http://<hbbs>:21114`, i.e. plain HTTP against a port that speaks
+    // the RustDesk wire protocol and serves no web API at all.
+    if let Some(baked) = crate::nexdesk_server::api_server() {
+        return baked;
+    }
     let s0 = get_custom_rendezvous_server(custom);
     if !s0.is_empty() {
         let s = crate::increase_port(&s0, -2);
@@ -1170,7 +1178,11 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
-    "https://admin.rustdesk.com".to_owned()
+    // Nothing is configured. An empty string is a state every caller already
+    // handles - it is what `no_register_device` returns - and it is strictly
+    // better than the previous fallback, which pointed the account feature at
+    // RustDesk's own API from a product that must never contact it.
+    String::new()
 }
 
 #[inline]

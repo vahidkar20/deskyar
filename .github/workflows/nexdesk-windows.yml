@@ -65,6 +65,9 @@ env:
   # in RustDesk's public servers.
   NEXDESK_SERVER: ${{ vars.NEXDESK_SERVER || vars.DESKYAR_SERVER }}
   NEXDESK_SERVER_KEY: ${{ vars.NEXDESK_SERVER_KEY || vars.DESKYAR_SERVER_KEY }}
+  # Account API base (the website), not the rendezvous host. Empty means the
+  # value compiled into src/nexdesk_server.rs applies.
+  NEXDESK_API_SERVER: ${{ vars.NEXDESK_API_SERVER }}
   # Signed update feed. The manifest lives on our own site; the Ed25519 public
   # key baked into the binary is what makes an update trustworthy. Public keys
   # are not secret, so they belong in Variables, not Secrets.
