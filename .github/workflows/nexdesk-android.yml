@@ -427,10 +427,15 @@ jobs:
           ls -lh signed-apk
 
       # Fails the build if upstream identity creeps back into the shipped
-      # binaries. The mixed-case brand and the upstream endpoints must be
-      # absent. Lowercase `rustdesk` is deliberately NOT gated: the core
-      # exports `rustdesk_core_main`, and `is_public()` matches the upstream
-      # domain on purpose in order to switch features *off* for it.
+      # binaries.
+      #
+      # The bare word `RustDesk` is deliberately not matched: is_custom_client()
+      # has to name upstream in order to recognise it, and is_public() matches
+      # the upstream domain in order to switch features *off* for it. Gating
+      # either would mean deleting a guard that protects users. What is gated is
+      # the set that can only be there by accident or regression: upstream
+      # endpoints, the upstream signing key, and the brand as it appeared in UI
+      # text.
       - name: Verify the binaries carry no upstream identity
         shell: bash
         run: |
@@ -438,10 +443,11 @@ jobs:
           APK="signed-apk/NexDesk-${VERSION}-android-universal.apk"
           rm -rf /tmp/apkcheck && mkdir -p /tmp/apkcheck
           unzip -o -q "$APK" 'lib/*' 'classes*.dex' -d /tmp/apkcheck
+          PATTERN='admin\.rustdesk|api\.rustdesk|5Qbwsde3|Show RustDesk|About RustDesk|Keep RustDesk'
           fail=0
           for f in /tmp/apkcheck/lib/*/libnexdesk.so /tmp/apkcheck/classes*.dex; do
             [ -f "$f" ] || continue
-            hits=$(strings -a "$f" | grep -E 'admin\.rustdesk|api\.rustdesk|5Qbwsde3|RustDesk' || true)
+            hits=$(strings -a "$f" | grep -E "$PATTERN" || true)
             if [ -n "$hits" ]; then
               echo "::error::upstream identity found in $f"
               echo "$hits" | sort -u | head -20
@@ -451,7 +457,7 @@ jobs:
           if [ "$fail" -ne 0 ]; then
             exit 1
           fi
-          echo "OK: no upstream endpoints, key or brand in libnexdesk.so or the DEX"
+          echo "OK: no upstream endpoints, key or UI brand in libnexdesk.so or the DEX"
 
       - name: Upload the APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
