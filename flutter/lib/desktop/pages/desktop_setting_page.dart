@@ -2910,16 +2910,14 @@ class _AboutState extends State<_About> {
 
 //#region server status
 
-/// Whether the client is still pointed at RustDesk's public infrastructure.
+/// Whether the client is still pointed at upstream's public infrastructure.
 ///
-/// `get_api_server` returns `https://admin.rustdesk.com` when no custom
-/// rendezvous host is configured - that is upstream's fallback, not a
-/// deliberate choice. Any other value means a self-hosted server is in use.
-bool _isPublicServer(String apiServer) {
-  if (apiServer.isEmpty) return false;
-  final lower = apiServer.toLowerCase();
-  return lower.contains('rustdesk.com');
-}
+/// It no longer can be: `get_api_server` resolves the account API from the
+/// value baked at build time and falls back to an empty string, never to an
+/// upstream host. The helper stays because the About card asks for it, but the
+/// answer is always "no" - and keeping the host test here would ship the
+/// upstream domain inside the Dart snapshot for a branch that cannot be taken.
+bool _isPublicServer(String _) => false;
 
 /// Short, readable form of the API server for the About card.
 ///

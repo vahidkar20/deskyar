@@ -3140,7 +3140,7 @@ Future<void> onActiveWindowChanged() async {
     } catch (err) {
       debugPrintStack(label: "$err");
     } finally {
-      debugPrint("Start closing RustDesk...");
+      debugPrint("Start closing NexDesk...");
       await windowManager.setPreventClose(false);
       await windowManager.close();
       if (isMacOS) {
@@ -4302,7 +4302,7 @@ get defaultOptionAccessMode => isCustomClient ? 'custom' : '';
 get defaultOptionApproveMode => isCustomClient ? 'password-click' : '';
 
 bool whitelistNotEmpty() {
-  // https://rustdesk.com/docs/en/self-host/client-configuration/advanced-settings/#whitelist
+  // See the advanced-settings documentation on the self-hosted server page.
   final v = bind.mainGetOptionSync(key: kOptionWhitelist);
   return v != '' && v != ',';
 }
