@@ -36,7 +36,7 @@ The `Fakeapp` hit is the heuristic misfiring on a repackaged remote-access clien
 | 82 | boot receiver `exported=false`, `allowBackup=false`, debug action removed | unchanged |
 | 83 | overlay-permission prompt removed from the normal flow | unchanged |
 | 84 | native library renamed `librustdesk.so` → `libnexdesk.so`, scheme `nexdesk://` | unchanged |
-| 85 | notification title, channel id/name and virtual-display name renamed; **zero** `RustDesk` strings left in either DEX | unchanged |
+| 85 | notification title, channel id/name and virtual-display name renamed | unchanged |
 | 86 | **the ad slot removed entirely** — no `ad.yar.one`, no `document.write`, no third-party request of any kind left in `libapp.so` | unchanged |
 
 Five independent changes, and both verdicts come back byte-identical every time. The
@@ -116,7 +116,7 @@ Both build facts below are current; nothing needs filling in. Upload the APK at
 | Nested payloads | none: only `classes.dex` and `classes2.dex`, no embedded `.apk`/`.jar` |
 | Sensitive permissions | no SMS, no contacts, no location, no `REQUEST_INSTALL_PACKAGES`, no `QUERY_ALL_PACKAGES` |
 | Rendezvous server baked in | `rd.nexdesk.ir` plus the server's Ed25519 public key are present in `libnexdesk.so` |
-| Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD`; `classes.dex` + `classes2.dex` contain **zero** occurrences of the string `RustDesk` (verified on the published 1.5.11+85 APK) |
+| Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD`. The DEX carries no brand string in the current build; 1.5.11+85 still contained one — `Show RustDesk`, a Kotlin label whose displayed text is substituted at runtime — which a value-level check missed and a later build removed |
 | Control scan | upstream `rustdesk-1.5.3-universal-signed.apk`, scanned with the same tool, returns `not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a` **only** — no `Fakeapp` |
 | Ad-free build (vc86) | `ad.yar.one` and `document.write` are absent from `libapp.so`; the slot is tree-shaken out, not hidden. Scanned: **both verdicts, unchanged** |
 | Accessibility service | used only for touch/key injection; the service description is shown by Android before the user can enable it |
@@ -199,10 +199,9 @@ release URL above and let Kaspersky pull the file.
 > removed. 83: the overlay-permission prompt removed from the normal flow. 84:
 > the native library renamed `librustdesk.so` -> `libnexdesk.so` and the URI
 > scheme changed. 85: the notification title, notification channel and virtual
-> display renamed, leaving zero occurrences of the string `RustDesk` in either
-> DEX. 86: the ad slot removed entirely - no `ad.yar.one`, no `document.write`,
-> no third-party request of any kind left in `libapp.so`. Both verdicts returned
-> byte-identical after each of the five.
+> display renamed. 86: the ad slot removed entirely - no `ad.yar.one`, no
+> `document.write`, no third-party request of any kind left in `libapp.so`. Both
+> verdicts returned byte-identical after each of the five.
 >
 > That last build is the reason for this request. It removes the only capability
 > this fork adds to upstream, and the verdict does not move. There is nothing
