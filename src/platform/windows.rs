@@ -1896,9 +1896,13 @@ fn get_public_base_dir() -> PathBuf {
 
 #[inline]
 pub fn get_custom_client_staging_dir() -> PathBuf {
+    // Derived from the product name rather than hard-coded: the literal used to
+    // create a RustDesk directory on every install of a product that is not
+    // RustDesk.
+    let name = crate::get_app_name();
     get_public_base_dir()
-        .join("RustDesk")
-        .join("RustDeskCustomClientStaging")
+        .join(&name)
+        .join(format!("{name}CustomClientStaging"))
 }
 
 /// Removes the custom client staging directory.

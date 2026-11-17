@@ -45,11 +45,21 @@ fn initialize(app_dir: &str, custom_client_config: &str) {
     {
         *config::APP_DIR.write().unwrap() = app_dir.to_owned();
     }
-    // core_main's load_custom_client does not work for flutter since it is only applied to its load_library in main.c
-    if custom_client_config.is_empty() {
-        crate::load_custom_client();
-    } else {
-        crate::read_custom_client(custom_client_config);
+    // Mobile builds never read a signed custom-client blob: the verifier key
+    // belongs to upstream, and honouring it would let a third party rename this
+    // build back to RustDesk at runtime. `read_custom_client` is compiled to a
+    // no-op on those targets, so the key never reaches the native library.
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    let _ = custom_client_config;
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        // core_main's load_custom_client does not work for flutter since it is
+        // only applied to its load_library in main.c
+        if custom_client_config.is_empty() {
+            crate::load_custom_client();
+        } else {
+            crate::read_custom_client(custom_client_config);
+        }
     }
     // Apply the rendezvous server that was baked into this build.
     //

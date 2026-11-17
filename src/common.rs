@@ -2433,6 +2433,17 @@ pub fn get_dst_align_rgba() -> usize {
     1
 }
 
+/// Mobile builds do not accept a signed custom-client blob at all.
+///
+/// The verifier key in the desktop implementation below belongs to upstream
+/// RustDesk, and honouring a blob signed with it would let a third party rename
+/// this build back to "RustDesk" at runtime - which is exactly the capability a
+/// repackaging detector describes. Compiling that implementation out for
+/// Android and iOS also keeps the key out of `libnexdesk.so`.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub fn read_custom_client(_config: &str) {}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn read_custom_client(config: &str) {
     let Ok(data) = decode64(config) else {
         log::error!("Failed to decode custom client config");
@@ -2456,7 +2467,15 @@ pub fn read_custom_client(config: &str) {
 
     if let Some(app_name) = data.remove("app-name") {
         if let Some(app_name) = app_name.as_str() {
-            *config::APP_NAME.write().unwrap() = app_name.to_owned();
+            // Defence in depth, independent of who holds the signing key: a
+            // config that renames the product back to the upstream brand is
+            // refused outright. `is_custom_client()` keys off APP_NAME, so
+            // accepting this would also re-enable the upstream-only paths.
+            if app_name.contains("RustDesk") {
+                log::error!("Ignoring custom client config: app-name carries the upstream brand");
+            } else {
+                *config::APP_NAME.write().unwrap() = app_name.to_owned();
+            }
         }
     }
 
