@@ -155,6 +155,12 @@ jobs:
           grep -q 'NexDesk' libs/hbb_common/src/config.rs
           grep -q 'NexDeskInstallBanner' flutter/lib/desktop/pages/connection_page.dart
 
+          # The ad slot was removed deliberately and must not come back through
+          # an upstream merge. `install_banner.dart` above is a different
+          # widget - keep the two visibly separate.
+          ! test -e flutter/lib/desktop/widgets/banner_slot.dart
+          ! grep -rq 'ad\.yar\.one' flutter/lib
+
           git add -A
           git commit -m "chore: sync upstream RustDesk ${TAG}
 

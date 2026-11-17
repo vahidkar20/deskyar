@@ -313,6 +313,26 @@ jobs:
           cd "$FLUTTER_ROOT"
           git apply flutter_3.24.4_dropdown_menu_enableFilter.diff
 
+      - name: Verify the ad channel is absent from the source
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            flutter/lib/common/widgets/ad_creative.dart \
+            flutter/lib/desktop/widgets/ad_document.dart \
+            flutter/lib/desktop/widgets/banner_slot.dart \
+            flutter/lib/mobile/widgets/nexdesk_banner.dart; do
+            if [ -e "$f" ]; then
+              echo "::error::$f is back - the ad channel must not be reinstated"
+              exit 1
+            fi
+          done
+          if grep -rn 'ad\.yar\.one\|NexDeskBannerSlot\|NexDeskBanner\b\|resolveAdCreative\|parseAdDocument' flutter/lib; then
+            echo "::error::the ad channel is referenced in flutter/lib"
+            exit 1
+          fi
+          echo "OK: no ad channel in the source"
+
       - name: Dart analysis (fast feedback)
         # `flutter build windows` is only reached after the cargo and vcpkg
         # work, so a one-line Dart type error used to surface ~20 minutes into

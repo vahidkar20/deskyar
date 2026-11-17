@@ -395,6 +395,28 @@ jobs:
           EOF
           echo "::notice::APK will be signed with the release keystore ($ANDROID_ALIAS)"
 
+      # Cheap source-level counterpart to the binary gate. Runs in seconds, so a
+      # re-added ad slot is caught before the Flutter build rather than after it.
+      - name: Verify the ad channel is absent from the source
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            flutter/lib/common/widgets/ad_creative.dart \
+            flutter/lib/desktop/widgets/ad_document.dart \
+            flutter/lib/desktop/widgets/banner_slot.dart \
+            flutter/lib/mobile/widgets/nexdesk_banner.dart; do
+            if [ -e "$f" ]; then
+              echo "::error::$f is back - the ad channel must not be reinstated"
+              exit 1
+            fi
+          done
+          if grep -rn 'ad\.yar\.one\|NexDeskBannerSlot\|NexDeskBanner\b\|resolveAdCreative\|parseAdDocument' flutter/lib; then
+            echo "::error::the ad channel is referenced in flutter/lib"
+            exit 1
+          fi
+          echo "OK: no ad channel in the source"
+
       - name: Build the universal APK
         shell: bash
         env:
@@ -456,6 +478,42 @@ jobs:
             exit 1
           fi
           echo "OK: no upstream endpoints, key or UI brand in libnexdesk.so or the DEX"
+
+      # Fails the build if the ad channel returns.
+      #
+      # The step above already unpacks libapp.so with `unzip 'lib/*'` and then
+      # never looks at it - its loop only globs libnexdesk.so and the DEX. That
+      # gap is why the ad slot survived five releases while we documented it as
+      # removed. libapp.so is the Dart AOT snapshot and on Android it is a
+      # shared library under lib/<abi>/, not an asset.
+      - name: Verify the ad channel is gone from the binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="signed-apk/NexDesk-${VERSION}-android-universal.apk"
+          rm -rf /tmp/adcheck && mkdir -p /tmp/adcheck
+          unzip -o -q "$APK" 'lib/*' 'classes*.dex' -d /tmp/adcheck
+
+          # A wrong extraction path would make the loop below match nothing and
+          # pass silently - the exact failure mode being fixed here.
+          test -f /tmp/adcheck/lib/arm64-v8a/libapp.so \
+            || { echo "::error::libapp.so not found after unzip - the path changed"; exit 1; }
+
+          PATTERN='ad\.yar\.one|document\.write|nexdesk-mobile-banner-dismissed'
+          fail=0
+          for f in /tmp/adcheck/lib/*/libapp.so /tmp/adcheck/lib/*/libnexdesk.so /tmp/adcheck/classes*.dex; do
+            [ -f "$f" ] || continue
+            hits=$(strings -a "$f" | grep -E "$PATTERN" || true)
+            if [ -n "$hits" ]; then
+              echo "::error::ad channel string found in $f"
+              echo "$hits" | sort -u | head -20
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo "OK: no ad endpoint, no document.write and no dismissal key in any binary"
 
       - name: Upload the APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
