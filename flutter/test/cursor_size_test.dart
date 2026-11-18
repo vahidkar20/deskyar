@@ -3,12 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/desktop/pages/remote_page.dart';
-import 'package:flutter_hbb/models/input_model.dart';
-import 'package:flutter_hbb/models/model.dart';
-import 'package:flutter_hbb/native/custom_cursor.dart';
-import 'package:flutter_hbb/utils/image.dart';
+import 'package:nexdesk/consts.dart';
+import 'package:nexdesk/desktop/pages/remote_page.dart';
+import 'package:nexdesk/models/input_model.dart';
+import 'package:nexdesk/models/model.dart';
+import 'package:nexdesk/native/custom_cursor.dart';
+import 'package:nexdesk/utils/image.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:image/image.dart' as img;

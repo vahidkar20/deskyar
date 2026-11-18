@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:nexdesk/models/platform_model.dart';
 import 'package:get/get.dart';
 
 /// Event pushed by `src/nexdesk_update.rs` on every phase change.

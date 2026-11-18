@@ -10,24 +10,24 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_hbb/common/widgets/peers_view.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/models/ab_model.dart';
-import 'package:flutter_hbb/models/chat_model.dart';
-import 'package:flutter_hbb/models/cm_file_model.dart';
-import 'package:flutter_hbb/models/file_model.dart';
-import 'package:flutter_hbb/models/group_model.dart';
-import 'package:flutter_hbb/models/peer_model.dart';
-import 'package:flutter_hbb/models/peer_tab_model.dart';
-import 'package:flutter_hbb/models/printer_model.dart';
-import 'package:flutter_hbb/models/server_model.dart';
-import 'package:flutter_hbb/models/user_model.dart';
-import 'package:flutter_hbb/models/state_model.dart';
-import 'package:flutter_hbb/models/desktop_render_texture.dart';
-import 'package:flutter_hbb/models/terminal_model.dart';
-import 'package:flutter_hbb/common/shared_state.dart';
-import 'package:flutter_hbb/utils/multi_window_manager.dart';
-import 'package:flutter_hbb/utils/http_service.dart' as http;
+import 'package:nexdesk/common/widgets/peers_view.dart';
+import 'package:nexdesk/consts.dart';
+import 'package:nexdesk/models/ab_model.dart';
+import 'package:nexdesk/models/chat_model.dart';
+import 'package:nexdesk/models/cm_file_model.dart';
+import 'package:nexdesk/models/file_model.dart';
+import 'package:nexdesk/models/group_model.dart';
+import 'package:nexdesk/models/peer_model.dart';
+import 'package:nexdesk/models/peer_tab_model.dart';
+import 'package:nexdesk/models/printer_model.dart';
+import 'package:nexdesk/models/server_model.dart';
+import 'package:nexdesk/models/user_model.dart';
+import 'package:nexdesk/models/state_model.dart';
+import 'package:nexdesk/models/desktop_render_texture.dart';
+import 'package:nexdesk/models/terminal_model.dart';
+import 'package:nexdesk/common/shared_state.dart';
+import 'package:nexdesk/utils/multi_window_manager.dart';
+import 'package:nexdesk/utils/http_service.dart' as http;
 import 'package:tuple/tuple.dart';
 import 'package:image/image.dart' as img2;
 import 'package:flutter_svg/flutter_svg.dart';
@@ -42,12 +42,12 @@ import '../utils/image.dart' as img;
 import '../common/widgets/dialog.dart';
 import 'input_model.dart';
 import 'platform_model.dart';
-import 'package:flutter_hbb/utils/scale.dart';
+import 'package:nexdesk/utils/scale.dart';
 
-import 'package:flutter_hbb/generated_bridge.dart'
-    if (dart.library.html) 'package:flutter_hbb/web/bridge.dart';
-import 'package:flutter_hbb/native/custom_cursor.dart'
-    if (dart.library.html) 'package:flutter_hbb/web/custom_cursor.dart';
+import 'package:nexdesk/generated_bridge.dart'
+    if (dart.library.html) 'package:nexdesk/web/bridge.dart';
+import 'package:nexdesk/native/custom_cursor.dart'
+    if (dart.library.html) 'package:nexdesk/web/custom_cursor.dart';
 
 typedef HandleMsgBox = Function(Map<String, dynamic> evt, String id);
 typedef ReconnectHandle = Function(OverlayDialogManager, SessionID, bool);

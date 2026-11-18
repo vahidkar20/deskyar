@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/common/formatter/id_formatter.dart';
-import 'package:flutter_hbb/models/nexdesk_update_model.dart';
+import 'package:nexdesk/common.dart';
+import 'package:nexdesk/common/formatter/id_formatter.dart';
+import 'package:nexdesk/models/nexdesk_update_model.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 

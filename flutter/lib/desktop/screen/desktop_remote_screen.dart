@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/desktop/pages/remote_tab_page.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
-import 'package:flutter_hbb/models/state_model.dart';
+import 'package:nexdesk/common.dart';
+import 'package:nexdesk/desktop/pages/remote_tab_page.dart';
+import 'package:nexdesk/models/platform_model.dart';
+import 'package:nexdesk/models/state_model.dart';
 import 'package:provider/provider.dart';
 
 /// multi-tab desktop remote screen

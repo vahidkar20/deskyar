@@ -5,15 +5,15 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_hbb/common/widgets/connection_page_title.dart';
-import 'package:flutter_hbb/consts.dart';
-import 'package:flutter_hbb/desktop/widgets/anchor_menu.dart';
-import 'package:flutter_hbb/desktop/widgets/install_banner.dart';
-import 'package:flutter_hbb/models/state_model.dart';
+import 'package:nexdesk/common/widgets/connection_page_title.dart';
+import 'package:nexdesk/consts.dart';
+import 'package:nexdesk/desktop/widgets/anchor_menu.dart';
+import 'package:nexdesk/desktop/widgets/install_banner.dart';
+import 'package:nexdesk/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:flutter_hbb/models/peer_model.dart';
+import 'package:nexdesk/models/peer_model.dart';
 
 import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';

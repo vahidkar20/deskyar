@@ -8,15 +8,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_hbb/common/formatter/id_formatter.dart';
-import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
-import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
-import 'package:flutter_hbb/main.dart';
-import 'package:flutter_hbb/models/peer_model.dart';
-import 'package:flutter_hbb/models/peer_tab_model.dart';
-import 'package:flutter_hbb/models/state_model.dart';
-import 'package:flutter_hbb/utils/multi_window_manager.dart';
-import 'package:flutter_hbb/utils/platform_channel.dart';
+import 'package:nexdesk/common/formatter/id_formatter.dart';
+import 'package:nexdesk/desktop/widgets/refresh_wrapper.dart';
+import 'package:nexdesk/desktop/widgets/tabbar_widget.dart';
+import 'package:nexdesk/main.dart';
+import 'package:nexdesk/models/peer_model.dart';
+import 'package:nexdesk/models/peer_tab_model.dart';
+import 'package:nexdesk/models/state_model.dart';
+import 'package:nexdesk/utils/multi_window_manager.dart';
+import 'package:nexdesk/utils/platform_channel.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:get/get_rx/src/rx_workers/utils/debouncer.dart';
@@ -37,16 +37,16 @@ import 'mobile/pages/terminal_page.dart';
 import 'desktop/pages/remote_page.dart' as desktop_remote;
 import 'desktop/pages/file_manager_page.dart' as desktop_file_manager;
 import 'desktop/pages/view_camera_page.dart' as desktop_view_camera;
-import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
+import 'package:nexdesk/desktop/widgets/remote_toolbar.dart';
 import 'models/model.dart';
 import 'models/nexdesk_update_model.dart';
 import 'models/platform_model.dart';
 
-import 'package:flutter_hbb/native/win32.dart'
-    if (dart.library.html) 'package:flutter_hbb/web/win32.dart';
-import 'package:flutter_hbb/native/common.dart'
-    if (dart.library.html) 'package:flutter_hbb/web/common.dart';
-import 'package:flutter_hbb/utils/http_service.dart' as http;
+import 'package:nexdesk/native/win32.dart'
+    if (dart.library.html) 'package:nexdesk/web/win32.dart';
+import 'package:nexdesk/native/common.dart'
+    if (dart.library.html) 'package:nexdesk/web/common.dart';
+import 'package:nexdesk/utils/http_service.dart' as http;
 
 final globalKey = GlobalKey<NavigatorState>();
 final navigationBarKey = GlobalKey();

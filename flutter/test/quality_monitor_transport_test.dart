@@ -1,5 +1,5 @@
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/models/model.dart';
+import 'package:nexdesk/common.dart';
+import 'package:nexdesk/models/model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uuid/uuid.dart';
 

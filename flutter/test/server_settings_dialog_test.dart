@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_hbb/mobile/widgets/dialog.dart';
+import 'package:nexdesk/mobile/widgets/dialog.dart';
 
 void main() {
   testWidgets('server settings text fields preserve literal input',

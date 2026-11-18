@@ -456,6 +456,9 @@ jobs:
       # symbol `rustdesk_core_main`, and is_public() matches the upstream domain
       # in order to switch features *off* for it. Both are guards that protect
       # users, and neither is identity.
+      #
+      # `flutter_hbb` is upstream's Dart package name. It is not the brand, but
+      # it is the package URI the AOT snapshot carries, so it must not survive.
       - name: Verify the binaries carry no upstream identity
         shell: bash
         run: |
@@ -463,9 +466,13 @@ jobs:
           APK="signed-apk/NexDesk-${VERSION}-android-universal.apk"
           rm -rf /tmp/apkcheck && mkdir -p /tmp/apkcheck
           unzip -o -q "$APK" 'lib/*' 'classes*.dex' -d /tmp/apkcheck
-          PATTERN='admin\.rustdesk|api\.rustdesk|5Qbwsde3|RustDesk'
+
+          test -f /tmp/apkcheck/lib/arm64-v8a/libapp.so \
+            || { echo "::error::libapp.so not found after unzip - the path changed"; exit 1; }
+
+          PATTERN='admin\.rustdesk|api\.rustdesk|5Qbwsde3|RustDesk|flutter_hbb'
           fail=0
-          for f in /tmp/apkcheck/lib/*/libnexdesk.so /tmp/apkcheck/classes*.dex; do
+          for f in /tmp/apkcheck/lib/*/libapp.so /tmp/apkcheck/lib/*/libnexdesk.so /tmp/apkcheck/classes*.dex; do
             [ -f "$f" ] || continue
             hits=$(strings -a "$f" | grep -E "$PATTERN" || true)
             if [ -n "$hits" ]; then
@@ -477,15 +484,15 @@ jobs:
           if [ "$fail" -ne 0 ]; then
             exit 1
           fi
-          echo "OK: no upstream endpoints, key or UI brand in libnexdesk.so or the DEX"
+          echo "OK: no upstream endpoints, key, UI brand or Dart package name in any binary"
 
       # Fails the build if the ad channel returns.
       #
-      # The step above already unpacks libapp.so with `unzip 'lib/*'` and then
-      # never looks at it - its loop only globs libnexdesk.so and the DEX. That
-      # gap is why the ad slot survived five releases while we documented it as
-      # removed. libapp.so is the Dart AOT snapshot and on Android it is a
-      # shared library under lib/<abi>/, not an asset.
+      # The identity step above now scans libapp.so too. This step keeps its own
+      # extraction and existence assertion so that a wrong path cannot make the
+      # ad scan match nothing and pass silently. libapp.so is the Dart AOT
+      # snapshot and on Android it is a shared library under lib/<abi>/, not an
+      # asset.
       - name: Verify the ad channel is gone from the binaries
         shell: bash
         run: |

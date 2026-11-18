@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/desktop/pages/port_forward_tab_page.dart';
+import 'package:nexdesk/common.dart';
+import 'package:nexdesk/desktop/pages/port_forward_tab_page.dart';
 import 'package:provider/provider.dart';
 
 /// multi-tab file port forward screen

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_hbb/main.dart';
-import 'package:flutter_hbb/common.dart';
+import 'package:nexdesk/main.dart';
+import 'package:nexdesk/common.dart';
 
 enum SystemWindowTheme { light, dark }
 

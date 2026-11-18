@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/consts.dart';
+import 'package:nexdesk/common.dart';
+import 'package:nexdesk/consts.dart';
 
-import 'package:flutter_hbb/models/peer_model.dart';
+import 'package:nexdesk/models/peer_model.dart';
 
 import '../../models/platform_model.dart';
 

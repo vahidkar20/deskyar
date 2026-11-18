@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_custom_cursor/flutter_custom_cursor.dart';
-import 'package:flutter_hbb/common.dart';
-import 'package:flutter_hbb/generated_bridge.dart' show CursorShape;
-import 'package:flutter_hbb/models/model.dart';
-import 'package:flutter_hbb/native/custom_cursor.dart';
+import 'package:nexdesk/common.dart';
+import 'package:nexdesk/generated_bridge.dart' show CursorShape;
+import 'package:nexdesk/models/model.dart';
+import 'package:nexdesk/native/custom_cursor.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uuid/uuid.dart';
 
