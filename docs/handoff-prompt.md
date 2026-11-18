@@ -1,8 +1,8 @@
 # Handoff prompt — NexDesk / Cafe Bazaar false positive
 
 **راهنمای استفاده (برای مالک):** کل بخش زیر خط جداکننده را کپی کنید و به هوش مصنوعی
-جدید بدهید. خودبسنده است — آن هوش مصنوعی هیچ‌چیز از گفتگوی ما نمی‌داند. اگر اسکن
-`v1.5.11-test1` را گرفته‌اید، نتیجه را همراه پرامپت بفرستید.
+جدید بدهید. خودبسنده است — آن هوش مصنوعی هیچ‌چیز از گفتگوی ما نمی‌داند. نتیجهٔ اسکن
+vc92 و vc93 در همین سند ثبت شده است.
 
 ---
 
@@ -20,7 +20,7 @@ RustDesk (AGPL-3.0). Package `ir.nexdesk.app`, publisher `NexDesk`, Iran.
 - Repository: `D:/Dehghani/Rust Desk github/deskyar`, branch `feat/native-installer`
 - Rendezvous server: `rd.nexdesk.ir` (self-hosted, baked at build time)
 - Account API: `https://nexdesk.ir` (baked at build time)
-- Current build: versionCode **92**, versionName 1.5.11
+- Current build: versionCode **93**, versionName 1.5.11
 
 The owner distributes through Google Play and wants to distribute through **Cafe
 Bazaar**, the major Iranian Android store. Bazaar refuses the app.
@@ -52,7 +52,8 @@ The work proceeded in controlled steps, each scanned by the owner:
 |---|---|---|
 | 82–85 | packaging and branding: boot receiver, overlay prompt, native library rename, notification strings, URI scheme | **unchanged** |
 | 88–91 | every upstream string removed from the binaries: upstream account API, upstream version feed, upstream Ed25519 signing key, the brand `RustDesk` in 583 places across 54 translation files, the Dart snapshot, the custom-client loader | **unchanged** |
-| 92 | the live advertising channel removed — see below | **not yet scanned** |
+| 92 | the live advertising channel removed — see below | **unchanged** |
+| 93 | the Dart package renamed `flutter_hbb` → `nexdesk`; share links `nexdesk://` | **unchanged** (OpenTip, 2026-11-18) |
 
 Verified by direct byte search on the published APKs: at vc90 and vc91 the DEX and
 both native libraries contained **zero** occurrences of `admin.rustdesk`,
@@ -78,36 +79,43 @@ It was removed in vc92 (four files, 1672 lines, both mount points, the 5-minute
 refresh timer, the dismissal key, and two Persian ad strings that were shipping
 inside `libnexdesk.so`).
 
-**vc92 is published and waiting for a scan:**
+**vc92 and vc93 have both been scanned; both verdicts are unchanged.**
 
 ```
-tag      v1.5.11-test1   (prerelease)
+tag      v1.5.11-test1   (prerelease, vc92)
 sha256   1de1eeba25dd91d2aa146898a40d6a68dade0d255404c2cd4f3c429a299086a9
+
+tag      v1.5.11-test2   (prerelease, vc93, commit 63038e7)
+sha256   699cf3c3f1c5dfbe5d1e964512770f1eed13370109cb17d2c88ee83169237088
 ```
 
-Verified on that APK: `ad.yar.one`, `document.write` and
+OpenTip for vc93 (2026-11-18 13:06, databases 01:42): 2 detections (1 Malware,
+1 Adware/other), 0 suspicious activities, 0 network activities, 0 extracted
+files.
+
+Verified on the vc92 APK: `ad.yar.one`, `document.write` and
 `nexdesk-mobile-banner-dismissed` return **zero** occurrences in the DEX,
 `libnexdesk.so`, and `libapp.so` on all three ABIs. The code symbols confirm it:
-`NexDeskBanner` 2→0, `resolveAdCreative` 1→0, `ad_creative` 1→0.
+`NexDeskBanner` 2→0, `resolveAdCreative` 1→0, `ad_creative` 1→0. The vc93 CI gate
+re-ran the ad and upstream-identity scans (including `flutter_hbb`) and passed on
+all three ABIs.
 
 ## 5. Your first action
 
-**Ask the owner whether `v1.5.11-test1` has been scanned, and what the result was.**
-Everything branches on that. Do not start new engineering before you know.
+The vc92 and vc93 scans are done; both verdicts are unchanged. The next action is
+the vendor submission: send `docs/opentip-submission.md` to OpenTip with the vc93
+APK, then open the Bazaar ticket. Do not start new engineering before Kaspersky
+answers.
 
-### If the verdict changed
-The advertising channel was the cause. Document it in
-`docs/kaspersky-false-positive.md` and `docs/opentip-submission.md`, then work on
-getting the fix into the shipping build (vc93+) and re-verified.
+**Measured result:** the package now contains nothing but a remote-desktop product,
+and the classification did not move. The OpenTip report for vc93 shows zero
+suspicious activities and zero network activity. The consistent reading is that
+`Fakeapp` tracks **identity** — RustDesk machine code under a different
+certificate — not behaviour. That last part is an inference from the measurement,
+not a separate scan.
 
-### If the verdict is unchanged
-This is the most likely outcome, and it is a definitive result: the package now
-contains nothing but a remote-desktop product, and the classification did not move.
-That establishes `Fakeapp` tracks **identity** (RustDesk's machine code under a
-different certificate), not behaviour.
-
-At that point the only remaining path is the vendor conversation, and further code
-changes have near-zero expected value. Tell the owner that plainly.
+The remaining path is the vendor conversation; further code changes have near-zero
+expected value. Tell the owner that plainly.
 
 ## 6. Hard-won constraints — violating these wastes days
 
@@ -164,10 +172,11 @@ changes have near-zero expected value. Tell the owner that plainly.
 
 ## 9. Open items, ranked by value
 
-1. **The vc92 scan** — everything depends on it.
-2. **Send the Opentip submission** — the only mechanism that can change the verdict.
-   `docs/opentip-submission.md` is written to be sent. Attach the APK; a reviewer
-   cannot download from a link.
+1. **Send the Opentip submission for vc93** — the only mechanism that can change
+   the verdict. `docs/opentip-submission.md` is written to be sent. Attach the
+   APK; a reviewer cannot download from a link. SHA-256 `699C…37088`.
+2. **Bazaar ticket** — after the Kaspersky request, open a ticket asking for a
+   human review/re-scan of vc93, quoting the OpenTip report.
 3. **`InputService.kt:634`** logs the focused text field's contents to logcat during
    input injection. Inherited from upstream, never persisted, but it is literally
    "intercept keyboard input" — the phrase in Kaspersky's generic Trojan description.
