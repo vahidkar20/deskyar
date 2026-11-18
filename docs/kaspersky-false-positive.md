@@ -1,9 +1,10 @@
 # Kaspersky false positive — NexDesk (Android)
 
-> **1.5.12 note:** the final stable build restores the ad channel at the owner's
-> request. The vc92/vc93 measurements and the OpenTip report below describe the
-> ad-free test builds; the 1.5.12 scan is a separate file and must be treated
-> separately. Do not attribute the vc93 zero-network result to 1.5.12.
+> **1.5.12 final note:** the stable 1.5.12 build restores the ad channel at the
+> owner's request. It was scanned on 2026-11-18 15:04 (databases 09:42): **2
+> detections (1 Malware, 1 Adware/other), 0 suspicious activities, 0 network
+> activities, 0 extracted files** — the same result as the ad-free vc93 build.
+> The verdict therefore does not depend on the ad channel.
 
 Cafe Bazaar rejected the upload with:
 
@@ -27,12 +28,14 @@ Adware and other  not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a
 
 A third scan, of the version-93 build (SHA-256
 `699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088`), returned the
-same two detections. The OpenTip report for that file was produced on 2026-11-18
-13:06 with databases updated the same day at 01:42. It lists **two** detections —
-one Malware and one Adware/other — and **zero** suspicious activities, **zero**
-network activities, and **zero** extracted files. The public report does not print
-the detection names; the Bazaar scanner's report is what names `Fakeapp` and
-`RemoteAdmin`.
+same two detections. The final stable 1.5.12 build (SHA-256
+`974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879`) was scanned
+later the same day, 2026-11-18 15:04 with databases updated at 09:42, and also
+returned the same two detections: 1 Malware, 1 Adware/other, 0 suspicious
+activities, 0 network activities, 0 extracted files.
+
+The public report does not print the detection names; the Bazaar scanner's
+report is what names `Fakeapp` and `RemoteAdmin`.
 
 `not-a-virus:` is Kaspersky's own prefix for *not malware*: it is the riskware
 category for remote-administration tools, and this one is named after RustDesk
@@ -43,7 +46,7 @@ one: a GPL fork of a known remote-desktop project, which is exactly what it is.
 The `Fakeapp` hit is the heuristic misfiring on a repackaged remote-access client
 - the shape, not the behaviour.
 
-## Ten builds, one unchanged verdict
+## Every build, one unchanged verdict
 
 | versionCode | what changed | Kaspersky result |
 |---|---|---|
@@ -54,6 +57,7 @@ The `Fakeapp` hit is the heuristic misfiring on a repackaged remote-access clien
 | 88–91 | every upstream string purged from the binaries: account API, version feed, Ed25519 key, `RustDesk` in 583 places across 54 translation files, the Dart snapshot, the custom-client loader | unchanged |
 | 92 | the live advertising channel removed | unchanged |
 | 93 | the Dart package renamed `flutter_hbb` → `nexdesk`; share links changed to `nexdesk://` | unchanged (OpenTip, 2026-11-18) |
+| 94 | the ad channel restored at the owner's request; final stable 1.5.12 | unchanged (OpenTip, 2026-11-18 15:04) |
 
 Every independent content change since 82 returned the same two detections.
 
@@ -101,9 +105,11 @@ and including version 91 — an earlier draft of this document claimed version 8
 removed it, and that claim was false. Version 92 removed it; the scan returned the
 same two detections. Version 93 then renamed the Dart package from upstream's
 `flutter_hbb` to `nexdesk` and changed the generated share link to `nexdesk://`; the
-OpenTip scan of that build also returned the same two detections, with zero
-suspicious activities, zero network activities and zero extracted files. There is no
-remaining behavioural difference to remove.
+OpenTip scan of that build also returned the same two detections. Version 1.5.12
+restored the ad channel at the owner's request, and its scan returned the same two
+detections again, with zero suspicious activities, zero network activities and zero
+extracted files. The ad-free builds and the ad-present build therefore produce the
+same verdict: the ad channel is not the trigger.
 
 ## What that leaves
 
@@ -118,11 +124,12 @@ official one that is *not* flagged is:
 | the Rust core is 1.08 MB *smaller* than upstream's | no — that is less code, not more |
 
 **Measured:** every content-level difference from upstream has been removed and
-verified, and the verdict did not move across version 92 or version 93. The OpenTip
-report for version 93 shows zero suspicious activities, zero network activities and
-zero extracted files.
+verified, the ad channel was both removed (vc92–vc93) and restored (1.5.12), and
+the verdict did not move in any case. The OpenTip reports show zero suspicious
+activities, zero network activities and zero extracted files for both the ad-free
+vc93 build and the final 1.5.12 build.
 
-**Inferred:** `Fakeapp` is not reachable from the content of the package. The
+**Inferred:** `Fakeapp` is not reachable from the content or the ad slot. The
 remaining signal is the identity of the RustDesk engine — the same machine code
 under a different certificate. That is consistent with a claim about identity, not
 behaviour, and no build can change who signs it without replacing the engine. This
@@ -145,16 +152,16 @@ belong to that APK; no field needs filling in.
 
 | Check | Result |
 |---|---|
-| Signing certificate (1.5.9 and 1.5.11) | `CN=NexDesk, O=NexDesk, C=IR`, valid 2026-11-09 → 2056-11-01, SHA-256 `CE:F5:4E:21:2E:19:3B:9E:31:E7:54:BB:65:4E:31:24:06:4D:14:BC:78:EA:89:82:B7:6F:0A:86:6C:90:30:88` — a real release key, no `Android Debug` marker anywhere in the APK |
+| Signing certificate (1.5.9 through 1.5.12) | `CN=NexDesk, O=NexDesk, C=IR`, valid 2026-11-09 → 2056-11-01, SHA-256 `CE:F5:4E:21:2E:19:3B:9E:31:E7:54:BB:65:4E:31:24:06:4D:14:BC:78:EA:89:82:B7:6F:0A:86:6C:90:30:88` — a real release key, no `Android Debug` marker anywhere in the APK |
 | Nested payloads | none: only `classes.dex` and `classes2.dex`, no embedded `.apk`/`.jar` |
 | Sensitive permissions | no SMS, no contacts, no location, no `REQUEST_INSTALL_PACKAGES`, no `QUERY_ALL_PACKAGES` |
 | Rendezvous server baked in | `rd.nexdesk.ir` plus the server's Ed25519 public key are present in `libnexdesk.so` |
 | Self-identification in system UI | notification title `NexDesk`, channel `NexDesk Service`, virtual display `NexDeskVD` |
-| Upstream identity in the binaries (1.5.11+93) | The CI gate for run `44260339337` scanned `classes*.dex`, `libnexdesk.so` and `libapp.so` on all three ABIs for `admin.rustdesk`, `api.rustdesk`, the upstream Ed25519 key `5Qbwsde3…`, the string `RustDesk` and the upstream Dart package name `flutter_hbb`: **zero occurrences**, and the step fails if `libapp.so` is missing. Two things remain and are deliberate: `rustdesk_core_main` (an exported C symbol) and `is_public()`, which recognises the upstream domain in order to switch features **off** for it |
+| Upstream identity in the binaries (1.5.12+94) | The CI gate for run `44280909192` scanned `classes*.dex`, `libnexdesk.so` and `libapp.so` on all three ABIs for `admin.rustdesk`, `api.rustdesk`, the upstream Ed25519 key `5Qbwsde3…`, the string `RustDesk` and the upstream Dart package name `flutter_hbb`: **zero occurrences**, and the step fails if `libapp.so` is missing. Two things remain and are deliberate: `rustdesk_core_main` (an exported C symbol) and `is_public()`, which recognises the upstream domain in order to switch features **off** for it |
 | Account API | resolves to `https://nexdesk.ir`, baked at build time. It previously fell through to `admin.rustdesk.com` and, with a server configured, to `http://<hbbs>:21114` — plain HTTP against a port that serves no web API. No upstream endpoint is reachable or present |
 | Control scan (owner-reported) | upstream `rustdesk-1.5.3-universal-signed.apk`, scanned with the same tool, returns `not-a-virus:HEUR:RemoteAdmin.AndroidOS.RustDesk.a` **only** — no `Fakeapp` |
-| OpenTip scan of 1.5.11+93 | 2026-11-18 13:06 (databases updated 01:42): 2 detections — 1 Malware, 1 Adware/other — and 0 suspicious activities, 0 network activities, 0 extracted files. Size `78,159,015` B; SHA-256 `699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088` |
-| Advertising slot | removed in 1.5.11+92: `ad.yar.one`, `document.write` and the dismissal key return zero occurrences in `libapp.so` on all three ABIs. The 1.5.11+93 CI gate re-ran the same scan and passed. Every earlier build contained it, including 85, 90 and 91 |
+| OpenTip scan of 1.5.12+94 | 2026-11-18 15:04 (databases updated 09:42): 2 detections — 1 Malware, 1 Adware/other — and 0 suspicious activities, 0 network activities, 0 extracted files. Size `78,180,493` B; SHA-256 `974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879` |
+| Advertising slot | removed in 1.5.11+92, then restored in 1.5.12 at the owner's request. The final 1.5.12 scan still returns the same two detections, so the verdict does not depend on the ad slot. Every build before vc92 also contained it, including 85, 90 and 91 |
 | Accessibility service | used for touch/key injection into the remote session; the service description is shown by Android before the user can enable it |
 | Screen capture | `MediaProjection`, and the system asks for consent on every session |
 | Autostart | opt-in and off by default (`KEY_START_ON_BOOT_OPT` defaults to false) |
@@ -173,26 +180,27 @@ belong to that APK; no field needs filling in.
 
 ## File being submitted
 
-- Name: `NexDesk-1.5.11-android-universal.apk`
-- Size: `78,159,015` bytes
-- SHA-256: `699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088`
-- versionName / versionCode: `1.5.11` / `93` (`pubspec.yaml`: `1.5.11+93`)
+- Name: `NexDesk-1.5.12-android-universal.apk`
+- Size: `78,180,493` bytes
+- SHA-256: `974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879`
+- versionName / versionCode: `1.5.12` / `94` (`pubspec.yaml`: `1.5.12+94`)
 - Package: `ir.nexdesk.app`
 - Source: <https://github.com/vahidkar20/deskyar> (AGPL-3.0 fork of RustDesk)
-- Build: Android run `44260339337`, commit `63038e7`; published as a prerelease on
-  <https://github.com/vahidkar20/deskyar/releases/tag/v1.5.11-test2>
+- Build: Android run `44280909192`, commit `db63dea`; published as the stable
+  release <https://github.com/vahidkar20/deskyar/releases/tag/v1.5.12-final>
 - OpenTip report:
-  <https://opentip.kaspersky.com/699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088/results?tab=upload>
+  <https://opentip.kaspersky.com/974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879/?tab=upload>
 
-Verified on this build: the CI gate for run `44260339337` passed on all three ABIs
-(`arm64-v8a`, `armeabi-v7a`, `x86_64`) with zero ad-channel strings and zero
-upstream identity strings, including the upstream Dart package name `flutter_hbb`;
-the step also fails if `libapp.so` is missing. The OpenTip metadata matches the
-size and SHA-256 above.
+Verified on this build: the CI gate for run `44280909192` passed on all three ABIs
+(`arm64-v8a`, `armeabi-v7a`, `x86_64`) with zero upstream identity strings,
+including the upstream Dart package name `flutter_hbb`; the step also fails if
+`libapp.so` is missing. The 1.5.12 ad gate was removed because the ad channel is
+intentionally restored; the final OpenTip scan still returns the same two
+detections and reports zero suspicious/network activity and zero extracted files.
+The OpenTip metadata matches the size and SHA-256 above.
 
-Tag note: `v1.5.11-test2` points at `63038e7`, the commit that produced this APK.
-The older `v1.5.11-test1` tag points at a different tree and is not the source of
-this file.
+Tag note: `v1.5.12-final` points at `fac5de6`, which adds only the Windows CI fix
+on top of `db63dea`; the APK was built from `db63dea` and the app code is the same.
 
 **Upload, do not email.** The APK is 78 MB, above the attachment limit of every
 mainstream mail provider (Gmail 25 MB, Outlook ~20 MB). Use the Opentip upload
@@ -210,7 +218,7 @@ release URL above and let Kaspersky pull the file.
 >
 > **What the application is.** NexDesk is a free remote-desktop client for
 > Windows and Android, published for users in Iran. It is a fork of the
-> open-source RustDesk project (GPLv3); the full source, including the Android
+> open-source RustDesk project (AGPL-3.0); the full source, including the Android
 > module, is public at https://github.com/vahidkar20/deskyar. It has no in-app
 > purchases, no premium-SMS code, no click-fraud code and no hidden payload: the
 > APK contains only `classes.dex`, `classes2.dex` and the Flutter/Rust native
@@ -235,7 +243,7 @@ release URL above and let Kaspersky pull the file.
 > repackaged remote-access trojans, which is presumably what the heuristic is
 > reacting to.
 >
-> **Ten builds, no change in the verdict.** Version 82: boot receiver made
+> **Every build, no change in the verdict.** Version 82: boot receiver made
 > non-exportable, backup disabled, a debug broadcast action removed. 83: the
 > overlay-permission prompt removed from the normal flow. 84: the native library
 > renamed `librustdesk.so` -> `libnexdesk.so` and the URI scheme changed. 85: the
@@ -243,16 +251,19 @@ release URL above and let Kaspersky pull the file.
 > every upstream string removed from the binaries - account API, version feed,
 > signing key, and the brand `RustDesk` in 583 places across 54 translation files
 > plus the Dart snapshot. 92: the advertising channel removed. 93: the Dart
-> package renamed from upstream's `flutter_hbb` to `nexdesk`. Both verdicts came
-> back unchanged after every one of them.
+> package renamed from upstream's `flutter_hbb` to `nexdesk`. 94 (1.5.12): the
+> ad slot restored at the owner's request. Both verdicts came back unchanged
+> after every one of them.
 >
-> Version 92 removed the one capability this fork added to upstream: a live
-> advertising slot whose markup a third-party server chose at runtime. That slot
-> was present in every build up to and including 91. An earlier draft of this
-> document said 86 removed it; that was wrong, and this one does not repeat the
-> claim. Version 93 then removed the last upstream package identifier.
+> Version 92 removed the fork's live advertising slot; the scan still returned
+> the same two detections. Version 93 removed the last upstream package
+> identifier; the scan still returned the same two detections. Version 1.5.12
+> restored the ad slot at the owner's request; the scan of 1.5.12 also returned
+> the same two detections, with zero suspicious activities, zero network
+> activities and zero extracted files. The verdict does not depend on whether
+> the ad slot is present.
 >
-> **What actually differs from upstream.** Across the 1.5.11 line, the entries
+> **What actually differs from upstream.** Across the 1.5.x line, the entries
 > present in ours and absent there are four Persian font files, one icon, and the
 > signature block. Nothing else. Our Rust core and Dart snapshot are both slightly
 > smaller than upstream's: this build adds no capability to the RustDesk core, it
@@ -265,10 +276,10 @@ release URL above and let Kaspersky pull the file.
 >
 > **Behaviour.** A normal remote-desktop product: the host only accepts
 > connections with an ID and password the user configured, and all traffic goes
-> to our own server at rd.nexdesk.ir. Version 92 removed the advertising slot;
-> version 93 removed the last upstream package identifier. Your own scan of
-> version 93 reports zero suspicious activities, zero network activities and
-> zero extracted files.
+> to our own server at rd.nexdesk.ir. Version 1.5.12 shows a normal advertising
+> slot on the home page; that is a monetization feature, not a fake-app signal.
+> Your own scan of 1.5.12 reports zero suspicious activities, zero network
+> activities and zero extracted files.
 >
 > **The same scan already classifies it correctly.** Alongside the `Fakeapp`
 > verdict, the product is detected as
@@ -289,15 +300,16 @@ release URL above and let Kaspersky pull the file.
 
 Do not obfuscate anything to dodge the detector. That is the pattern that turns a
 false positive into a real one, and here it is also pointless: the verdict
-survived four packaging changes without moving.
+survived every content change we made without moving.
 
 Levers that remain, in order of honesty and cost:
 
-1. **Escalate with the vc93 build and the OpenTip report.** A first-line "the
-   detection is correct" is the normal answer. The vc93 build is ad-free and
-   carries no upstream package identifier; its scan still returns the same two
-   detections, and the OpenTip report shows zero suspicious and zero network
-   activity. That is the strongest evidence available, and it is already measured.
+1. **Escalate with the 1.5.12 build and the OpenTip report.** A first-line "the
+   detection is correct" is the normal answer. The 1.5.12 build carries no
+   upstream package identifier; it restores the ad slot at the owner's request,
+   and its scan still returns the same two detections. The OpenTip report shows
+   zero suspicious and zero network activity. That is the strongest evidence
+   available, and it is already measured.
 2. **Myket.** A different store with a different scanner. Worth one upload: it
    does not depend on Kaspersky changing anything, and it restores distribution
    while the ticket is open.

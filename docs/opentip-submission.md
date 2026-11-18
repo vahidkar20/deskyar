@@ -1,17 +1,20 @@
 # Opentip submission — NexDesk false positive
 
-> **1.5.12 note:** the final stable build restores the ad channel at the owner's
-> request. The vc93 facts below are the ad-free control; do not send this text as
-> the 1.5.12 submission without replacing the file facts, hash and scan evidence.
+> **Final 1.5.12:** the stable build restores the ad channel at the owner's
+> request. It was scanned on 2026-11-18 15:04 (databases 09:42): 2 detections
+> (1 Malware, 1 Adware/other), 0 suspicious activities, 0 network activities,
+> 0 extracted files — the same result as the ad-free vc93 control. The verdict
+> does not depend on the ad slot.
 
 **چکیدهٔ فارسی:** این متن برای ارسال به کسپرسکی (OpenTip) آماده شده. ادعای اصلی ساده است:
 ما یک فورک مشروع AGPL از RustDesk هستیم، با گواهی، مخزن و سرور خودمان. تشخیص
 `RemoteAdmin.RustDesk.a` درست است و درخواست حذفش را نداریم — موتور همان است.
 اما `Fakeapp` باید برداشته شود، چون «ادای برنامهٔ دیگری را درآوردن» توصیف ما نیست.
-مهم‌ترین شاهد: تمام رشته‌ها، اندپوینت‌ها، کلید upstream، کانال تبلیغات و حتی نام پکیج Dart
-حذف شدند و حکم **تغییر نکرد**؛ گزارش OpenTip نسخهٔ ۹۳ صفر فعالیت مشکوک و صفر فعالیت
-شبکه نشان می‌دهد. نتیجهٔ اندازه‌گیری‌شده: تشخیص محتوا-محور نیست. استنباط: به
-هویت/شباهت کد موتور واکنش می‌دهد.
+مهم‌ترین شاهد: کانال تبلیغات در vc92 حذف شد و در 1.5.12 به درخواست مالک برگشت؛
+نام پکیج Dart هم از `flutter_hbb` به `nexdesk` تغییر کرد. در هر دو حالت (بدون تبلیغات
+و با تبلیغات) حکم **تغییر نکرد** و گزارش OpenTip نسخهٔ 1.5.12 صفر فعالیت مشکوک،
+صفر فعالیت شبکه و صفر فایل استخراج‌شده نشان می‌دهد. نتیجهٔ اندازه‌گیری‌شده: تشخیص
+محتوا-محور نیست. استنباط: به هویت/شباهت کد موتور واکنش می‌دهد.
 
 ---
 
@@ -27,12 +30,12 @@ False-positive classification of a legitimate open-source Android application.
 |---|---|
 | Application | NexDesk — remote desktop |
 | Package | `ir.nexdesk.app` |
-| Version reported | 1.5.11 (versionCode 93) |
-| File | `NexDesk-1.5.11-android-universal.apk` |
-| Size | `78,159,015` bytes |
-| SHA-256 | `699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088` |
-| Build | Android run `44260339337`, commit `63038e7` |
-| Release | `v1.5.11-test2` (prerelease) |
+| Version reported | 1.5.12 (versionCode 94) |
+| File | `NexDesk-1.5.12-android-universal.apk` |
+| Size | `78,180,493` bytes |
+| SHA-256 | `974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879` |
+| Build | Android run `44280909192`, commit `db63dea` |
+| Release | `v1.5.12-final` (stable) |
 | Signing certificate | `CN=NexDesk, O=NexDesk, C=IR`, valid 2026-11-09 → 2056-11-01, SHA-256 `CE:F5:4E:21:2E:19:3B:9E:31:E7:54:BB:65:4E:31:24:06:4D:14:BC:78:EA:89:82:B7:6F:0A:86:6C:90:30:88` |
 | Source | `https://github.com/vahidkar20/deskyar` (public, full history) |
 | Distribution | Google Play and Cafe Bazaar (Iran) |
@@ -89,26 +92,25 @@ Four earlier builds changed only packaging and branding: notification strings,
 the native library name, the URI scheme and a boot receiver. **Every one of those
 returned a byte-identical verdict.**
 
-Version 92 removed the one capability this fork added: a live advertising slot
-whose markup a third-party server chose at runtime. It was present in every build
-up to and including 91; an earlier draft of this submission claimed version 86
-removed it, and that claim was false. Version 92 was the first build without it.
-Version 93 then renamed the Dart package from upstream's `flutter_hbb` to
-`nexdesk` and changed the generated share link to `nexdesk://`.
+Version 92 removed the fork's advertising slot; the scan still returned the same
+two detections. Version 93 renamed the Dart package from upstream's `flutter_hbb`
+to `nexdesk` and changed the generated share link to `nexdesk://`; the scan still
+returned the same two detections. Version 1.5.12 restored the ad slot at the
+owner's request; its scan also returned the same two detections.
 
-The CI gate for the version-93 build scans every `libapp.so`, `libnexdesk.so` and
-`classes*.dex` for the ad strings, the upstream endpoints, the upstream key, the
-brand and `flutter_hbb`, and fails if `libapp.so` is missing. It passed on all
-three ABIs.
+The CI gate for 1.5.12 scans every `libapp.so`, `libnexdesk.so` and `classes*.dex`
+for the upstream endpoints, the upstream key, the brand and `flutter_hbb`, and
+fails if `libapp.so` is missing. It passed on all three ABIs. The 1.5.12 ad gate
+was intentionally removed because the ad slot is restored.
 
-**Both version 92 and version 93 were scanned, and both returned the same two
-detections.** The OpenTip report for version 93 (scanned 2026-11-18 13:06,
-databases updated 01:42) lists two detections — one Malware, one Adware/other —
+**Version 93 (ad-free) and version 1.5.12 (ad-present) were both scanned, and both
+returned the same two detections.** The OpenTip report for 1.5.12 (2026-11-18
+15:04, databases 09:42) lists two detections — one Malware, one Adware/other —
 and zero suspicious activities, zero network activities and zero extracted files.
 
-That is the point of this submission, stated precisely: every content-level
-difference we could remove has been removed, and the verdict did not move. On the
-measurement, `Fakeapp` is not reachable from the package. The remaining signal is
+That is the point of this submission, stated precisely: whether the ad slot is
+removed or present, the verdict does not move. On the measurement, `Fakeapp` is
+not reachable from the package content or the ad slot. The remaining signal is
 the identity of the RustDesk engine under a different certificate; that is an
 inference, not something we can prove from outside. We are not predicting that a
 reanalysis will change the verdict. We are asking for it to be looked at, and for
@@ -130,11 +132,11 @@ Either of the following would resolve this:
 
 - Source, full history and release artefacts: `https://github.com/vahidkar20/deskyar`
 - The exact file:
-  `https://github.com/vahidkar20/deskyar/releases/download/v1.5.11-test2/NexDesk-1.5.11-android-universal.apk`
-  (SHA-256 `699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088`)
-- Build: Android run `44260339337`, commit `63038e7`
+  `https://github.com/vahidkar20/deskyar/releases/download/v1.5.12-final/NexDesk-1.5.12-android-universal.apk`
+  (SHA-256 `974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879`)
+- Build: Android run `44280909192`, commit `db63dea`
 - OpenTip report for this hash:
-  `https://opentip.kaspersky.com/699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088/results?tab=upload`
+  `https://opentip.kaspersky.com/974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879/?tab=upload`
 - Our own analysis, including the control scan of the official RustDesk APK
   (which returns `RemoteAdmin` only, with no `Fakeapp`):
   `docs/kaspersky-false-positive.md` in that repository.
@@ -149,10 +151,11 @@ Either of the following would resolve this:
 
 ## Notes for the owner (not for submission)
 
-**۱. این را با نسخهٔ ۹۳ بفرستید.** فایل و SHA باید یکی باشند:
-`699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088`. فایل در
-ریلیز `v1.5.11-test2` است. در OpenTip روی همان گزارش، «Submit to reanalyze» را
-بزنید و متن انگلیسی بالا را در توضیحات بچسبانید.
+**۱. این را با نسخهٔ ۱.۵.۱۲ بفرستید.** فایل و SHA باید یکی باشند:
+`974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879`. فایل در
+ریلیز `v1.5.12-final` است. در OpenTip روی همان گزارش، «Submit to reanalyze» را
+بزنید و متن انگلیسی بالا را در توضیحات بچسبانید:
+<https://opentip.kaspersky.com/974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879/?tab=upload>
 
 **۲. فایل را ضمیمه کنید، نه لینک.** بازبین به لینک دانلود دسترسی ندارد؛ اگر فرم
 آپلود جدا دارد، همان APK را بدهید.
@@ -173,11 +176,11 @@ Either of the following would resolve this:
 **۶. متن تیکت بازار (بعد از ثبت درخواست کسپرسکی):**
 
 > سلام،
-> نسخهٔ ۱.۵.۱۱ (versionCode 93) اپلیکیشن NexDesk با بستهٔ `ir.nexdesk.app` را برای
+> نسخهٔ ۱.۵.۱۲ (versionCode 94) اپلیکیشن NexDesk با بستهٔ `ir.nexdesk.app` را برای
 > بررسی ارسال کرده‌ایم. اسکنر کسپرسکی دو تشخیص می‌دهد: `RemoteAdmin.AndroidOS.RustDesk.a`
 > که برای یک ابزار ریموت‌دسکتاپ مبتنی بر RustDesk درست است، و `Fakeapp.fm` که
 > نادرست است. درخواست بازبینی در OpenTip ثبت شد.
 > گزارش OpenTip برای همین فایل: ۲ تشخیص، صفر فعالیت مشکوک، صفر فعالیت شبکه، صفر
-> فایل استخراج‌شده. SHA-256: `699CF3C3F1C5DFBE5D1E964512770F1EED13370109CB17D2C88EE83169237088`.
+> فایل استخراج‌شده. SHA-256: `974A351C00160B7C2F9F9974A0D8628803AAC627A4EF6FAF4EBAD8A6BF4C5879`.
 > سورس کامل: `https://github.com/vahidkar20/deskyar`.
 > خواهشمندیم همین versionCode را بازبینی انسانی/اسکن مجدد کنید و نتیجه را اعلام کنید.
