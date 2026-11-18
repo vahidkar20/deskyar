@@ -1,5 +1,9 @@
 # Opentip submission — NexDesk false positive
 
+> **1.5.12 note:** the final stable build restores the ad channel at the owner's
+> request. The vc93 facts below are the ad-free control; do not send this text as
+> the 1.5.12 submission without replacing the file facts, hash and scan evidence.
+
 **چکیدهٔ فارسی:** این متن برای ارسال به کسپرسکی (OpenTip) آماده شده. ادعای اصلی ساده است:
 ما یک فورک مشروع AGPL از RustDesk هستیم، با گواهی، مخزن و سرور خودمان. تشخیص
 `RemoteAdmin.RustDesk.a` درست است و درخواست حذفش را نداریم — موتور همان است.

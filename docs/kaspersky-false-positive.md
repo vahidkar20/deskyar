@@ -1,5 +1,10 @@
 # Kaspersky false positive — NexDesk (Android)
 
+> **1.5.12 note:** the final stable build restores the ad channel at the owner's
+> request. The vc92/vc93 measurements and the OpenTip report below describe the
+> ad-free test builds; the 1.5.12 scan is a separate file and must be treated
+> separately. Do not attribute the vc93 zero-network result to 1.5.12.
+
 Cafe Bazaar rejected the upload with:
 
 > version code: 79, cpu architecture: arm64-v8a, armeabi-v7a

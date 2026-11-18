@@ -12,6 +12,7 @@ import 'package:nexdesk/consts.dart';
 import 'package:nexdesk/desktop/pages/connection_page.dart';
 import 'package:nexdesk/desktop/pages/desktop_setting_page.dart';
 import 'package:nexdesk/desktop/pages/desktop_tab_page.dart';
+import 'package:nexdesk/desktop/widgets/banner_slot.dart';
 import 'package:nexdesk/desktop/widgets/install_banner.dart';
 import 'package:nexdesk/desktop/widgets/update_progress.dart';
 import 'package:nexdesk/models/platform_model.dart';
@@ -111,6 +112,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           }
         },
       ),
+      // Live ad slot, sized to the pane. The creative is fetched from
+      // ad.yar.one at runtime - see widgets/banner_slot.dart.
+      const NexDeskBannerSlot(),
     ];
     if (isIncomingOnly) {
       children.addAll([
