@@ -423,10 +423,17 @@ jobs:
           cp "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android/libc++_shared.so" ./flutter/android/app/src/main/jniLibs/x86_64/
           pushd flutter
           flutter build apk --release --target-platform android-arm64,android-arm,android-x64
+          flutter build apk --release --split-per-abi --target-platform android-arm64,android-arm,android-x64
           popd
           mkdir -p signed-apk
           mv ./flutter/build/app/outputs/flutter-apk/app-release.apk \
              "signed-apk/NexDesk-${VERSION}-android-universal.apk"
+          mv ./flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+             "signed-apk/NexDesk-${VERSION}-arm64-v8a.apk"
+          mv ./flutter/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+             "signed-apk/NexDesk-${VERSION}-armeabi-v7a.apk"
+          mv ./flutter/build/app/outputs/flutter-apk/app-x86_64-release.apk \
+             "signed-apk/NexDesk-${VERSION}-x86_64.apk"
           ls -lh signed-apk
 
       # Fails the build if upstream identity creeps back into the shipped
@@ -475,14 +482,14 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: NexDesk-android-universal
-          path: signed-apk/NexDesk-${{ env.VERSION }}-android-universal.apk
+          path: signed-apk/*.apk
           if-no-files-found: error
 
       - name: Attach to release
         if: ${{ inputs.make_release || startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
-          files: signed-apk/NexDesk-${{ env.VERSION }}-android-universal.apk
+          files: signed-apk/*.apk
           name: NexDesk ${{ env.VERSION }}
           draft: true
 

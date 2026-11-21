@@ -790,7 +790,7 @@ impl Client {
     async fn _start_inner(
         peer: String,
         key: String,
-        token: String,
+        mut token: String,
         conn_type: ConnType,
         interface: impl Interface,
         mut udp: (Option<Arc<UdpSocket>>, Option<Arc<Mutex<u16>>>),
@@ -851,7 +851,7 @@ impl Client {
             NatType::from_i32(my_nat_type).unwrap_or(NatType::UNKNOWN_NAT)
         };
 
-        let switch_code = interface.get_switch_code();
+        let mut switch_code = interface.get_switch_code();
         let legacy_secure = !key.is_empty() && (!token.is_empty() || !switch_code.is_empty());
         let carries_offer = webrtc_offerer.as_ref().and_then(|g| g.stream()).is_some();
         // Counted from before the key exchange, so the exchange spends the UDP NAT test's own
@@ -880,9 +880,28 @@ impl Client {
             }
         }
         if !exchanged && legacy_secure {
-            secure_tcp(&mut socket, &key)
-                .await
-                .map_err(|e| anyhow!("Failed to secure tcp: {}", e))?;
+            match tokio::time::timeout(
+                Duration::from_secs(4),
+                secure_tcp(&mut socket, &key),
+            )
+            .await
+            {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => {
+                    return Err(anyhow!("Failed to secure tcp: {}", e));
+                }
+                Err(_) => {
+                    // hbbs from before the signed key exchange never answers this
+                    // handshake. Keep the connection usable by dropping the token and
+                    // switch code rather than sending them over an unencrypted stream.
+                    log::warn!(
+                        "{} does not complete the secure handshake; continuing without token/switch code",
+                        rendezvous_server
+                    );
+                    token.clear();
+                    switch_code.clear();
+                }
+            }
         }
         // A token or switch code has always taken this socket straight to the punch without
         // waiting for the UDP NAT test. The WebRTC exchange does not replace that wait, it only
